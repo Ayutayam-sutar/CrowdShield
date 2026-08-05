@@ -1,0 +1,6 @@
+{
+  "name": "CrowdShield",
+  "description": "AI-powered early warning system for crowd stampede prevention featuring dual Admin Control Room Command Dashboard and Citizen Mobile App interfaces.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
