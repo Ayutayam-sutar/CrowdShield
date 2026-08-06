@@ -1,7 +1,7 @@
 import React from 'react';
 import { MapContainer, TileLayer, Polygon, Polyline, Marker, Tooltip, Popup } from 'react-leaflet';
 import L from 'leaflet';
-import { Navigation, CheckCircle2, ShieldAlert, ArrowRight, CornerUpRight, Footprints, Clock } from 'lucide-react';
+import { Navigation, Footprints, Clock, AlertTriangle } from 'lucide-react';
 
 interface CitizenEvacuationMapProps {
   isScenarioActive: boolean;
@@ -46,7 +46,7 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({ isSc
     [20.2958, 85.8248],
   ];
 
-  // 2. Dynamic A* Segmented Polyline Path (5 Lat/Lng Waypoints explicit routing around Red Zone)
+  // 2. Dynamic Segmented Polyline Path (5 Lat/Lng Waypoints explicit routing around Red Zone)
   const aStarPathCoordinates: [number, number][] = [
     [20.2961, 85.8245], // Node A: Current Location (Gate 3 Entrance)
     [20.2962, 85.8225], // Waypoint 1: Head West away from Gate 3 surge
@@ -59,32 +59,38 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({ isSc
   const midTooltipPoint: [number, number] = [20.2985, 85.8228];
 
   return (
-    <div className="bg-white border border-[#E7E5DD] rounded-2xl p-4 shadow-sm flex flex-col gap-3 font-body text-[#151726]">
+    <div className="bg-white border border-[#E7E5DD] rounded-2xl p-3.5 sm:p-5 shadow-xs flex flex-col gap-3 sm:gap-4 font-body text-[#151726] w-full max-w-full">
       {/* Header Bar */}
-      <div className="flex items-center justify-between border-b border-[#E7E5DD] pb-3">
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded-xl bg-[#2C7BE5]/10 text-[#2C7BE5]">
-            <Navigation className="w-4 h-4 animate-pulse" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#E7E5DD] pb-3 gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="p-2 rounded-xl bg-[#2C7BE5]/10 text-[#2C7BE5] shrink-0">
+            <Navigation className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse text-[#2C7BE5]" />
           </div>
-          <div>
-            <h3 className="font-heading font-bold text-sm text-[#151726]">
-              Safe Evacuation Route (A* Pathfinding)
+          <div className="min-w-0 flex flex-col">
+            <h3 className="font-heading font-bold text-xs sm:text-base text-[#151726] tracking-tight truncate flex items-center gap-2">
+              <span>Safe Exit Route</span>
+              {isScenarioActive && (
+                <span className="px-2 py-0.5 rounded-full bg-[#FF3B5C]/15 text-[#FF3B5C] text-[10px] font-mono-num font-bold uppercase shrink-0">
+                  Active Reroute
+                </span>
+              )}
             </h3>
-            <p className="text-[11px] text-[#5B5F73] font-mono-num">
-              Dynamic real-time route avoiding high-density surge zones
+            <p className="text-[10px] sm:text-[11px] text-[#5B5F73] font-mono-num truncate">
+              Clear path avoiding crowded areas
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="px-2.5 py-1 rounded-full bg-[#22D3A6]/15 text-[#059669] font-mono-num font-bold text-[10px] flex items-center gap-1">
-            <Clock className="w-3 h-3" /> Est. Exit: 2.5 mins
+        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+          <span className="px-2.5 py-1 rounded-full bg-[#22D3A6]/15 text-[#059669] font-mono-num font-bold text-[10px] sm:text-[11px] flex items-center gap-1">
+            <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            <span>Est. Walk: 2.5 mins</span>
           </span>
         </div>
       </div>
 
       {/* Light Theme Leaflet Map Container */}
-      <div className="relative w-full h-64 rounded-xl border border-[#E7E5DD] overflow-hidden shadow-inner z-10">
+      <div className="relative w-full h-60 sm:h-72 md:h-80 rounded-xl sm:rounded-2xl border border-[#E7E5DD] overflow-hidden shadow-inner z-10">
         <MapContainer
           center={[centerLat, centerLng]}
           zoom={16}
@@ -109,8 +115,9 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({ isSc
             }}
           >
             <Popup>
-              <div className="p-1 font-heading font-bold text-xs text-[#FF3B5C]">
-                ⚠️ Gate 3 Danger Zone (4.8 p/m² Surge)
+              <div className="p-1 font-heading font-bold text-xs text-[#FF3B5C] flex items-center gap-1">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span>Gate 3 (Very Crowded Area)</span>
               </div>
             </Popup>
           </Polygon>
@@ -128,7 +135,7 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({ isSc
           >
             {/* Permanent Distance Tooltip along middle segment */}
             <Tooltip position={midTooltipPoint} permanent direction="top" className="custom-leaflet-tooltip">
-              <span className="font-mono-num font-bold text-[11px] text-[#2C7BE5] bg-white px-2 py-0.5 rounded shadow border border-[#2C7BE5]">
+              <span className="font-mono-num font-bold text-[11px] text-[#2C7BE5] bg-white px-2 py-0.5 rounded-md shadow-xs border border-[#2C7BE5]">
                 450m via Safe Route
               </span>
             </Tooltip>
@@ -138,7 +145,7 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({ isSc
           <Marker position={aStarPathCoordinates[0]} icon={createBlueDotIcon()}>
             <Popup>
               <div className="p-1 font-heading font-bold text-xs text-[#2C7BE5]">
-                ● Node A: Your Current Position
+                ● You Are Here
               </div>
             </Popup>
           </Marker>
@@ -147,64 +154,64 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({ isSc
           <Marker position={aStarPathCoordinates[aStarPathCoordinates.length - 1]} icon={createGreenExitIcon()}>
             <Popup>
               <div className="p-1 font-heading font-bold text-xs text-[#059669]">
-                ✓ Node B: Safe Auxiliary Exit Gate 4
+                ✓ Safe Exit: Gate 4
               </div>
             </Popup>
           </Marker>
         </MapContainer>
 
         {/* Map Legend Overlay */}
-        <div className="absolute bottom-2 left-2 bg-white/95 backdrop-blur-xs px-2.5 py-1.5 rounded-lg border border-[#E7E5DD] shadow-md z-20 text-[10px] font-mono-num flex items-center gap-3">
+        <div className="absolute bottom-2.5 left-2.5 bg-white/95 backdrop-blur-md px-2.5 sm:px-3 py-1.5 rounded-xl border border-[#E7E5DD] shadow-md z-20 text-[10px] sm:text-[11px] font-mono-num flex items-center gap-2.5 sm:gap-3 flex-wrap max-w-[calc(100%-20px)]">
           <div className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#38BDF8] border border-white" />
-            <span className="font-bold text-[#151726]">Node A (You)</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-[#38BDF8] border border-white shrink-0" />
+            <span className="font-bold text-[#151726]">You Are Here</span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="w-2.5 h-0.5 bg-[#2C7BE5] border-b border-dashed border-[#2C7BE5]" />
-            <span className="font-bold text-[#2C7BE5]">A* Safe Path</span>
+            <span className="w-2.5 h-0.5 bg-[#2C7BE5] border-b border-dashed border-[#2C7BE5] shrink-0" />
+            <span className="font-bold text-[#2C7BE5]">Safe Path</span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded bg-[#FF3B5C]/50 border border-[#FF3B5C]" />
-            <span className="font-bold text-[#FF3B5C]">Surge Area</span>
+            <span className="w-2.5 h-2.5 rounded bg-[#FF3B5C]/50 border border-[#FF3B5C] shrink-0" />
+            <span className="font-bold text-[#FF3B5C]">Crowded Area</span>
           </div>
         </div>
       </div>
 
-      {/* Turn-by-Turn Instruction List (Plus Jakarta Sans) */}
-      <div className="bg-[#FAFAF7] border border-[#E7E5DD] rounded-xl p-3 flex flex-col gap-2">
+      {/* Turn-by-Turn Instruction List */}
+      <div className="bg-[#FAFAF7] border border-[#E7E5DD] rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col gap-2.5">
         <span className="font-heading font-bold text-xs text-[#151726] uppercase tracking-wider flex items-center gap-1.5">
-          <Footprints className="w-3.5 h-3.5 text-[#2C7BE5]" />
-          Turn-by-Turn Evacuation Instructions
+          <Footprints className="w-3.5 h-3.5 text-[#2C7BE5] shrink-0" />
+          <span>Step-by-Step Directions</span>
         </span>
 
         <div className="space-y-2 text-xs text-[#151726]">
-          <div className="flex items-start gap-2 bg-white p-2 rounded-lg border border-[#E7E5DD]">
-            <span className="w-5 h-5 rounded-full bg-[#2C7BE5] text-white font-bold text-[10px] flex items-center justify-center shrink-0">
+          <div className="flex items-start gap-2.5 bg-white p-2.5 rounded-xl border border-[#E7E5DD] hover:border-[#2C7BE5]/40 transition-colors">
+            <span className="w-5 h-5 rounded-full bg-[#2C7BE5] text-white font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
               1
             </span>
-            <div className="flex flex-col">
-              <span className="font-bold text-[#151726]">Head West 50m towards West Concourse Corridor.</span>
-              <span className="text-[10px] text-[#5B5F73]">Move away from Gate 3 overcrowding zone.</span>
+            <div className="flex flex-col min-w-0">
+              <span className="font-bold text-[#151726] leading-tight">Head West 50m toward West Concourse.</span>
+              <span className="text-[10px] sm:text-[11px] text-[#5B5F73] mt-0.5">Move away from crowded Gate 3.</span>
             </div>
           </div>
 
-          <div className="flex items-start gap-2 bg-white p-2 rounded-lg border border-[#E7E5DD]">
-            <span className="w-5 h-5 rounded-full bg-[#FF7A45] text-white font-bold text-[10px] flex items-center justify-center shrink-0">
+          <div className="flex items-start gap-2.5 bg-white p-2.5 rounded-xl border border-[#E7E5DD] hover:border-[#FF7A45]/40 transition-colors">
+            <span className="w-5 h-5 rounded-full bg-[#FF7A45] text-white font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
               2
             </span>
-            <div className="flex flex-col">
-              <span className="font-bold text-[#151726]">Turn Right onto Auxiliary Corridor 4.</span>
-              <span className="text-[10px] text-[#5B5F73]">Bypasses Gate 3 bottleneck (Avoids 4.8 p/m² surge).</span>
+            <div className="flex flex-col min-w-0">
+              <span className="font-bold text-[#151726] leading-tight">Turn Right onto Corridor 4.</span>
+              <span className="text-[10px] sm:text-[11px] text-[#5B5F73] mt-0.5">Bypasses Gate 3 crowds and heavy pushing.</span>
             </div>
           </div>
 
-          <div className="flex items-start gap-2 bg-white p-2 rounded-lg border border-[#E7E5DD]">
-            <span className="w-5 h-5 rounded-full bg-[#22D3A6] text-[#151726] font-bold text-[10px] flex items-center justify-center shrink-0">
+          <div className="flex items-start gap-2.5 bg-white p-2.5 rounded-xl border border-[#E7E5DD] hover:border-[#22D3A6]/40 transition-colors">
+            <span className="w-5 h-5 rounded-full bg-[#22D3A6] text-[#151726] font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
               3
             </span>
-            <div className="flex flex-col">
-              <span className="font-bold text-[#151726]">Proceed 400m along lighted corridor to EXIT GATE 4.</span>
-              <span className="text-[10px] text-[#059669] font-bold">Turnstiles force-unlocked by Command Control.</span>
+            <div className="flex flex-col min-w-0">
+              <span className="font-bold text-[#151726] leading-tight">Walk 400m along the lighted hallway to Exit Gate 4.</span>
+              <span className="text-[10px] sm:text-[11px] text-[#059669] font-bold mt-0.5">Exit gates are unlocked and open.</span>
             </div>
           </div>
         </div>
