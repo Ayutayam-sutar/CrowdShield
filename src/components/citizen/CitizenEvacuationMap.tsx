@@ -84,7 +84,7 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({ isSc
         <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
           <span className="px-2.5 py-1 rounded-full bg-[#22D3A6]/15 text-[#059669] font-mono-num font-bold text-[10px] sm:text-[11px] flex items-center gap-1">
             <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-            <span>Est. Walk: 2.5 mins</span>
+            <span>Estimated Walk: 2.5 mins</span>
           </span>
         </div>
       </div>
