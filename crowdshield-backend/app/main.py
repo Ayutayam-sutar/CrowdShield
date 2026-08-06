@@ -1,0 +1,77 @@
+"""
+FastAPI application initialization and lifespan.
+"""
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+import logging
+
+from app.core.config import settings
+from app.db.base import Base
+from app.db.session import engine, async_session
+from app.api.v1.api import api_router
+from app.models.user import User, UserRole
+from app.core.security import get_password_hash
+from sqlalchemy import select
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Lifecycle manager for FastAPI.
+    Initializes database tables on startup.
+    """
+    logger.info("Starting up CrowdShield Backend...")
+    # Initialize DB tables (in production, use Alembic migrations instead)
+    async with engine.begin() as conn:
+        # We don't drop tables here, just create missing ones
+        await conn.run_sync(Base.metadata.create_all)
+    
+    # Seed default admin user
+  # Seed default admin user
+    async with async_session() as db:
+        # CHANGE 01 TO 02 HERE
+        result = await db.execute(select(User).where(User.username == "CHIEF-OPERATOR-02"))
+        admin = result.scalars().first()
+        if not admin:
+            admin_user = User(
+                username="CHIEF-OPERATOR-02", # <-- AND HERE
+                hashed_password=get_password_hash("Sentinel@2026"),
+                role=UserRole.ADMIN
+            )
+            db.add(admin_user)
+            await db.commit()
+            logger.info("Created default Admin user.")
+
+    logger.info("Database tables verified/created.")
+    
+    yield
+    
+    logger.info("Shutting down CrowdShield Backend...")
+    await engine.dispose()
+
+app = FastAPI(
+    title="CrowdShield Backend",
+    description="AI-Powered Early Warning Crowd Stampede Prevention System",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# CORS configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins_list,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include API Router
+app.include_router(api_router, prefix="/api/v1")
+
+@app.get("/health")
+async def health_check():
+    """Simple health check endpoint."""
+    return {"status": "ok", "version": app.version}

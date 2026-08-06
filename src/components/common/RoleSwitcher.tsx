@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ViewMode } from '../../types';
 import { ShieldAlert, RefreshCw, Lock, ChevronUp, X, Shield, User, LogOut } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 interface RoleSwitcherProps {
   currentView: ViewMode;
@@ -16,6 +17,7 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
   onResetScenario,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const { logout, role, userId } = useAuth();
 
   return (
     <div className={`fixed ${currentView === 'citizen' ? 'bottom-16 sm:bottom-6' : 'bottom-4 sm:bottom-6'} right-4 sm:right-6 z-50 flex flex-col items-end gap-2 font-body transition-all`}>
@@ -47,10 +49,10 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
               </div>
               <div className="flex flex-col min-w-0 flex-1">
                 <span className="text-xs font-bold text-white font-heading truncate">
-                  {currentView === 'admin' ? 'Operator ID: OP-8842' : 'Visitor ID: CIT-9041'}
+                  {currentView === 'admin' ? `Operator ID: ${userId?.substring(0, 8)}` : `Visitor ID: ${userId?.substring(0, 8)}`}
                 </span>
                 <span className="text-[10px] text-[#22D3A6] font-mono-num">
-                  {currentView === 'admin' ? 'Role: Senior Crowd Controller' : 'Citizen App Companion'}
+                  {role === 'ADMIN' ? 'Role: Senior Crowd Controller' : 'Citizen App Companion'}
                 </span>
               </div>
             </div>
@@ -58,7 +60,7 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
             <div className="pt-2 border-t border-white/10 grid grid-cols-2 gap-2 text-[10px] font-mono-num text-white/70">
               <div>
                 <span className="text-white/40 block">Clearance:</span>
-                <span className="font-bold text-white">Tier 1 Command</span>
+                <span className="font-bold text-white">{role}</span>
               </div>
               <div>
                 <span className="text-white/40 block">Node Location:</span>
@@ -87,12 +89,12 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
             <button
               onClick={() => {
                 setIsOpen(false);
-                onSwitchView('auth');
+                logout();
               }}
               className="w-full py-2.5 px-3 rounded-xl bg-[#FF3B5C]/15 hover:bg-[#FF3B5C] text-[#FF3B5C] hover:text-white border border-[#FF3B5C]/30 text-xs font-heading font-bold transition-all cursor-pointer flex items-center justify-center gap-2"
             >
               <LogOut className="w-4 h-4" />
-              <span>Secure System Exit / Switch Role</span>
+              <span>Secure System Exit</span>
             </button>
           </div>
         </div>

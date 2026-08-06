@@ -23,12 +23,18 @@ import {
   Radio,
   Wifi
 } from 'lucide-react';
+import { speakAnnouncement } from '../../utils/speech';
+
+import { VolunteerTasksView } from './VolunteerTasksView';
+import { useAuth } from '../../context/AuthContext';
+import { CrowdAlert } from '../../types';
 
 interface CitizenPortalViewProps {
   reports: CitizenReport[];
   onSubmitReport: (report: Omit<CitizenReport, 'id' | 'timestamp' | 'status' | 'upvotes'>) => void;
   isScenarioActive: boolean;
   onLogout?: () => void;
+  alerts?: CrowdAlert[];
 }
 
 export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
@@ -36,7 +42,9 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
   onSubmitReport,
   isScenarioActive,
   onLogout,
+  alerts,
 }) => {
+  const { role } = useAuth();
   const [activeTab, setActiveTab] = useState<'feed' | 'drill'>('feed');
   const [selectedLang, setSelectedLang] = useState<SupportedLanguage>('en');
   const [reportCategory, setReportCategory] = useState<CitizenReport['category']>('Overcrowding');
@@ -111,20 +119,10 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
 
   const playBhashiniTTS = () => {
     setIsPlayingAudio(true);
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(translation.announcementText);
-      if (selectedLang === 'hi') utterance.lang = 'hi-IN';
-      else if (selectedLang === 'ta') utterance.lang = 'ta-IN';
-      else if (selectedLang === 'bn') utterance.lang = 'bn-IN';
-      else utterance.lang = 'en-US';
-
-      utterance.onend = () => setIsPlayingAudio(false);
-      utterance.onerror = () => setIsPlayingAudio(false);
-      window.speechSynthesis.speak(utterance);
-    } else {
-      setTimeout(() => setIsPlayingAudio(false), 3000);
-    }
+    speakAnnouncement(translation.announcementText, selectedLang);
+    // Estimated wait time based on length
+    const estimatedMs = Math.max(translation.announcementText.length * 70, 3000);
+    setTimeout(() => setIsPlayingAudio(false), estimatedMs);
   };
 
   return (
@@ -211,6 +209,13 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
           <>
             {/* Grid Row 1: Urgent Broadcast Banner & Offline Safety Network */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5 sm:gap-4 items-stretch">
+              
+              {/* Volunteer Task Board (Only visible to VOLUNTEER role) */}
+              {role === 'VOLUNTEER' && alerts && (
+                <div className="lg:col-span-3">
+                  <VolunteerTasksView alerts={alerts} />
+                </div>
+              )}
               
               {/* Urgent Live Broadcast Banner (2 cols on lg) */}
               <div className={`p-4 rounded-2xl border flex flex-col justify-between gap-3 shadow-xs lg:col-span-2 transition-all ${

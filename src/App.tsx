@@ -30,6 +30,8 @@ import { SupportModal } from './components/common/SupportModal';
 import { SystemLogsModal } from './components/common/SystemLogsModal';
 import { AuthView } from './components/common/AuthView';
 import { ToastContainer } from './components/common/ToastContainer';
+import { useAuth } from './context/AuthContext';
+import { wsService } from './services/websocket';
 
 // Admin Views
 import { DashboardView } from './components/admin/DashboardView';
@@ -44,6 +46,8 @@ import { SettingsView } from './components/admin/SettingsView';
 import { CitizenPortalView } from './components/citizen/CitizenPortalView';
 
 export default function App() {
+  const { isAuthenticated, role, logout } = useAuth();
+
   // State
   const [viewMode, setViewMode] = useState<ViewMode>('auth');
   const [adminRoute, setAdminRoute] = useState<AdminRoute>('dashboard');
@@ -157,6 +161,62 @@ export default function App() {
     checkAndGenerateCrowdAlerts(zones);
   }, [zones]);
 
+  // WebSocket Connection
+  useEffect(() => {
+    if (isAuthenticated) {
+      wsService.connect();
+
+      const unsubscribe = wsService.subscribe((data) => {
+        if (data.event === 'TELEMETRY_UPDATE' && data.zone) {
+          // Update zone data
+          setZones((prevZones) =>
+            prevZones.map((z) =>
+              z.id === data.zone!.id ? { ...z, ...data.zone } : z
+            )
+          );
+
+          // Handle new alerts
+          if (data.alert) {
+            setAlerts((prevAlerts) => {
+              // Don't add duplicate active alerts for the same zone
+              const exists = prevAlerts.find(a => a.id === data.alert!.id || (a.zoneId === data.alert!.zoneId && a.status === 'active'));
+              if (exists) return prevAlerts;
+              return [data.alert!, ...prevAlerts];
+            });
+
+            // Trigger Toast
+            addToastNotification(
+              `CROWD SURGE ALERT`,
+              `Zone ${data.zone.id} flagged by ML Risk Engine. Overrides applied.`,
+              data.alert.riskLevel === 'critical' ? 'critical' : 'warning',
+              data.zone.id
+            );
+          }
+        } else if (data.event === 'RESOLVED_BY_VOLUNTEER' && data.alert_id) {
+          // Update alert status
+          setAlerts((prevAlerts) => 
+            prevAlerts.map(a => 
+              a.id === data.alert_id 
+                ? { ...a, status: 'resolved', resolvedBy: data.resolved_by } 
+                : a
+            )
+          );
+          
+          addToastNotification(
+            `ALERT RESOLVED`,
+            `Alert #${data.alert_id} was resolved by volunteer ${data.resolved_by || 'Unknown'}`,
+            'info'
+          );
+        }
+      });
+
+      return () => {
+        unsubscribe();
+        wsService.disconnect();
+      };
+    }
+  }, [isAuthenticated]);
+
   // Handlers
   const handleTriggerScenario = () => {
     setIsScenarioActive(true);
@@ -214,7 +274,7 @@ export default function App() {
   const activeAlertCount = alerts.filter((a) => a.status === 'active').length;
 
   // Render Auth View
-  if (viewMode === 'auth') {
+  if (!isAuthenticated) {
     return (
       <AuthView
         onLogin={(mode) => setViewMode(mode)}
@@ -223,18 +283,23 @@ export default function App() {
   }
 
   // Render Citizen View
-  if (viewMode === 'citizen') {
+  if (role === 'CITIZEN' || role === 'VOLUNTEER' || viewMode === 'citizen') {
     return (
       <div className="min-h-screen bg-[#FAFAF7]">
         <CitizenPortalView
           reports={citizenReports}
           onSubmitReport={handleAddCitizenReport}
           isScenarioActive={isScenarioActive}
-          onLogout={() => setViewMode('auth')}
+          onLogout={logout}
+          alerts={alerts}
         />
         <RoleSwitcher
-          currentView={viewMode}
-          onSwitchView={(mode) => setViewMode(mode)}
+          currentView="citizen"
+          onSwitchView={(mode) => {
+            // Can't switch to admin if not admin
+            if (role !== 'ADMIN' && mode === 'admin') return;
+            setViewMode(mode);
+          }}
           isScenarioActive={isScenarioActive}
           onResetScenario={handleResetScenario}
         />
@@ -243,6 +308,8 @@ export default function App() {
   }
 
   // Render Admin Layout
+  if (role !== 'ADMIN') return null; // Safety check
+
   return (
     <div className="min-h-screen bg-[#FAFAF7] flex flex-col font-body text-[#151726]">
       {/* Toast Notifications */}

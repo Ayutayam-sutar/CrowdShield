@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { ViewMode } from '../../types';
+import api from '../../utils/api';
+import { useAuth } from '../../context/AuthContext';
 import { 
   ShieldCheck, 
   Lock, 
@@ -18,7 +20,10 @@ import {
   KeyRound,
   User,
   Menu,
-  X
+  X,
+  AlertCircle,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 interface AuthViewProps {
@@ -26,34 +31,69 @@ interface AuthViewProps {
 }
 
 export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
+  const { login } = useAuth();
   const [activeTab, setActiveTab] = useState<'admin' | 'citizen'>('citizen');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Citizen Authentication State
   const [citizenContact, setCitizenContact] = useState('+91 98765-43210');
   const [citizenName, setCitizenName] = useState('Ananya Sharma');
   const [citizenOtp, setCitizenOtp] = useState('492-015');
-  const [selectedCitizenVenue, setSelectedCitizenVenue] = useState('Jawaharlal Nehru Stadium - Sector 7G');
 
   // Admin Authentication State
-  const [operatorId, setOperatorId] = useState('OP-7742');
-  const [password, setPassword] = useState('••••••••');
+  const [operatorId, setOperatorId] = useState('CHIEF-OPERATOR-01');
+  const [password, setPassword] = useState('Sentinel2026#Secure');
+  const [showPassword, setShowPassword] = useState(false);
   const [selectedAdminVenue, setSelectedAdminVenue] = useState('Jawaharlal Nehru Stadium - Sector 7G');
   const [mfaCode, setMfaCode] = useState('948-210');
 
-  const handleAdminSubmit = (e: React.FormEvent) => {
+  const handleAdminSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin('admin');
+    setIsLoading(true);
+    setErrorMsg(null);
+    try {
+      const formData = new URLSearchParams();
+      formData.append('username', operatorId);
+      formData.append('password', password);
+      
+      const response = await api.post('/auth/login/admin', formData, {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      });
+      
+      login(response.data.access_token);
+      onLogin('admin');
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.detail || 'Failed to authenticate');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleCitizenSubmit = (e: React.FormEvent) => {
+  const handleCitizenSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin('citizen');
+    setIsLoading(true);
+    setErrorMsg(null);
+    try {
+      const response = await api.post('/auth/login/citizen', {
+        contact: citizenContact,
+        name: citizenName,
+        otp: citizenOtp
+      });
+      
+      login(response.data.access_token);
+      onLogin('citizen');
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.detail || 'Failed to authenticate');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const fillDemoAdmin = () => {
-    setOperatorId('CHIEF-OPERATOR-01');
-    setPassword('Sentinel2026#Secure');
+    setOperatorId('CHIEF-OPERATOR-02');
+    setPassword('Sentinel@2026');
     setMfaCode('882-194');
   };
 
@@ -272,6 +312,15 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
 
           {/* Login Card Container */}
           <div className="w-full max-w-2xl bg-[#FAFAF7] border border-[#E7E5DD] rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-md relative">
+            
+            {/* Enhanced Error Banner */}
+            {errorMsg && (
+              <div className="mb-5 p-3 sm:p-4 rounded-xl bg-red-50 border border-red-500/50 flex items-start gap-3 text-red-700 text-xs font-semibold animate-fadeIn shadow-sm">
+                <AlertCircle className="w-5 h-5 shrink-0 text-red-600" />
+                <span className="mt-0.5 leading-relaxed">{errorMsg}</span>
+              </div>
+            )}
+
             {activeTab === 'citizen' ? (
               <form onSubmit={handleCitizenSubmit} className="flex flex-col gap-4 sm:gap-5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#E7E5DD] pb-4 gap-2">
@@ -324,8 +373,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
+                  <div className="w-full">
                     <label className="text-[11px] font-semibold text-[#5B5F73] uppercase tracking-wider flex items-center gap-1.5">
                       <KeyRound className="w-3.5 h-3.5 text-[#2C7BE5]" />
                       Verification Code (OTP)
@@ -337,20 +385,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
                       className="w-full mt-1.5 p-3 rounded-xl bg-white border border-[#E7E5DD] text-xs text-[#151726] font-mono-num focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/20"
                     />
                   </div>
-
-                  <div>
-                    <label className="text-[11px] font-semibold text-[#5B5F73] uppercase tracking-wider">Event Venue / Sector</label>
-                    <select
-                      value={selectedCitizenVenue}
-                      onChange={(e) => setSelectedCitizenVenue(e.target.value)}
-                      className="w-full mt-1.5 p-3 rounded-xl bg-white border border-[#E7E5DD] text-xs text-[#151726] font-body focus:outline-none focus:border-[#059669]"
-                    >
-                      <option value="Jawaharlal Nehru Stadium - Sector 7G">Jawaharlal Nehru Stadium · Sector 7G</option>
-                      <option value="Kumbh Mela Sector 4 - Sangam Ghat">Kumbh Mela Sector 4 · Sangam Ghat Corridor</option>
-                      <option value="Central Railway Station Concourse">Central Railway Station Concourse</option>
-                    </select>
-                  </div>
-                </div>
 
                 {/* Feature Callout */}
                 <div className="p-3.5 sm:p-4 rounded-2xl bg-white border border-[#E7E5DD] flex items-center justify-between shadow-xs gap-3">
@@ -407,13 +441,23 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
 
                   <div>
                     <label className="text-[11px] font-semibold text-[#5B5F73] uppercase tracking-wider">Security Passcode</label>
-                    <input
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full mt-1.5 p-3 rounded-xl bg-white border border-[#E7E5DD] text-xs text-[#151726] font-mono-num focus:outline-none focus:border-[#2C7BE5] focus:ring-2 focus:ring-[#2C7BE5]/20"
-                      required
-                    />
+                    <div className="relative mt-1.5">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full p-3 pr-10 rounded-xl bg-white border border-[#E7E5DD] text-xs text-[#151726] font-mono-num focus:outline-none focus:border-[#2C7BE5] focus:ring-2 focus:ring-[#2C7BE5]/20"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5B5F73] hover:text-[#2C7BE5] transition-colors cursor-pointer"
+                        title={showPassword ? "Hide Password" : "Show Password"}
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
                 </div>
 

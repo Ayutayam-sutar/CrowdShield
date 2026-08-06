@@ -32,6 +32,8 @@ import {
 export const AnalyticsView: React.FC = () => {
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [aiSummary, setAiSummary] = useState<string>('');
+  const [isLoadingSummary, setIsLoadingSummary] = useState<boolean>(false);
 
   const handleExportCSV = () => {
     const csvContent = "data:text/csv;charset=utf-8," 
@@ -46,14 +48,26 @@ export const AnalyticsView: React.FC = () => {
     document.body.removeChild(link);
   };
 
+  const handleGenerateSummary = async (alertId: string = "LOG-4482") => {
+    setIsAiModalOpen(true);
+    setIsLoadingSummary(true);
+    setAiSummary('');
+    
+    try {
+      // Import api dynamically or add to top imports
+      const api = (await import('../../utils/api')).default;
+      const response = await api.post(`/analytics/summary/${alertId}`);
+      setAiSummary(response.data.summary);
+    } catch (err) {
+      console.error("Failed to generate summary", err);
+      setAiSummary("Failed to generate AI summary. Please check API keys and connection.");
+    } finally {
+      setIsLoadingSummary(false);
+    }
+  };
+
   const handleCopyAiSummary = () => {
-    const text = `INSPECTION INCIDENT CG-8924 REPORT SUMMARY:
-Surge detected at 18:42 at West Exit Gate 3.
-Peak Density: 4.8 p/m² (Exceeded 4.0 safety threshold).
-A* rerouting successfully diverted 1,200 pax to Aux Gate 4.
-Multilingual Bhashini audio PA broadcast activated in Hindi and Odia.
-Resolution Time: 14 mins. Zero injuries reported.`;
-    navigator.clipboard.writeText(text);
+    navigator.clipboard.writeText(aiSummary);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -73,7 +87,7 @@ Resolution Time: 14 mins. Zero injuries reported.`;
 
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setIsAiModalOpen(true)}
+            onClick={() => handleGenerateSummary("LOG-4482")}
             className="px-4 py-2 bg-[#7C6CFF] hover:bg-[#6856FF] text-white rounded-xl font-heading font-bold text-xs flex items-center gap-2 shadow-md transition-colors cursor-pointer"
           >
             <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
@@ -233,28 +247,19 @@ Resolution Time: 14 mins. Zero injuries reported.`;
             <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col gap-3 font-mono-num text-xs leading-relaxed text-gray-200">
               <div className="flex items-center justify-between text-[11px] border-b border-white/10 pb-2 text-white/70">
                 <span className="flex items-center gap-1.5 text-[#22D3A6] font-bold">
-                  <FileText className="w-3.5 h-3.5" /> Incident CG-8924
+                  <FileText className="w-3.5 h-3.5" /> Incident Report
                 </span>
-                <span>Severity: CRITICAL (LEVEL 4)</span>
               </div>
 
               <div className="space-y-2 text-[#E2E8F0]">
-                <p>
-                  <strong className="text-white">Summary:</strong> Surge detected at <span className="text-[#FF3B5C] font-bold">18:42</span> at West Exit Gate 3 corridor. Peak density reached <span className="text-[#FF3B5C] font-bold">4.8 p/m²</span>, exceeding safety threshold.
-                </p>
-                <p>
-                  <strong className="text-white">Automated Countermeasures:</strong> Real-time A* dynamic rerouting successfully diverted <span className="text-[#22D3A6] font-bold">1,200 pax</span> towards Auxiliary Exit Gate 4.
-                </p>
-                <p>
-                  <strong className="text-white">Multilingual Broadcasts:</strong> Bhashini AI engine executed voice PA instructions in Hindi & Odia, preventing bottleneck panic.
-                </p>
-                <p>
-                  <strong className="text-white">Resolution Metrics:</strong> Total resolution time: <span className="text-[#22D3A6] font-bold">14 mins</span>. Zero injuries recorded. Operator intervention: <span className="text-[#7C6CFF] font-bold">OP_01 Remote Turnstile Unlock</span>.
-                </p>
-              </div>
-
-              <div className="mt-2 p-2.5 rounded-lg bg-[#7C6CFF]/10 border border-[#7C6CFF]/30 text-[11px] text-[#A78BFA] font-sans">
-                <strong>AI Compliance Recommendation:</strong> Permanently widen Auxiliary Corridor 4 during peak exit hours (18:00 - 20:00) to reduce future risk index by an estimated 38%.
+                {isLoadingSummary ? (
+                  <div className="flex items-center justify-center p-8 gap-3 text-[#7C6CFF]">
+                    <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                    <span className="font-heading font-bold animate-pulse">Generating Summary via Sentinel LLM...</span>
+                  </div>
+                ) : (
+                  <div className="whitespace-pre-wrap">{aiSummary}</div>
+                )}
               </div>
             </div>
 

@@ -238,15 +238,22 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
             </button>
           </div>
 
-          {/* Profile Avatar */}
+          {/* Profile Avatar & Logout */}
           <div className="flex items-center gap-2 pl-2 border-l border-[#E7E5DD]">
             <div className="w-7 h-7 rounded-full bg-[#2C7BE5] text-white font-bold text-xs flex items-center justify-center font-heading">
               OP
             </div>
-            <div className="hidden lg:flex flex-col text-[11px]">
+            <div className="hidden lg:flex flex-col text-[11px] mr-2">
               <span className="font-bold text-[#151726] leading-none">operator_01</span>
               <span className="text-[#5B5F73] text-[10px] leading-tight">Chief Controller</span>
             </div>
+            <button 
+              onClick={() => window.dispatchEvent(new Event('unauthorized'))}
+              className="p-1.5 rounded bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition-colors"
+              title="Logout"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-log-out"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" x2="9" y1="12" y2="12"></line></svg>
+            </button>
           </div>
         </div>
       </div>

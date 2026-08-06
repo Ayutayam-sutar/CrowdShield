@@ -16,6 +16,7 @@ import {
   VolumeX
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { speakAnnouncement } from '../../utils/speech';
 
 interface AlertsViewProps {
   alerts: CrowdAlert[];
@@ -66,9 +67,12 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
 
   const handlePlayAudio = () => {
     setIsPlayingAudio(true);
+    speakAnnouncement(currentTranslation.announcementText, activeLang);
+    // Rough estimate for playing time based on length
+    const estimatedMs = Math.max(currentTranslation.announcementText.length * 70, 3000);
     setTimeout(() => {
       setIsPlayingAudio(false);
-    }, 4000);
+    }, estimatedMs);
   };
 
   return (
