@@ -1,20 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Navigation, 
   CheckCircle2, 
   RotateCcw, 
   Play, 
   Pause, 
   ChevronRight, 
+  ChevronLeft,
   Volume2, 
   ShieldAlert, 
   Award, 
-  Flame, 
   MapPin, 
   Info,
   Compass,
-  ArrowUpRight,
-  Sparkles
+  ArrowUpRight
 } from 'lucide-react';
 
 interface EvacuationStep {
@@ -165,21 +163,21 @@ export const EvacuationDrillMode: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-4 font-body text-[#151726]">
+    <div className="flex flex-col gap-3.5 sm:gap-4 font-body text-[#151726] w-full max-w-full">
       {/* Mode Header Banner */}
-      <div className="bg-[#151726] text-white p-4 rounded-2xl border border-white/10 shadow-lg flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#22D3A6]/20 text-[#22D3A6] border border-[#22D3A6]/30 flex items-center justify-center font-bold font-heading">
-            <Compass className="w-5 h-5 animate-spin-slow" />
+      <div className="bg-[#151726] text-white p-3.5 sm:p-4 rounded-2xl border border-white/10 shadow-md flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#22D3A6]/20 text-[#22D3A6] border border-[#22D3A6]/30 flex items-center justify-center font-bold font-heading shrink-0">
+            <Compass className="w-5 h-5 animate-spin-slow text-[#22D3A6]" />
           </div>
-          <div>
-            <h2 className="font-heading font-bold text-sm sm:text-base tracking-tight flex items-center gap-2">
-              <span>Evacuation Drill Mode</span>
-              <span className="px-2 py-0.5 rounded-full bg-[#22D3A6] text-[#151726] text-[10px] font-mono-num font-bold uppercase">
+          <div className="min-w-0 flex flex-col">
+            <h2 className="font-heading font-bold text-xs sm:text-base tracking-tight flex items-center gap-1.5 sm:gap-2 truncate">
+              <span className="truncate">Evacuation Drill Mode</span>
+              <span className="px-2 py-0.5 rounded-full bg-[#22D3A6] text-[#151726] text-[9px] sm:text-[10px] font-mono-num font-bold uppercase shrink-0">
                 Interactive GPS
               </span>
             </h2>
-            <p className="text-[11px] text-white/70">
+            <p className="text-[10px] sm:text-[11px] text-white/70 truncate">
               Simulated turn-by-turn guidance to nearest safe exit
             </p>
           </div>
@@ -187,9 +185,9 @@ export const EvacuationDrillMode: React.FC = () => {
 
         <button
           onClick={() => setIsVoiceGuidanceActive(!isVoiceGuidanceActive)}
-          className={`p-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+          className={`p-2 sm:px-3 sm:py-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 active:scale-95 ${
             isVoiceGuidanceActive
-              ? 'bg-[#2C7BE5] text-white border-[#2C7BE5]'
+              ? 'bg-[#2C7BE5] text-white border-[#2C7BE5] shadow-xs'
               : 'bg-white/10 text-white/70 border-white/10 hover:bg-white/20'
           }`}
           title="Toggle Voice Guidance"
@@ -201,12 +199,12 @@ export const EvacuationDrillMode: React.FC = () => {
 
       {/* Interactive Map Visualizer */}
       <div className="bg-[#151726] rounded-2xl border border-white/10 shadow-md p-3 sm:p-4 flex flex-col gap-3 relative overflow-hidden">
-        <div className="flex items-center justify-between text-xs text-white/80 font-mono-num">
-          <span className="flex items-center gap-1.5 font-bold text-[#22D3A6]">
-            <MapPin className="w-4 h-4 text-[#22D3A6]" />
-            Stadium Sector 7G Safe Map
+        <div className="flex items-center justify-between text-xs text-white/80 font-mono-num gap-2">
+          <span className="flex items-center gap-1.5 font-bold text-[#22D3A6] truncate">
+            <MapPin className="w-4 h-4 text-[#22D3A6] shrink-0" />
+            <span className="truncate">Stadium Sector 7G Safe Map</span>
           </span>
-          <span className="bg-white/10 px-2.5 py-0.5 rounded-full text-[10px] text-white/90">
+          <span className="bg-white/10 px-2 sm:px-2.5 py-0.5 rounded-full text-[10px] text-white/90 shrink-0 border border-white/10">
             Live Route: Gate 3 → Gate 4
           </span>
         </div>
@@ -259,13 +257,13 @@ export const EvacuationDrillMode: React.FC = () => {
               <div
                 key={step.stepNumber}
                 style={{ left: `${step.xPercent}%`, top: `${step.yPercent}%` }}
-                className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group cursor-pointer"
+                className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group cursor-pointer z-10"
                 onClick={() => {
                   setCurrentStepIndex(idx);
                   setDrillCompleted(false);
                 }}
               >
-                <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all shadow-lg ${
+                <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all shadow-md ${
                   isPassed
                     ? 'bg-[#22D3A6] text-[#151726]'
                     : isCurrent
@@ -274,7 +272,7 @@ export const EvacuationDrillMode: React.FC = () => {
                 }`}>
                   {isPassed ? <CheckCircle2 className="w-4 h-4" /> : step.stepNumber}
                 </div>
-                <span className="mt-1 text-[9px] font-bold text-white bg-black/80 px-1.5 py-0.5 rounded backdrop-blur whitespace-nowrap shadow-xs">
+                <span className="mt-1 text-[9px] font-bold text-white bg-black/85 px-1.5 py-0.5 rounded backdrop-blur whitespace-nowrap shadow-xs border border-white/10">
                   {step.title}
                 </span>
               </div>
@@ -288,7 +286,7 @@ export const EvacuationDrillMode: React.FC = () => {
                 left: `${currentStep.xPercent}%`,
                 top: `${currentStep.yPercent}%`,
               }}
-              className="absolute -translate-x-1/2 -translate-y-1/2 transition-all duration-700 ease-out pointer-events-none z-10"
+              className="absolute -translate-x-1/2 -translate-y-1/2 transition-all duration-700 ease-out pointer-events-none z-20"
             >
               <div className="relative flex items-center justify-center">
                 <span className="animate-ping absolute inline-flex h-8 w-8 rounded-full bg-[#38BDF8] opacity-75" />
@@ -302,21 +300,21 @@ export const EvacuationDrillMode: React.FC = () => {
 
         {/* Real-time Distance & Time HUD */}
         <div className="grid grid-cols-3 gap-2 text-center pt-1">
-          <div className="bg-white/5 border border-white/10 rounded-xl p-2 flex flex-col">
-            <span className="text-[10px] text-white/60 font-mono-num uppercase">Remaining</span>
-            <span className="text-sm font-bold text-white font-mono-num">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-2 flex flex-col justify-center">
+            <span className="text-[9px] sm:text-[10px] text-white/60 font-mono-num uppercase tracking-wider">Remaining</span>
+            <span className="text-xs sm:text-sm font-bold text-white font-mono-num truncate">
               {drillCompleted ? '0 meters' : `${remainingDistance}m`}
             </span>
           </div>
-          <div className="bg-white/5 border border-white/10 rounded-xl p-2 flex flex-col">
-            <span className="text-[10px] text-white/60 font-mono-num uppercase">Drill Time</span>
-            <span className="text-sm font-bold text-[#22D3A6] font-mono-num">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-2 flex flex-col justify-center">
+            <span className="text-[9px] sm:text-[10px] text-white/60 font-mono-num uppercase tracking-wider">Drill Time</span>
+            <span className="text-xs sm:text-sm font-bold text-[#22D3A6] font-mono-num truncate">
               {formatTime(elapsedSeconds)}
             </span>
           </div>
-          <div className="bg-white/5 border border-white/10 rounded-xl p-2 flex flex-col">
-            <span className="text-[10px] text-white/60 font-mono-num uppercase">Exit Pace</span>
-            <span className="text-sm font-bold text-[#38BDF8] font-mono-num">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-2 flex flex-col justify-center">
+            <span className="text-[9px] sm:text-[10px] text-white/60 font-mono-num uppercase tracking-wider">Exit Pace</span>
+            <span className="text-xs sm:text-sm font-bold text-[#38BDF8] font-mono-num truncate">
               1.2 m/sec
             </span>
           </div>
@@ -324,7 +322,7 @@ export const EvacuationDrillMode: React.FC = () => {
       </div>
 
       {/* Progress Bar */}
-      <div className="bg-white border border-[#E7E5DD] rounded-2xl p-4 shadow-sm flex flex-col gap-2">
+      <div className="bg-white border border-[#E7E5DD] rounded-2xl p-3.5 sm:p-4 shadow-xs flex flex-col gap-2">
         <div className="flex items-center justify-between text-xs font-bold text-[#151726]">
           <span>Evacuation Progress</span>
           <span className="font-mono-num text-[#2C7BE5]">{progressPercent}%</span>
@@ -339,12 +337,12 @@ export const EvacuationDrillMode: React.FC = () => {
 
       {/* Active Instruction Card or Drill Completed Card */}
       {drillCompleted ? (
-        <div className="bg-[#22D3A6]/15 border-2 border-[#22D3A6] rounded-2xl p-5 shadow-lg flex flex-col items-center text-center gap-3 animate-in zoom-in-95">
-          <div className="w-12 h-12 rounded-full bg-[#22D3A6] text-[#151726] flex items-center justify-center font-bold shadow-md">
+        <div className="bg-[#22D3A6]/15 border-2 border-[#22D3A6] rounded-2xl p-5 shadow-md flex flex-col items-center text-center gap-3 animate-in zoom-in-95">
+          <div className="w-12 h-12 rounded-full bg-[#22D3A6] text-[#151726] flex items-center justify-center font-bold shadow-md shrink-0">
             <Award className="w-7 h-7" />
           </div>
           <div>
-            <h3 className="font-heading font-bold text-lg text-[#151726]">
+            <h3 className="font-heading font-bold text-base sm:text-lg text-[#151726]">
               EVACUATION DRILL COMPLETED!
             </h3>
             <p className="text-xs text-[#5B5F73] mt-1 max-w-xs leading-relaxed">
@@ -352,31 +350,31 @@ export const EvacuationDrillMode: React.FC = () => {
             </p>
           </div>
 
-          <div className="w-full p-3 rounded-xl bg-white border border-[#22D3A6]/40 flex items-center justify-around text-xs font-mono-num text-[#151726]">
-            <div>
+          <div className="w-full p-3 rounded-xl bg-white border border-[#22D3A6]/40 flex items-center justify-around text-xs font-mono-num text-[#151726] gap-2">
+            <div className="text-center">
               <span className="block text-[10px] text-[#5B5F73]">SAFETY RATING</span>
-              <strong className="text-[#059669] text-sm">A+ OPTIMAL</strong>
+              <strong className="text-[#059669] text-xs sm:text-sm">A+ OPTIMAL</strong>
             </div>
             <div className="h-6 w-px bg-[#E7E5DD]" />
-            <div>
+            <div className="text-center">
               <span className="block text-[10px] text-[#5B5F73]">TOTAL DISTANCE</span>
-              <strong className="text-[#151726] text-sm">150 meters</strong>
+              <strong className="text-[#151726] text-xs sm:text-sm">150 meters</strong>
             </div>
           </div>
 
           <button
             onClick={handleResetDrill}
-            className="w-full mt-2 py-3 bg-[#151726] hover:bg-[#25283e] text-white rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-md"
+            className="w-full mt-1 py-3 bg-[#151726] hover:bg-[#25283e] text-white rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-md active:scale-[0.99] transition-all"
           >
             <RotateCcw className="w-4 h-4 text-[#22D3A6]" />
             <span>Restart Evacuation Drill</span>
           </button>
         </div>
       ) : (
-        <div className="bg-white border-2 border-[#2C7BE5] rounded-2xl p-4 shadow-sm flex flex-col gap-3">
+        <div className="bg-white border-2 border-[#2C7BE5] rounded-2xl p-4 shadow-xs flex flex-col gap-3">
           <div className="flex items-center justify-between border-b border-[#E7E5DD] pb-2">
             <span className="text-[11px] font-bold font-mono-num text-[#2C7BE5] uppercase tracking-wider flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#2C7BE5] animate-ping" />
+              <span className="w-2 h-2 rounded-full bg-[#2C7BE5] animate-ping shrink-0" />
               Step {currentStep.stepNumber} of {totalSteps}
             </span>
             <span className="text-[10px] text-[#5B5F73] font-mono-num">
@@ -385,9 +383,9 @@ export const EvacuationDrillMode: React.FC = () => {
           </div>
 
           <div>
-            <h3 className="font-heading font-bold text-base text-[#151726] flex items-center gap-2">
-              <ArrowUpRight className="w-5 h-5 text-[#2C7BE5]" />
-              {currentStep.title}
+            <h3 className="font-heading font-bold text-sm sm:text-base text-[#151726] flex items-center gap-2">
+              <ArrowUpRight className="w-5 h-5 text-[#2C7BE5] shrink-0" />
+              <span>{currentStep.title}</span>
             </h3>
             <p className="text-xs text-[#5B5F73] mt-1.5 leading-relaxed bg-[#FAFAF7] p-3 rounded-xl border border-[#E7E5DD]">
               {currentStep.instruction}
@@ -396,25 +394,39 @@ export const EvacuationDrillMode: React.FC = () => {
 
           {currentStep.hazardNote && (
             <div className="bg-[#FF3B5C]/10 border border-[#FF3B5C]/30 p-2.5 rounded-xl flex items-center gap-2 text-xs text-[#151726]">
-              <ShieldAlert className="w-4 h-4 text-[#FF3B5C] flex-shrink-0" />
+              <ShieldAlert className="w-4 h-4 text-[#FF3B5C] shrink-0" />
               <span className="text-[11px]"><strong>Warning:</strong> {currentStep.hazardNote}</span>
             </div>
           )}
 
           {/* Navigation Control CTAs */}
           <div className="flex items-center gap-2 pt-1">
+            <button
+              onClick={handlePrevStep}
+              disabled={currentStepIndex === 0}
+              className={`py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1 transition-all ${
+                currentStepIndex === 0
+                  ? 'opacity-40 bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'bg-white border-[#E7E5DD] text-[#151726] hover:bg-gray-50 cursor-pointer active:scale-95'
+              }`}
+              title="Previous Step"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Prev</span>
+            </button>
+
             {isAutoSimulating ? (
               <button
                 onClick={handlePauseDrill}
-                className="flex-1 py-3 bg-[#FF7A45] hover:bg-[#e06332] text-white rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                className="flex-1 py-2.5 sm:py-3 bg-[#FF7A45] hover:bg-[#e06332] text-white rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-[0.99]"
               >
                 <Pause className="w-4 h-4" />
-                <span>Pause Auto-Simulation</span>
+                <span>Pause Simulation</span>
               </button>
             ) : (
               <button
                 onClick={handleStartDrill}
-                className="flex-1 py-3 bg-[#2C7BE5] hover:bg-[#2066c6] text-white rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-md"
+                className="flex-1 py-2.5 sm:py-3 bg-[#2C7BE5] hover:bg-[#2066c6] text-white rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md active:scale-[0.99]"
               >
                 <Play className="w-4 h-4 fill-current" />
                 <span>Start Live Auto Drill</span>
@@ -423,7 +435,7 @@ export const EvacuationDrillMode: React.FC = () => {
 
             <button
               onClick={handleNextStep}
-              className="py-3 px-4 bg-[#151726] hover:bg-[#25283e] text-white rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              className="py-2.5 px-3 sm:px-4 bg-[#151726] hover:bg-[#25283e] text-white rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.99]"
             >
               <span>Next</span>
               <ChevronRight className="w-4 h-4" />
