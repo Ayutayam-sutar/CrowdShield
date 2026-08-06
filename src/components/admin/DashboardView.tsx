@@ -32,9 +32,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onNavigateToAlerts,
   onOpenEmergencyBroadcast,
 }) => {
-  // Calculated overall venue risk
-  const highestZoneRisk = Math.max(...zones.map((z) => z.riskScore));
-  const venueRiskScore = isScenarioActive ? 92 : highestZoneRisk;
+  // Calculated overall venue risk (Average of all active zones)
+  const totalZoneRisk = zones.reduce((acc, z) => acc + (z.riskScore || 0), 0);
+  const averageZoneRisk = zones.length > 0 ? Math.round(totalZoneRisk / zones.length) : 0;
+  const venueRiskScore = isScenarioActive ? 92 : averageZoneRisk;
 
   const totalHeadcount = zones.reduce((acc, z) => acc + (z.currentHeadcount ?? 0), 0);
   const affectedZonesCount = zones.filter((z) => z.riskLevel === 'critical' || z.riskLevel === 'warning').length;
