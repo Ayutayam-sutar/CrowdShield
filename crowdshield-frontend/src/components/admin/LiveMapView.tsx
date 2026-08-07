@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { VenueZone, CCTVFeed, VenueInfo } from '../../types';
-import { MapContainer, TileLayer, Polygon, Marker, Popup, Polyline, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Polygon, Marker, Popup, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 import { 
   Video, 
@@ -10,21 +10,62 @@ import {
   CheckCircle2, 
   AlertTriangle,
   Eye,
-  X
+  X,
+  VideoOff,
+  RefreshCw
 } from 'lucide-react';
 
 interface LiveMapViewProps {
-  selectedVenue: VenueInfo;
+  selectedVenue: VenueInfo | null;
   zones: VenueZone[];
   cctvFeeds: CCTVFeed[];
 }
 
 export const LiveMapView: React.FC<LiveMapViewProps> = ({
   selectedVenue,
-  zones,
-  cctvFeeds,
+  zones = [],
+  cctvFeeds = [],
 }) => {
   const [activeCameraModal, setActiveCameraModal] = useState<CCTVFeed | null>(null);
+  const [failedFeeds, setFailedFeeds] = useState<Record<string, boolean>>({});
+  const [streamCacheBusters, setStreamCacheBusters] = useState<Record<string, number>>({});
+
+  const centerCoords: [number, number] = selectedVenue?.centerCoords || [28.5833, 77.2333];
+
+  const handleImageError = (feedId: string) => {
+    setFailedFeeds((prev) => ({ ...prev, [feedId]: true }));
+  };
+
+  const handleRetryFeed = (feedId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setStreamCacheBusters((prev) => ({ ...prev, [feedId]: Date.now() }));
+    setFailedFeeds((prev) => ({ ...prev, [feedId]: false }));
+  };
+
+  // Extract port from stream URL (e.g. http://localhost:5001/video_feed -> 5001)
+  const getPortFromUrl = (url: string, defaultPort: string = '5000') => {
+    const match = url.match(/:(\d+)\//);
+    return match ? match[1] : defaultPort;
+  };
+
+  // Match feed with live telemetry zone data
+  const findMatchedZone = (feed: CCTVFeed): VenueZone | null => {
+    if (!zones || zones.length === 0) return null;
+    const camNum = feed.id.replace(/\D/g, '');
+    return zones.find((z) => {
+      const zid = (z.id || '').toLowerCase();
+      const zcode = (z.code || '').toLowerCase();
+      const targetId = (feed.zoneId || '').toLowerCase();
+      if (targetId && (zid === targetId || zcode === targetId)) return true;
+      if (camNum) {
+        const num = parseInt(camNum, 10);
+        if (zid.includes(`z-${num}`) || zid.includes(`z-0${num}`) || zcode.includes(`z-${num}`) || zcode.includes(`z-0${num}`)) {
+          return true;
+        }
+      }
+      return false;
+    }) || null;
+  };
 
   // Custom DivIcon generator for Leaflet markers
   const createZoneMarkerIcon = (code: string, density: number, riskLevel: string) => {
@@ -69,7 +110,7 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
             Spatial Telemetry & Heatmap Overlay
           </h2>
           <span className="text-xs text-[#5B5F73]">
-            {selectedVenue.name}
+            {selectedVenue ? selectedVenue.name : 'Awaiting Edge Telemetry...'}
           </span>
         </div>
 
@@ -86,7 +127,7 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
       {/* Main Leaflet Map View */}
       <div className="flex-1 w-full h-full relative z-0">
         <MapContainer
-          center={selectedVenue.centerCoords}
+          center={centerCoords}
           zoom={16}
           scrollWheelZoom={true}
           className="w-full h-full"
@@ -139,9 +180,9 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
           {/* Citizen Evacuation Polyline Path avoiding red bottleneck zones */}
           <Polyline
             positions={[
-              [20.2961, 85.8245], // User Blue Dot / Gate 3
-              [20.2980, 85.8230], // Curved waypoint around red zone
-              [20.3010, 85.8270]  // Safe Exit Gate 4
+              [20.2961, 85.8245],
+              [20.2980, 85.8230],
+              [20.3010, 85.8270]
             ]}
             pathOptions={{
               color: '#2C7BE5',
@@ -168,21 +209,41 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
           </div>
 
           <div className="flex flex-col gap-2.5 text-xs">
-            <div className="flex items-center justify-between p-2 rounded-lg bg-[#22D3A6]/10 border border-[#22D3A6]/30">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-[#22D3A6]" />
-                <span className="font-bold text-[#151726]">Sector Alpha</span>
+            {zones.length > 0 ? (
+              zones.slice(0, 3).map((z) => (
+                <div 
+                  key={z.id} 
+                  className={`flex items-center justify-between p-2 rounded-lg border ${
+                    z.riskLevel === 'critical' ? 'bg-[#FF3B5C]/10 border-[#FF3B5C]/30' :
+                    z.riskLevel === 'warning' ? 'bg-[#FF7A45]/10 border-[#FF7A45]/30' :
+                    z.riskLevel === 'caution' ? 'bg-[#FFB627]/10 border-[#FFB627]/30' :
+                    'bg-[#22D3A6]/10 border-[#22D3A6]/30'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    {z.riskLevel === 'critical' || z.riskLevel === 'warning' ? (
+                      <AlertTriangle className="w-4 h-4 text-[#FF3B5C]" />
+                    ) : (
+                      <CheckCircle2 className="w-4 h-4 text-[#22D3A6]" />
+                    )}
+                    <span className="font-bold text-[#151726]">{z.name}</span>
+                  </div>
+                  <span className="font-mono-num font-bold uppercase text-[11px]" style={{
+                    color: z.riskLevel === 'critical' ? '#FF3B5C' : z.riskLevel === 'warning' ? '#FF7A45' : z.riskLevel === 'caution' ? '#FFB627' : '#22D3A6'
+                  }}>
+                    {z.currentHeadcount} p · {z.density.toFixed(1)} p/m²
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div className="flex items-center justify-between p-2 rounded-lg bg-[#22D3A6]/10 border border-[#22D3A6]/30">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-[#22D3A6]" />
+                  <span className="font-bold text-[#151726]">All Sectors</span>
+                </div>
+                <span className="font-mono-num font-bold text-[#22D3A6]">SECURE</span>
               </div>
-              <span className="font-mono-num font-bold text-[#22D3A6]">SECURE · 1.8 p/m²</span>
-            </div>
-
-            <div className="flex items-center justify-between p-2 rounded-lg bg-[#FF3B5C]/10 border border-[#FF3B5C]/30">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-[#FF3B5C]" />
-                <span className="font-bold text-[#151726]">Sector Bravo</span>
-              </div>
-              <span className="font-mono-num font-bold text-[#FF3B5C]">CRITICAL · 4.8 p/m²</span>
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -192,7 +253,7 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
         <div className="flex items-center justify-between px-2 text-xs">
           <span className="font-heading font-bold text-gray-300 flex items-center gap-2">
             <Video className="w-4 h-4 text-[#2C7BE5]" />
-            LIVE EDGE CCTV FEEDS (YOLO11 COMPLIANT)
+            LIVE EDGE CCTV FEEDS (MULTI-PORT MJPEG)
           </span>
           <span className="text-gray-400 font-mono-num text-[11px]">
             4 Active Feeds · 120 FPS Aggregate
@@ -200,57 +261,89 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {cctvFeeds.map((feed) => (
-            <div
-              key={feed.id}
-              onClick={() => setActiveCameraModal(feed)}
-              className="relative rounded-xl overflow-hidden border border-white/15 bg-black cursor-pointer group aspect-video"
-            >
-              <img
-                src={feed.imageUrl}
-                alt={feed.name}
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              />
+          {cctvFeeds.map((feed) => {
+            const port = getPortFromUrl(feed.imageUrl);
+            const matchedZone = findMatchedZone(feed);
+            const isOffline = failedFeeds[feed.id];
+            const cacheBuster = streamCacheBusters[feed.id];
+            const streamUrl = cacheBuster ? `${feed.imageUrl}?t=${cacheBuster}` : feed.imageUrl;
 
-              {/* YOLO11 Bounding Box Overlay Simulation */}
-              <div className="absolute inset-0 pointer-events-none p-1">
-                {feed.yoloDetections.map((det) => (
-                  <div
-                    key={det.id}
-                    style={{
-                      left: `${det.bbox.x}%`,
-                      top: `${det.bbox.y}%`,
-                      width: `${det.bbox.width}%`,
-                      height: `${det.bbox.height}%`,
-                    }}
-                    className={`absolute border ${
-                      det.type === 'backlog'
-                        ? 'border-[#FF3B5C] bg-[#FF3B5C]/20'
-                        : det.type === 'velocity_anomaly'
-                        ? 'border-[#FFB627] bg-[#FFB627]/20'
-                        : 'border-[#22D3A6] bg-[#22D3A6]/10'
-                    }`}
-                  >
-                    <span className="absolute -top-3 left-0 bg-black/80 text-[9px] font-mono-num px-1 rounded text-white whitespace-nowrap">
-                      {det.label}
+            const headcount = matchedZone ? matchedZone.currentHeadcount : (feed.personCount || 0);
+            const density = matchedZone ? matchedZone.density : 0;
+
+            return (
+              <div
+                key={feed.id}
+                onClick={() => setActiveCameraModal(feed)}
+                className="relative rounded-xl overflow-hidden border border-white/15 bg-black cursor-pointer group aspect-video"
+              >
+                {isOffline ? (
+                  <div className="w-full h-full bg-[#151726] flex flex-col items-center justify-center gap-1.5 text-white p-2 text-center">
+                    <VideoOff className="w-5 h-5 text-[#FF3B5C] animate-pulse" />
+                    <span className="font-heading font-bold text-[11px] text-white">
+                      Camera Offline - Awaiting Edge Feed
                     </span>
+                    <span className="px-1.5 py-0.5 rounded bg-[#FF3B5C]/20 border border-[#FF3B5C]/30 text-[#FF3B5C] font-mono-num font-bold text-[9px]">
+                      Port {port}
+                    </span>
+                    <button
+                      onClick={(e) => handleRetryFeed(feed.id, e)}
+                      className="mt-1 px-2.5 py-0.5 bg-[#2C7BE5] hover:bg-[#2C7BE5]/80 rounded text-[10px] font-bold text-white flex items-center gap-1 transition-colors"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      <span>Retry Stream</span>
+                    </button>
                   </div>
-                ))}
-              </div>
+                ) : (
+                  <img
+                    src={streamUrl}
+                    alt={feed.name}
+                    onError={() => handleImageError(feed.id)}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                )}
 
-              {/* Top Tag */}
-              <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-xs px-2 py-0.5 rounded text-[10px] font-mono-num text-white flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#22D3A6] animate-pulse" />
-                <span>{feed.name}</span>
-              </div>
+                {/* YOLO11 Bounding Box Overlay */}
+                {!isOffline && (
+                  <div className="absolute inset-0 pointer-events-none p-1">
+                    {feed.yoloDetections.map((det) => (
+                      <div
+                        key={det.id}
+                        style={{
+                          left: `${det.bbox.x}%`,
+                          top: `${det.bbox.y}%`,
+                          width: `${det.bbox.width}%`,
+                          height: `${det.bbox.height}%`,
+                        }}
+                        className={`absolute border ${
+                          det.type === 'backlog'
+                            ? 'border-[#FF3B5C] bg-[#FF3B5C]/20'
+                            : det.type === 'velocity_anomaly'
+                            ? 'border-[#FFB627] bg-[#FFB627]/20'
+                            : 'border-[#22D3A6] bg-[#22D3A6]/10'
+                        }`}
+                      >
+                        <span className="absolute -top-3 left-0 bg-black/80 text-[9px] font-mono-num px-1 rounded text-white whitespace-nowrap">
+                          {det.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
-              {/* Bottom Tag */}
-              <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-0.5 rounded text-[10px] font-mono-num text-white">
-                {feed.personCount} count
+                {/* Top Tag */}
+                <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-xs px-2 py-0.5 rounded text-[10px] font-mono-num text-white flex items-center gap-1">
+                  <span className={`w-1.5 h-1.5 rounded-full ${isOffline ? 'bg-[#FF3B5C]' : 'bg-[#22D3A6] animate-pulse'}`} />
+                  <span>{feed.name}</span>
+                </div>
+
+                {/* Bottom Tag - Dynamic Telemetry */}
+                <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-0.5 rounded text-[10px] font-mono-num text-white">
+                  {headcount} headcount {matchedZone ? `· ${density.toFixed(1)} p/m²` : ''}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -264,7 +357,7 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
                   {activeCameraModal.name}
                 </h3>
                 <p className="text-xs text-gray-400 font-mono-num">
-                  Location: {activeCameraModal.location} · Node: {activeCameraModal.edgeNodeId}
+                  Location: {activeCameraModal.location} · Node: {activeCameraModal.edgeNodeId} · Port: {getPortFromUrl(activeCameraModal.imageUrl)}
                 </p>
               </div>
               <button
@@ -276,41 +369,64 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
             </div>
 
             <div className="relative aspect-video bg-black w-full overflow-hidden">
-              <img
-                src={activeCameraModal.imageUrl}
-                alt={activeCameraModal.name}
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-cover"
-              />
+              {failedFeeds[activeCameraModal.id] ? (
+                <div className="w-full h-full bg-[#151726] flex flex-col items-center justify-center gap-3 text-white p-6 text-center">
+                  <VideoOff className="w-10 h-10 text-[#FF3B5C] animate-pulse" />
+                  <span className="font-heading font-bold text-base text-white">
+                    Camera Offline - Awaiting Edge Feed
+                  </span>
+                  <span className="px-3 py-1 rounded bg-[#FF3B5C]/20 border border-[#FF3B5C]/40 text-[#FF3B5C] font-mono-num font-bold text-xs">
+                    Target Port {getPortFromUrl(activeCameraModal.imageUrl)}
+                  </span>
+                  <button
+                    onClick={() => handleRetryFeed(activeCameraModal.id)}
+                    className="mt-2 px-4 py-1.5 bg-[#2C7BE5] hover:bg-[#2C7BE5]/80 rounded-xl text-xs font-bold text-white flex items-center gap-2 cursor-pointer transition-colors"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    <span>Retry Stream Connection</span>
+                  </button>
+                </div>
+              ) : (
+                <img
+                  src={streamCacheBusters[activeCameraModal.id] ? `${activeCameraModal.imageUrl}?t=${streamCacheBusters[activeCameraModal.id]}` : activeCameraModal.imageUrl}
+                  alt={activeCameraModal.name}
+                  onError={() => handleImageError(activeCameraModal.id)}
+                  className="w-full h-full object-cover"
+                />
+              )}
 
               {/* Bounding box overlays */}
-              <div className="absolute inset-0 p-4 pointer-events-none">
-                {activeCameraModal.yoloDetections.map((det) => (
-                  <div
-                    key={det.id}
-                    style={{
-                      left: `${det.bbox.x}%`,
-                      top: `${det.bbox.y}%`,
-                      width: `${det.bbox.width}%`,
-                      height: `${det.bbox.height}%`,
-                    }}
-                    className={`absolute border-2 ${
-                      det.type === 'backlog'
-                        ? 'border-[#FF3B5C] bg-[#FF3B5C]/25'
-                        : 'border-[#22D3A6] bg-[#22D3A6]/15'
-                    }`}
-                  >
-                    <span className="absolute -top-5 left-0 bg-[#151726] text-[11px] font-mono-num px-1.5 py-0.5 rounded text-white">
-                      {det.label}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              {!failedFeeds[activeCameraModal.id] && (
+                <div className="absolute inset-0 p-4 pointer-events-none">
+                  {activeCameraModal.yoloDetections.map((det) => (
+                    <div
+                      key={det.id}
+                      style={{
+                        left: `${det.bbox.x}%`,
+                        top: `${det.bbox.y}%`,
+                        width: `${det.bbox.width}%`,
+                        height: `${det.bbox.height}%`,
+                      }}
+                      className={`absolute border-2 ${
+                        det.type === 'backlog'
+                          ? 'border-[#FF3B5C] bg-[#FF3B5C]/25'
+                          : 'border-[#22D3A6] bg-[#22D3A6]/15'
+                      }`}
+                    >
+                      <span className="absolute -top-5 left-0 bg-[#151726] text-[11px] font-mono-num px-1.5 py-0.5 rounded text-white">
+                        {det.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="p-4 flex items-center justify-between text-xs font-mono-num text-gray-300 bg-white/5">
-              <span>YOLO11 Edge Inference: 30 FPS</span>
-              <span>Headcount: {activeCameraModal.personCount} individuals</span>
+              <span>YOLO11 Edge Stream · Port {getPortFromUrl(activeCameraModal.imageUrl)}</span>
+              <span>
+                Live Telemetry: {findMatchedZone(activeCameraModal)?.currentHeadcount ?? 0} headcount · {findMatchedZone(activeCameraModal)?.density.toFixed(1) ?? '--'} p/m²
+              </span>
               <button
                 onClick={() => setActiveCameraModal(null)}
                 className="px-4 py-1.5 bg-[#2C7BE5] text-white rounded-lg font-bold font-heading"

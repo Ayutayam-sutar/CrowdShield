@@ -45,20 +45,65 @@ import { SettingsView } from './components/admin/SettingsView';
 // Citizen View
 import { CitizenPortalView } from './components/citizen/CitizenPortalView';
 
+import api from './utils/api';
+
+export function mapBackendZoneToFrontend(raw: any): VenueZone {
+  const centerLat = raw.center_lat || (Array.isArray(raw.center) ? raw.center[0] : 28.5832);
+  const centerLng = raw.center_lng || (Array.isArray(raw.center) ? raw.center[1] : 77.2318);
+  return {
+    id: raw.id,
+    name: raw.name || raw.code || raw.id,
+    code: raw.code || raw.id,
+    sector: raw.sector || 'Sector General',
+    density: raw.density ?? 0,
+    maxCapacity: raw.capacity_limit ?? raw.maxCapacity ?? 3500,
+    currentHeadcount: raw.current_headcount ?? raw.currentHeadcount ?? 0,
+    flowRate: raw.flow_rate ?? raw.flowRate ?? 0,
+    riskScore: raw.risk_score ?? raw.riskScore ?? 0,
+    riskLevel: (raw.risk_level ?? raw.riskLevel ?? 'safe').toLowerCase() as any,
+    trend: (raw.trend ?? 'stable').toLowerCase() as any,
+    polygon: raw.coordinates_json?.polygon || raw.polygon || [
+      [centerLat - 0.001, centerLng - 0.001],
+      [centerLat + 0.001, centerLng - 0.001],
+      [centerLat + 0.001, centerLng + 0.001],
+      [centerLat - 0.001, centerLng + 0.001]
+    ],
+    center: [centerLat, centerLng],
+    gateStatus: (raw.gate_status ?? raw.gateStatus ?? 'open').toLowerCase() as any,
+  };
+}
+
+export function mapBackendVenueToFrontend(raw: any): VenueInfo {
+  const mappedZones = (raw.zones || []).map(mapBackendZoneToFrontend);
+  const totalHeadcount = mappedZones.reduce((acc: number, z: VenueZone) => acc + z.currentHeadcount, 0);
+  const affected = mappedZones.filter((z: VenueZone) => z.riskLevel === 'warning' || z.riskLevel === 'critical').length;
+
+  return {
+    id: raw.id,
+    name: raw.name,
+    location: raw.location,
+    centerCoords: [raw.gps_center_lat || 28.5833, raw.gps_center_lng || 77.2333],
+    totalCapacity: raw.total_capacity || 60000,
+    currentTotalHeadcount: totalHeadcount,
+    activeZonesCount: mappedZones.length,
+    affectedZonesCount: affected,
+  };
+}
+
 export default function App() {
   const { isAuthenticated, role, logout } = useAuth();
 
   // State
   const [viewMode, setViewMode] = useState<ViewMode>('auth');
   const [adminRoute, setAdminRoute] = useState<AdminRoute>('dashboard');
-  const [venues, setVenues] = useState<VenueInfo[]>(INITIAL_VENUES);
-  const [selectedVenue, setSelectedVenue] = useState<VenueInfo>(INITIAL_VENUES[0]);
+  const [venues, setVenues] = useState<VenueInfo[]>([]);
+  const [selectedVenue, setSelectedVenue] = useState<VenueInfo | null>(null);
   const [networkMode, setNetworkMode] = useState<NetworkMode>('edge');
   const [language, setLanguage] = useState<SupportedLanguage>('en');
   const [isScenarioActive, setIsScenarioActive] = useState<boolean>(false);
 
   // Core Data Collections State
-  const [zones, setZones] = useState<VenueZone[]>(INITIAL_ZONES);
+  const [zones, setZones] = useState<VenueZone[]>([]);
   const [alerts, setAlerts] = useState<CrowdAlert[]>(INITIAL_ALERTS);
   const [cctvFeeds, setCctvFeeds] = useState<CCTVFeed[]>(INITIAL_CCTV_FEEDS);
   const [citizenReports, setCitizenReports] = useState<CitizenReport[]>(INITIAL_CITIZEN_REPORTS);
@@ -156,35 +201,90 @@ export default function App() {
     });
   };
 
+  // Fetch Live Venues and Zones from FastAPI backend
+  useEffect(() => {
+    const fetchLiveData = async () => {
+      try {
+        const [venuesRes, zonesRes] = await Promise.all([
+          api.get('/venues').catch(() => ({ data: [] })),
+          api.get('/zones').catch(() => ({ data: [] })),
+        ]);
+
+        const rawVenues = Array.isArray(venuesRes.data) ? venuesRes.data : [];
+        const rawZones = Array.isArray(zonesRes.data) ? zonesRes.data : [];
+
+        const mappedVenues = rawVenues.map(mapBackendVenueToFrontend);
+        const mappedZones = rawZones.map(mapBackendZoneToFrontend);
+
+        setVenues(mappedVenues);
+        if (mappedVenues.length > 0) {
+          setSelectedVenue(mappedVenues[0]);
+        } else {
+          setSelectedVenue(null);
+        }
+
+        if (mappedZones.length > 0) {
+          setZones(mappedZones);
+          wsService.subscribeToZone(mappedZones[0].id);
+        } else {
+          setZones([]);
+        }
+      } catch (err) {
+        console.error('[API] Failed to fetch live venues and zones from backend:', err);
+      }
+    };
+
+    if (isAuthenticated) {
+      fetchLiveData();
+    }
+  }, [isAuthenticated]);
+
+  // Handle Venue selection and subscribe to its primary zone
+  const handleSelectVenue = (venue: VenueInfo) => {
+    setSelectedVenue(venue);
+    api.get('/zones').then((res) => {
+      const rawZones = Array.isArray(res.data) ? res.data : [];
+      const mappedZones = rawZones.map(mapBackendZoneToFrontend);
+      if (mappedZones.length > 0) {
+        setZones(mappedZones);
+        wsService.subscribeToZone(mappedZones[0].id);
+      }
+    }).catch((err) => {
+      console.error('[API] Failed to fetch zones for selected venue:', err);
+    });
+  };
+
   // Monitor zones for threshold breaches
   useEffect(() => {
     checkAndGenerateCrowdAlerts(zones);
   }, [zones]);
 
-  // WebSocket Connection
+  // WebSocket Connection & Real-Time Telemetry Subscription
   useEffect(() => {
     if (isAuthenticated) {
       wsService.connect();
 
       const unsubscribe = wsService.subscribe((data) => {
         if (data.event === 'TELEMETRY_UPDATE' && data.zone) {
-          // Update zone data
-          setZones((prevZones) =>
-            prevZones.map((z) =>
-              z.id === data.zone!.id ? { ...z, ...data.zone } : z
-            )
-          );
+          const updatedZone = mapBackendZoneToFrontend(data.zone);
+          // Update existing zone or dynamically insert new zone (e.g., z-3)
+          setZones((prevZones) => {
+            const exists = prevZones.some((z) => z.id === updatedZone.id);
+            if (exists) {
+              return prevZones.map((z) => (z.id === updatedZone.id ? { ...z, ...updatedZone } : z));
+            } else {
+              return [...prevZones, updatedZone];
+            }
+          });
 
           // Handle new alerts
           if (data.alert) {
             setAlerts((prevAlerts) => {
-              // Don't add duplicate active alerts for the same zone
               const exists = prevAlerts.find(a => a.id === data.alert!.id || (a.zoneId === data.alert!.zoneId && a.status === 'active'));
               if (exists) return prevAlerts;
               return [data.alert!, ...prevAlerts];
             });
 
-            // Trigger Toast
             addToastNotification(
               `CROWD SURGE ALERT`,
               `Zone ${data.zone.id} flagged by ML Risk Engine. Overrides applied.`,
@@ -193,7 +293,6 @@ export default function App() {
             );
           }
         } else if (data.event === 'RESOLVED_BY_VOLUNTEER' && data.alert_id) {
-          // Update alert status
           setAlerts((prevAlerts) => 
             prevAlerts.map(a => 
               a.id === data.alert_id 
@@ -323,7 +422,7 @@ export default function App() {
       <HeaderTopBar
         venues={venues}
         selectedVenue={selectedVenue}
-        onSelectVenue={(v) => setSelectedVenue(v)}
+        onSelectVenue={(v) => handleSelectVenue(v)}
         networkMode={networkMode}
         onToggleNetworkMode={handleToggleNetworkMode}
         language={language}
@@ -373,7 +472,7 @@ export default function App() {
           )}
 
           {adminRoute === 'cameras' && (
-            <CamerasView cctvFeeds={cctvFeeds} />
+            <CamerasView cctvFeeds={cctvFeeds} zones={zones} />
           )}
 
           {adminRoute === 'alerts' && (

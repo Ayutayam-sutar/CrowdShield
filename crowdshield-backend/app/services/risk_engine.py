@@ -4,12 +4,17 @@ Evaluates telemetry features to determine real-time crowd risk scores.
 """
 
 import xgboost as xgb
-import numpy as np
+import pandas as pd
 
 class RiskEngine:
     def __init__(self):
-        # Placeholder for XGBoost model loading
-        self.model = None
+        try:
+            self.model = xgb.Booster()
+            self.model.load_model('crowdshield_xgb_model.json')
+            print("[RiskEngine] Successfully loaded XGBoost AI model.")
+        except Exception as e:
+            print(f"[RiskEngine] Warning: Could not load model. Falling back to heuristics. Error: {e}")
+            self.model = None
 
     def calculate_risk(
         self, 
@@ -26,18 +31,29 @@ class RiskEngine:
         """
         override_applied = False
         
-        # Base ML Feature engineered scoring (Fallback if XGBoost isn't loaded)
-        # Normalize features
-        density_score = min(density / 5.0, 1.0) # Assume 5.0 is max safe density
-        flow_conflict_score = 1.0 if flow_conflict else 0.0
-        reverse_flow_penalty = 1.0 if reverse_flow_detected else 0.0
-        
-        # Risk = (0.45 * Density_Score) + (0.25 * Flow_Conflict_Score) + (0.20 * Reverse_Flow_Penalty) + (0.10 * Surge_Score)
-        base_risk_prob = (0.45 * density_score) + (0.25 * flow_conflict_score) + (0.20 * reverse_flow_penalty) + (0.10 * surge_score)
-        
-        risk_score = min(max(base_risk_prob, 0.0), 1.0) * 100.0
+        if self.model:
+            # --- 1. XGBoost AI Prediction ---
+            features = pd.DataFrame([{
+                'density': density,
+                'avg_speed': avg_speed,
+                'flow_conflict': int(flow_conflict),
+                'reverse_flow_detected': int(reverse_flow_detected),
+                'capacity_ratio': capacity_ratio,
+                'surge_score': surge_score
+            }])
+            dmatrix = xgb.DMatrix(features)
+            raw_pred = float(self.model.predict(dmatrix)[0])
+            risk_score = min(max(raw_pred, 0.0), 100.0) # Keep between 0 and 100
+        else:
+            # --- 2. Fallback Heuristics ---
+            density_score = min(density / 5.0, 1.0)
+            flow_conflict_score = 1.0 if flow_conflict else 0.0
+            reverse_flow_penalty = 1.0 if reverse_flow_detected else 0.0
+            
+            base_risk_prob = (0.45 * density_score) + (0.25 * flow_conflict_score) + (0.20 * reverse_flow_penalty) + (0.10 * surge_score)
+            risk_score = min(max(base_risk_prob, 0.0), 1.0) * 100.0
 
-        # Safety Rule Overrides (Non-negotiable life safety checks)
+        # --- 3. Safety Rule Overrides (Non-negotiable life safety checks) ---
         
         # Rule 1: Reverse Flow Penalty
         if reverse_flow_detected and density > 3.0:
@@ -54,7 +70,7 @@ class RiskEngine:
             risk_score = max(risk_score, 90.0)
             override_applied = True
             
-        # Determine Level
+        # --- 4. Determine Level ---
         if risk_score >= 90.0:
             risk_level = "critical"
         elif risk_score >= 75.0:

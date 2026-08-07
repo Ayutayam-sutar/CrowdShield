@@ -82,6 +82,17 @@ class WebSocketService {
     };
   }
 
+  subscribeToZone(zoneId: string) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      try {
+        this.ws.send(JSON.stringify({ action: 'subscribe_zone', zone_id: zoneId }));
+        console.log(`[WebSocket] Subscribed to telemetry for zone: ${zoneId}`);
+      } catch (err) {
+        console.error('[WebSocket] Error subscribing to zone', err);
+      }
+    }
+  }
+
   disconnect() {
     if (this.ws) {
       this.ws.close();

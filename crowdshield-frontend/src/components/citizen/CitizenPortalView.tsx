@@ -129,7 +129,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
     <div className="w-full max-w-5xl mx-auto min-h-screen bg-[#F4F3EF] flex flex-col font-body shadow-2xl border-x border-[#E7E5DD] relative selection:bg-[#2C7BE5]/20">
       
       {/* Mobile Top Header */}
-      <header className="bg-[#151726] text-white p-3 sm:p-4 sticky top-0 z-30 shadow-md flex items-center justify-between px-3.5 sm:px-6">
+      <header className="bg-[#151726] text-white p-3 sm:p-4 shadow-md flex items-center justify-between px-3.5 sm:px-6">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#2C7BE5] flex items-center justify-center font-bold text-white shadow-sm font-heading shrink-0 text-xs sm:text-sm">
             CS
@@ -174,7 +174,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
       </header>
 
       {/* Main Mode Navigation Bar */}
-      <div className="bg-white border-b border-[#E7E5DD] px-3.5 sm:px-6 py-2 flex items-center gap-2 sm:gap-3 sticky top-[53px] sm:top-[61px] z-20 shadow-xs">
+      <div className="bg-white border-b border-[#E7E5DD] px-3.5 sm:px-6 py-2 flex items-center gap-2 sm:gap-3 shadow-xs">
         <button
           onClick={() => setActiveTab('feed')}
           className={`flex-1 py-2.5 px-3 sm:px-4 rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer active:scale-[0.99] ${
