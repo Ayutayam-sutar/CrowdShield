@@ -1,6 +1,5 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { VenueZone, CrowdAlert, RiskLevel } from '../../types';
-import { PREDICTIVE_TREND_DATA } from '../../data/mockData';
 import { 
   Users, 
   AlertTriangle, 
@@ -32,6 +31,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onNavigateToAlerts,
   onOpenEmergencyBroadcast,
 }) => {
+  // Compute dynamic trend chart data from live zones telemetry
+  const dynamicTrendData = useMemo(() => {
+    if (zones.length === 0) {
+      return [
+        { time: '04:30', current: 0.5, predicted: 0.6 },
+        { time: '04:35', current: 0.8, predicted: 0.9 },
+        { time: '04:40', current: 1.2, predicted: 1.4 },
+        { time: '04:45', current: 1.8, predicted: 2.1 },
+        { time: '04:50 (Live)', current: 2.4, predicted: 2.8 },
+      ];
+    }
+    return zones.map((z, idx) => ({
+      time: `${z.code} (${z.name.split(' ')[0]})`,
+      current: Number(z.density.toFixed(2)),
+      predicted: Number((z.density * (1 + (z.riskScore / 100))).toFixed(2)),
+    }));
+  }, [zones]);
   // Calculated overall venue risk (Average of all active zones)
   const totalZoneRisk = zones.reduce((acc, z) => acc + (z.riskScore || 0), 0);
   const averageZoneRisk = zones.length > 0 ? Math.round(totalZoneRisk / zones.length) : 0;
@@ -262,7 +278,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           <div className="h-64 w-full mt-4">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={PREDICTIVE_TREND_DATA} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={dynamicTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="currentGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#2C7BE5" stopOpacity={0.4} />
@@ -318,60 +334,74 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E7E5DD]">
-              {zones.map((zone) => (
-                <tr key={zone.id} className="hover:bg-[#FAFAF7] transition-colors">
-                  <td className="py-3 px-3 font-mono-num font-bold text-[#151726]">
-                    {zone.code}
-                  </td>
-                  <td className="py-3 px-3 font-bold text-[#151726]">
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-1.5">
-                        <span>{zone.name}</span>
-                        {zone.density >= 3.5 && (
-                          <span className="px-1.5 py-0.2 rounded bg-[#FF3B5C]/15 text-[#FF3B5C] text-[9px] font-bold border border-[#FF3B5C]/30 animate-pulse">
-                            ⚠️ Reverse Flow Detected
-                          </span>
-                        )}
-                        {zone.riskScore > 50 && zone.density < 3.5 && (
-                          <span className="px-1.5 py-0.2 rounded bg-[#FF7A45]/15 text-[#FF7A45] text-[9px] font-bold border border-[#FF7A45]/30">
-                            ⚠️ Flow Conflict: High
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-[10px] font-normal text-[#5B5F73]">
-                        {zone.sector} · <strong className="text-[#2C7BE5]">Confidence: {(94 + (zone.riskScore % 5)).toFixed(1)}%</strong>
+              {zones.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-xs text-[#5B5F73]">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Radio className="w-6 h-6 text-[#2C7BE5] animate-pulse" />
+                      <span className="font-heading font-bold text-sm text-[#151726]">Awaiting Edge Telemetry...</span>
+                      <span className="text-[11px] text-[#5B5F73]">
+                        No active database zones loaded yet. Telemetry from YOLO pipeline will auto-populate live zones here.
                       </span>
                     </div>
                   </td>
-                  <td className="py-3 px-3 font-mono-num font-bold text-sm">
-                    <span className={zone.density >= 4.0 ? 'text-[#FF3B5C]' : zone.density >= 3.0 ? 'text-[#FF7A45]' : 'text-[#151726]'}>
-                      {zone.density} p/m²
-                    </span>
-                  </td>
-                  <td className="py-3 px-3 font-mono-num">
-                    {(zone.currentHeadcount ?? 0).toLocaleString()} / {(zone.maxCapacity ?? 0).toLocaleString()}
-                  </td>
-                  <td className="py-3 px-3 font-mono-num">
-                    <div className="flex items-center gap-1">
-                      <span>{zone.flowRate} p/min</span>
-                      {zone.trend === 'up' && <ArrowUpRight className="w-3.5 h-3.5 text-[#FF3B5C]" />}
-                      {zone.trend === 'down' && <ArrowDownRight className="w-3.5 h-3.5 text-[#22D3A6]" />}
-                      {zone.trend === 'stable' && <Minus className="w-3.5 h-3.5 text-gray-400" />}
-                    </div>
-                  </td>
-                  <td className="py-3 px-3">
-                    {getRiskLevelBadge(zone.riskLevel, zone.riskScore)}
-                  </td>
-                  <td className="py-3 px-3 text-right">
-                    <button
-                      onClick={onNavigateToMap}
-                      className="px-2.5 py-1 bg-[#FAFAF7] hover:bg-[#E7E5DD] border border-[#E7E5DD] text-[#2C7BE5] rounded-lg font-semibold text-xs transition-colors cursor-pointer"
-                    >
-                      Inspect Map
-                    </button>
-                  </td>
                 </tr>
-              ))}
+              ) : (
+                zones.map((zone) => (
+                  <tr key={zone.id} className="hover:bg-[#FAFAF7] transition-colors">
+                    <td className="py-3 px-3 font-mono-num font-bold text-[#151726]">
+                      {zone.code}
+                    </td>
+                    <td className="py-3 px-3 font-bold text-[#151726]">
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-1.5">
+                          <span>{zone.name}</span>
+                          {zone.density >= 3.5 && (
+                            <span className="px-1.5 py-0.2 rounded bg-[#FF3B5C]/15 text-[#FF3B5C] text-[9px] font-bold border border-[#FF3B5C]/30 animate-pulse">
+                              ⚠️ Reverse Flow Detected
+                            </span>
+                          )}
+                          {zone.riskScore > 50 && zone.density < 3.5 && (
+                            <span className="px-1.5 py-0.2 rounded bg-[#FF7A45]/15 text-[#FF7A45] text-[9px] font-bold border border-[#FF7A45]/30">
+                              ⚠️ Flow Conflict: High
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] font-normal text-[#5B5F73]">
+                          {zone.sector} · <strong className="text-[#2C7BE5]">Confidence: {(94 + (zone.riskScore % 5)).toFixed(1)}%</strong>
+                        </span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-3 font-mono-num font-bold text-sm">
+                      <span className={zone.density >= 4.0 ? 'text-[#FF3B5C]' : zone.density >= 3.0 ? 'text-[#FF7A45]' : 'text-[#151726]'}>
+                        {zone.density} p/m²
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 font-mono-num">
+                      {(zone.currentHeadcount ?? 0).toLocaleString()} / {(zone.maxCapacity ?? 0).toLocaleString()}
+                    </td>
+                    <td className="py-3 px-3 font-mono-num">
+                      <div className="flex items-center gap-1">
+                        <span>{zone.flowRate} p/min</span>
+                        {zone.trend === 'up' && <ArrowUpRight className="w-3.5 h-3.5 text-[#FF3B5C]" />}
+                        {zone.trend === 'down' && <ArrowDownRight className="w-3.5 h-3.5 text-[#22D3A6]" />}
+                        {zone.trend === 'stable' && <Minus className="w-3.5 h-3.5 text-gray-400" />}
+                      </div>
+                    </td>
+                    <td className="py-3 px-3">
+                      {getRiskLevelBadge(zone.riskLevel, zone.riskScore)}
+                    </td>
+                    <td className="py-3 px-3 text-right">
+                      <button
+                        onClick={onNavigateToMap}
+                        className="px-2.5 py-1 rounded-lg bg-[#FAFAF7] hover:bg-[#E7E5DD] border border-[#E7E5DD] text-[11px] font-bold text-[#2C7BE5] cursor-pointer"
+                      >
+                        Map View ➔
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

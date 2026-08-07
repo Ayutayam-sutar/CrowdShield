@@ -18,7 +18,7 @@ import {
 
 interface HeaderTopBarProps {
   venues: VenueInfo[];
-  selectedVenue: VenueInfo;
+  selectedVenue: VenueInfo | null;
   onSelectVenue: (venue: VenueInfo) => void;
   networkMode: NetworkMode;
   onToggleNetworkMode: () => void;
@@ -89,7 +89,9 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
               className="flex items-center gap-2 bg-[#FAFAF7] hover:bg-[#E7E5DD]/50 border border-[#E7E5DD] px-3 py-1.5 rounded-lg text-xs font-semibold text-[#151726] transition-colors cursor-pointer"
             >
               <MapPin className="w-4 h-4 text-[#2C7BE5]" />
-              <span className="truncate max-w-[180px] sm:max-w-[240px] font-heading">{selectedVenue.name}</span>
+              <span className="truncate max-w-[180px] sm:max-w-[240px] font-heading">
+                {selectedVenue ? selectedVenue.name : 'Awaiting Edge Telemetry...'}
+              </span>
               <ChevronDown className="w-3.5 h-3.5 text-[#5B5F73]" />
             </button>
 
@@ -98,21 +100,29 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
                 <div className="px-3 py-1.5 text-[11px] font-bold text-[#5B5F73] uppercase tracking-wider border-b border-[#E7E5DD]">
                   Active Command Venues
                 </div>
-                {venues.map((venue) => (
-                  <button
-                    key={venue.id}
-                    onClick={() => {
-                      onSelectVenue(venue);
-                      setIsVenueDropdownOpen(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 text-xs flex flex-col gap-0.5 hover:bg-[#FAFAF7] transition-colors ${
-                      venue.id === selectedVenue.id ? 'bg-[#2C7BE5]/10 font-bold border-l-4 border-[#2C7BE5]' : ''
-                    }`}
-                  >
-                    <span className="text-[#151726]">{venue.name}</span>
-                    <span className="text-[11px] text-[#5B5F73] font-mono-num">{venue.location} · {(venue.currentTotalHeadcount ?? 0).toLocaleString()} active</span>
-                  </button>
-                ))}
+                {venues.length === 0 ? (
+                  <div className="px-3 py-3 text-xs text-[#5B5F73] text-center italic">
+                    Awaiting Edge Telemetry...
+                  </div>
+                ) : (
+                  venues.map((venue) => (
+                    <button
+                      key={venue.id}
+                      onClick={() => {
+                        onSelectVenue(venue);
+                        setIsVenueDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-xs flex flex-col gap-0.5 hover:bg-[#FAFAF7] transition-colors ${
+                        selectedVenue && venue.id === selectedVenue.id ? 'bg-[#2C7BE5]/10 font-bold border-l-4 border-[#2C7BE5]' : ''
+                      }`}
+                    >
+                      <span className="text-[#151726]">{venue.name}</span>
+                      <span className="text-[11px] text-[#5B5F73] font-mono-num">
+                        {venue.location} · {(venue.currentTotalHeadcount ?? 0).toLocaleString()} active
+                      </span>
+                    </button>
+                  ))
+                )}
               </div>
             )}
           </div>

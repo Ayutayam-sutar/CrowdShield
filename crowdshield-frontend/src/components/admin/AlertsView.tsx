@@ -109,7 +109,14 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
           </div>
 
           <div className="flex flex-col gap-2.5">
-            {alerts.map((alert) => {
+            {alerts.length === 0 ? (
+              <div className="py-8 text-center text-xs text-[#5B5F73] flex flex-col items-center justify-center gap-2">
+                <CheckCircle2 className="w-8 h-8 text-[#22D3A6]" />
+                <span className="font-heading font-bold text-xs text-[#151726]">No Active Crowd Alerts</span>
+                <span className="text-[10px] text-[#5B5F73]">All venue sectors currently operating within safe density thresholds.</span>
+              </div>
+            ) : (
+              alerts.map((alert) => {
               const isSelected = alert.id === selectedAlertId;
               let borderClass = 'border-l-4 border-[#FF3B5C]';
               if (alert.riskLevel === 'warning') borderClass = 'border-l-4 border-[#FF7A45]';
@@ -154,7 +161,8 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
                   </div>
                 </div>
               );
-            })}
+            })
+          )}
           </div>
         </div>
 

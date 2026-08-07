@@ -9,6 +9,8 @@ class TelemetryCreate(BaseModel):
     zone_id: str
     person_count: int
     avg_speed: float
+    density: Optional[float] = 0.0
+    surge_score: Optional[float] = 0.0
     flow_conflict: bool = False
     reverse_flow_detected: bool = False
 
