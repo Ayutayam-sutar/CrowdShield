@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { HISTORICAL_FOOTFALL_DATA } from '../../data/mockData';
+import React, { useState, useEffect } from 'react';
 import { 
   BarChart3, 
   Download, 
@@ -34,11 +33,28 @@ export const AnalyticsView: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [aiSummary, setAiSummary] = useState<string>('');
   const [isLoadingSummary, setIsLoadingSummary] = useState<boolean>(false);
+  const [historicalData, setHistoricalData] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    const fetchHistoricalData = async () => {
+      try {
+        const api = (await import('../../utils/api')).default;
+        const response = await api.get('/analytics/history');
+        setHistoricalData(response.data);
+      } catch (err) {
+        console.error("Failed to fetch historical analytics data", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchHistoricalData();
+  }, []);
 
   const handleExportCSV = () => {
     const csvContent = "data:text/csv;charset=utf-8," 
       + "Hour,Footfall,Bottlenecks\n"
-      + HISTORICAL_FOOTFALL_DATA.map(e => `${e.hour},${e.footfall},${e.bottlenecks}`).join("\n");
+      + historicalData.map(e => `${e.hour},${e.footfall},${e.bottlenecks}`).join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -104,65 +120,82 @@ export const AnalyticsView: React.FC = () => {
       </div>
 
       {/* Grid of Analytics Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Footfall Trend */}
-        <div className="bg-white border border-[#E7E5DD] rounded-2xl p-6 shadow-[0_2px_12px_rgba(21,23,38,0.04)] flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-heading font-bold text-base text-[#151726]">
-                Hourly Footfall Surge Pattern
-              </h3>
-              <p className="text-xs text-[#5B5F73]">
-                Aggregated entrance counts across all 12 venue turnstiles.
-              </p>
-            </div>
-            <span className="font-mono-num text-xs font-bold text-[#2C7BE5]">Peak: 18,500</span>
-          </div>
-
-          <div className="h-64 w-full mt-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={HISTORICAL_FOOTFALL_DATA} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="footfallGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#2C7BE5" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#2C7BE5" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="hour" stroke="#5B5F73" fontSize={11} tickLine={false} />
-                <YAxis stroke="#5B5F73" fontSize={11} tickLine={false} />
-                <Tooltip contentStyle={{ backgroundColor: '#151726', borderRadius: '10px', color: '#fff', fontSize: '12px' }} />
-                <Area type="monotone" dataKey="footfall" stroke="#2C7BE5" strokeWidth={3} fillOpacity={1} fill="url(#footfallGrad)" />
-              </AreaChart>
-            </ResponsiveContainer>
+      {isLoading ? (
+        <div className="flex items-center justify-center h-64 bg-white border border-[#E7E5DD] rounded-2xl shadow-[0_2px_12px_rgba(21,23,38,0.04)]">
+          <div className="flex flex-col items-center gap-3 text-[#7C6CFF]">
+            <div className="w-8 h-8 border-4 border-current border-t-transparent rounded-full animate-spin"></div>
+            <span className="font-heading font-bold animate-pulse text-sm">Fetching telemetry history...</span>
           </div>
         </div>
-
-        {/* Bottlenecks by Hour */}
-        <div className="bg-white border border-[#E7E5DD] rounded-2xl p-6 shadow-[0_2px_12px_rgba(21,23,38,0.04)] flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-heading font-bold text-base text-[#151726]">
-                Bottleneck Frequency Incident Bar
-              </h3>
-              <p className="text-xs text-[#5B5F73]">
-                Number of detected crush risk warnings by hour.
-              </p>
+      ) : historicalData.length === 0 ? (
+        <div className="flex items-center justify-center h-64 bg-white border border-[#E7E5DD] rounded-2xl shadow-[0_2px_12px_rgba(21,23,38,0.04)]">
+          <p className="text-[#5B5F73] text-sm font-heading">Awaiting sufficient telemetry data to generate reports.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Footfall Trend */}
+          <div className="bg-white border border-[#E7E5DD] rounded-2xl p-6 shadow-[0_2px_12px_rgba(21,23,38,0.04)] flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-heading font-bold text-base text-[#151726]">
+                  Hourly Footfall Surge Pattern
+                </h3>
+                <p className="text-xs text-[#5B5F73]">
+                  Aggregated entrance counts across all 12 venue turnstiles.
+                </p>
+              </div>
+              <span className="font-mono-num text-xs font-bold text-[#2C7BE5]">
+                Peak: {Math.max(0, ...historicalData.map(d => d.footfall)).toLocaleString()}
+              </span>
             </div>
-            <span className="font-mono-num text-xs font-bold text-[#FF3B5C]">Max: 5 Bottlenecks</span>
+  
+            <div className="h-64 w-full mt-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={historicalData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="footfallGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#2C7BE5" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="#2C7BE5" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="hour" stroke="#5B5F73" fontSize={11} tickLine={false} />
+                  <YAxis stroke="#5B5F73" fontSize={11} tickLine={false} />
+                  <Tooltip contentStyle={{ backgroundColor: '#151726', borderRadius: '10px', color: '#fff', fontSize: '12px' }} />
+                  <Area type="monotone" dataKey="footfall" stroke="#2C7BE5" strokeWidth={3} fillOpacity={1} fill="url(#footfallGrad)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-
-          <div className="h-64 w-full mt-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={HISTORICAL_FOOTFALL_DATA} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <XAxis dataKey="hour" stroke="#5B5F73" fontSize={11} tickLine={false} />
-                <YAxis stroke="#5B5F73" fontSize={11} tickLine={false} />
-                <Tooltip contentStyle={{ backgroundColor: '#151726', borderRadius: '10px', color: '#fff', fontSize: '12px' }} />
-                <Bar dataKey="bottlenecks" fill="#FF7A45" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+  
+          {/* Bottlenecks by Hour */}
+          <div className="bg-white border border-[#E7E5DD] rounded-2xl p-6 shadow-[0_2px_12px_rgba(21,23,38,0.04)] flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-heading font-bold text-base text-[#151726]">
+                  Bottleneck Frequency Incident Bar
+                </h3>
+                <p className="text-xs text-[#5B5F73]">
+                  Number of detected crush risk warnings by hour.
+                </p>
+              </div>
+              <span className="font-mono-num text-xs font-bold text-[#FF3B5C]">
+                Max: {Math.max(0, ...historicalData.map(d => d.bottlenecks))} Bottlenecks
+              </span>
+            </div>
+  
+            <div className="h-64 w-full mt-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={historicalData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <XAxis dataKey="hour" stroke="#5B5F73" fontSize={11} tickLine={false} />
+                  <YAxis stroke="#5B5F73" fontSize={11} tickLine={false} />
+                  <Tooltip contentStyle={{ backgroundColor: '#151726', borderRadius: '10px', color: '#fff', fontSize: '12px' }} />
+                  <Bar dataKey="bottlenecks" fill="#FF7A45" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Audit Log Table */}
       <div className="bg-white border border-[#E7E5DD] rounded-2xl p-6 shadow-[0_2px_12px_rgba(21,23,38,0.04)] flex flex-col gap-4">

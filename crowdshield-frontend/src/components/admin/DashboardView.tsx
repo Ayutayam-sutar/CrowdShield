@@ -60,7 +60,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   // Calculated aggregate metrics with zero fallbacks
   const totalZoneRisk = zones.reduce((acc, z) => acc + (z.riskScore || 0), 0);
   const averageZoneRisk = zones.length > 0 ? Math.round(totalZoneRisk / zones.length) : 0;
-  const venueRiskScore = isScenarioActive ? 92 : averageZoneRisk;
+  const venueRiskScore = averageZoneRisk;
 
   const totalHeadcount = zones.length > 0 ? zones.reduce((acc, z) => acc + (z.currentHeadcount ?? 0), 0) : 0;
   const totalFlowRate = zones.reduce((acc, z) => acc + (z.flowRate ?? 0), 0);
@@ -243,9 +243,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           <p className="text-xs text-[#5B5F73] max-w-xs mt-2 font-mono-num">
-            {isScenarioActive
-              ? '⚠ SIMULATED STAMPEDE IN PROGRESS: Critical crushing density projected at Gate 3.'
-              : zones.length === 0
+            {zones.length === 0
               ? 'Awaiting live telemetry stream...'
               : `Averaged across ${zones.length} active venue zone${zones.length > 1 ? 's' : ''}.`}
           </p>
