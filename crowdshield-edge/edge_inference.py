@@ -228,7 +228,7 @@ def generate_mjpeg_stream(source):
                         (0, 0, 255) if latest_surge_score > 0.7 else (0, 255, 0), 3)
 
             # 4. Encode frame to JPEG format
-            ret, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
+            ret, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 55])
             if not ret:
                 continue
 
