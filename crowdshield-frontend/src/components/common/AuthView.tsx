@@ -32,75 +32,60 @@ interface AuthViewProps {
 
 export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
   const { login } = useAuth();
-  const [activeTab, setActiveTab] = useState<'admin' | 'citizen'>('citizen');
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Citizen Authentication State
-  const [citizenContact, setCitizenContact] = useState('+91 98765-43210');
-  const [citizenName, setCitizenName] = useState('Ananya Sharma');
-  const [citizenOtp, setCitizenOtp] = useState('492-015');
-
-  // Admin Authentication State
-  const [operatorId, setOperatorId] = useState('CHIEF-OPERATOR-01');
-  const [password, setPassword] = useState('Sentinel2026#Secure');
+  // Login Credentials State
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [selectedAdminVenue, setSelectedAdminVenue] = useState('Jawaharlal Nehru Stadium - Sector 7G');
-  const [mfaCode, setMfaCode] = useState('948-210');
 
-  const handleAdminSubmit = async (e: React.FormEvent) => {
+  // Register Credentials State
+  const [registerName, setRegisterName] = useState('');
+  const [registerEmail, setRegisterEmail] = useState('');
+  const [registerPassword, setRegisterPassword] = useState('');
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setErrorMsg(null);
     try {
-      const formData = new URLSearchParams();
-      formData.append('username', operatorId);
-      formData.append('password', password);
-      
-      const response = await api.post('/auth/login/admin', formData, {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      const response = await api.post('/auth/login', {
+        email,
+        password,
       });
       
       login(response.data.access_token);
-      onLogin('admin');
+      const role = response.data.role;
+      onLogin(role === 'ADMIN' ? 'admin' : 'citizen');
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.detail || 'Failed to authenticate');
+      setErrorMsg(err.response?.data?.detail || 'Incorrect email or password. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleCitizenSubmit = async (e: React.FormEvent) => {
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setErrorMsg(null);
     try {
-      const response = await api.post('/auth/login/citizen', {
-        contact: citizenContact,
-        name: citizenName,
-        otp: citizenOtp
+      const response = await api.post('/auth/register', {
+        name: registerName,
+        email: registerEmail,
+        password: registerPassword,
       });
       
       login(response.data.access_token);
       onLogin('citizen');
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.detail || 'Failed to authenticate');
+      setErrorMsg(err.response?.data?.detail || 'Registration failed. Email may already be in use.');
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const fillDemoAdmin = () => {
-    setOperatorId('CHIEF-OPERATOR-02');
-    setPassword('Sentinel@2026');
-    setMfaCode('882-194');
-  };
-
-  const fillDemoCitizen = () => {
-    setCitizenContact('+91 98765-43210');
-    setCitizenName('Rahul Verma');
-    setCitizenOtp('881-304');
   };
 
   const scrollToSection = (id: string) => {
@@ -136,16 +121,16 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
 
           {/* Desktop Nav Links */}
           <nav className="hidden lg:flex items-center gap-8 text-xs font-semibold text-[#5B5F73]">
-            <button onClick={() => scrollToSection('features')} className="hover:text-[#2C7BE5] transition-colors cursor-pointer">
+            <button onClick={() => scrollToSection('features')} className="hover:text-[#2C7BE5] transition-colors cursor-pointer bg-transparent border-none">
               Platform Features
             </button>
-            <button onClick={() => scrollToSection('login-deck')} className="hover:text-[#2C7BE5] transition-colors cursor-pointer">
+            <button onClick={() => scrollToSection('login-deck')} className="hover:text-[#2C7BE5] transition-colors cursor-pointer bg-transparent border-none">
               Authentication Gateways
             </button>
-            <button onClick={() => scrollToSection('features')} className="hover:text-[#2C7BE5] transition-colors cursor-pointer">
+            <button onClick={() => scrollToSection('features')} className="hover:text-[#2C7BE5] transition-colors cursor-pointer bg-transparent border-none">
               YOLO Vision Engine
             </button>
-            <button onClick={() => scrollToSection('features')} className="hover:text-[#2C7BE5] transition-colors cursor-pointer">
+            <button onClick={() => scrollToSection('features')} className="hover:text-[#2C7BE5] transition-colors cursor-pointer bg-transparent border-none">
               NDRF Compliance
             </button>
           </nav>
@@ -154,31 +139,29 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <button
               onClick={() => {
-                setActiveTab('citizen');
+                setAuthMode('register');
                 scrollToSection('login-deck');
               }}
-              className="px-3 sm:px-4 py-2 rounded-xl bg-[#22D3A6] hover:bg-[#1ebf95] text-[#151726] text-xs font-heading font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer active:scale-95"
+              className="px-3 sm:px-4 py-2 rounded-xl bg-[#22D3A6] hover:bg-[#1ebf95] text-[#151726] text-xs font-heading font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer active:scale-95 border-none"
             >
               <Smartphone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span className="hidden sm:inline">Citizen Visitor</span>
-              <span className="sm:hidden">Visitor</span>
+              <span>Register</span>
             </button>
 
             <button
               onClick={() => {
-                setActiveTab('admin');
+                setAuthMode('login');
                 scrollToSection('login-deck');
               }}
-              className="px-3 sm:px-4 py-2 rounded-xl bg-[#151726] hover:bg-[#25283e] text-white text-xs font-heading font-bold transition-all cursor-pointer shadow-sm active:scale-95"
+              className="px-3 sm:px-4 py-2 rounded-xl bg-[#151726] hover:bg-[#25283e] text-white text-xs font-heading font-bold transition-all cursor-pointer shadow-sm active:scale-95 border-none"
             >
-              <span className="hidden sm:inline">Control Room</span>
-              <span className="sm:hidden">Control</span>
+              <span>Sign In</span>
             </button>
 
             {/* Mobile Hamburger Toggle */}
             <button 
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 text-[#151726] hover:bg-[#FAFAF7] rounded-lg border border-[#E7E5DD] ml-1"
+              className="lg:hidden p-2 text-[#151726] hover:bg-[#FAFAF7] rounded-lg border border-[#E7E5DD] ml-1 bg-transparent"
               aria-label="Toggle menu"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -189,13 +172,13 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
         {/* Mobile Dropdown Navigation */}
         {mobileMenuOpen && (
           <div className="lg:hidden mt-3 pt-3 border-t border-[#E7E5DD] flex flex-col gap-2.5 pb-2 text-xs font-semibold text-[#5B5F73]">
-            <button onClick={() => scrollToSection('features')} className="text-left py-1.5 hover:text-[#2C7BE5]">
+            <button onClick={() => scrollToSection('features')} className="text-left py-1.5 hover:text-[#2C7BE5] bg-transparent border-none">
               Platform Features
             </button>
-            <button onClick={() => scrollToSection('login-deck')} className="text-left py-1.5 hover:text-[#2C7BE5]">
+            <button onClick={() => scrollToSection('login-deck')} className="text-left py-1.5 hover:text-[#2C7BE5] bg-transparent border-none">
               Authentication Gateways
             </button>
-            <button onClick={() => scrollToSection('features')} className="text-left py-1.5 hover:text-[#2C7BE5]">
+            <button onClick={() => scrollToSection('features')} className="text-left py-1.5 hover:text-[#2C7BE5] bg-transparent border-none">
               YOLO Vision Engine
             </button>
           </div>
@@ -210,8 +193,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
         </div>
 
         <h1 className="font-heading font-bold text-2xl sm:text-5xl lg:text-6xl text-[#151726] tracking-tight max-w-4xl leading-[1.2] sm:leading-[1.15]">
-         Predict the Surge. Prevent the Crush.
-  <span className="bg-gradient-to-r from-[#2C7BE5] via-[#7C6CFF] to-[#059669] bg-clip-text text-transparent"> AI-powered crowd intelligence</span> that sees danger before it unfolds.
+          Predict the Surge. Prevent the Crush.
+          <span className="bg-gradient-to-r from-[#2C7BE5] via-[#7C6CFF] to-[#059669] bg-clip-text text-transparent"> AI-powered crowd intelligence</span> that sees danger before it unfolds.
         </h1>
 
         <p className="mt-3 sm:mt-6 text-xs sm:text-base text-[#5B5F73] max-w-2xl leading-relaxed font-medium px-2">
@@ -222,25 +205,25 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
         <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 w-full sm:w-auto px-2">
           <button
             onClick={() => {
-              setActiveTab('citizen');
+              setAuthMode('login');
               scrollToSection('login-deck');
             }}
-            className="px-5 sm:px-6 py-3.5 bg-[#22D3A6] hover:bg-[#1ebf95] text-[#151726] rounded-2xl font-heading font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg hover:shadow-[#22D3A6]/25 transition-all cursor-pointer active:scale-95"
+            className="px-5 sm:px-6 py-3.5 bg-[#2C7BE5] hover:bg-[#2066c6] text-white rounded-2xl font-heading font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg hover:shadow-[#2C7BE5]/25 transition-all cursor-pointer active:scale-95 border-none"
           >
-            <Smartphone className="w-4 h-4 shrink-0" />
-            <span>Enter Citizen Portal</span>
+            <Lock className="w-4 h-4 shrink-0" />
+            <span>Sign In to Platform</span>
+            <ArrowRight className="w-4 h-4 shrink-0" />
           </button>
 
           <button
             onClick={() => {
-              setActiveTab('admin');
+              setAuthMode('register');
               scrollToSection('login-deck');
             }}
-            className="px-5 sm:px-6 py-3.5 bg-[#2C7BE5] hover:bg-[#2066c6] text-white rounded-2xl font-heading font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg hover:shadow-[#2C7BE5]/25 transition-all cursor-pointer active:scale-95"
+            className="px-5 sm:px-6 py-3.5 bg-[#22D3A6] hover:bg-[#1ebf95] text-[#151726] rounded-2xl font-heading font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg hover:shadow-[#22D3A6]/25 transition-all cursor-pointer active:scale-95 border-none"
           >
-            <Lock className="w-4 h-4 shrink-0" />
-            <span>Control Room Command Deck</span>
-            <ArrowRight className="w-4 h-4 shrink-0" />
+            <Smartphone className="w-4 h-4 shrink-0" />
+            <span>Register Citizen Account</span>
           </button>
         </div>
 
@@ -273,46 +256,20 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
         <div className="max-w-4xl mx-auto flex flex-col items-center">
           <div className="text-center mb-6 sm:mb-8">
             <span className="text-xs font-mono-num font-bold text-[#2C7BE5] uppercase tracking-wider bg-[#2C7BE5]/10 px-3 py-1 rounded-full border border-[#2C7BE5]/20">
-              Secure Gateway Access
+              Authentication Gateway
             </span>
-            <h2 className="font-heading font-bold text-2xl sm:text-3xl text-[#151726] mt-3">Select Your Login Role</h2>
+            <h2 className="font-heading font-bold text-2xl sm:text-3xl text-[#151726] mt-3">
+              {authMode === 'login' ? 'Sign In to Your Account' : 'Register Citizen Account'}
+            </h2>
             <p className="text-xs text-[#5B5F73] mt-1.5 px-2 max-w-md">
-              Citizens log in with Email or Mobile Number. Control Room personnel use Security Credentials.
+              {authMode === 'login' 
+                ? 'Enter your registered email and passcode to access your dashboard.'
+                : 'Create an account as a citizen to access density alerts and report emergency SOS.'}
             </p>
           </div>
 
-          {/* Role Switch Tabs */}
-          <div className="flex items-center bg-[#FAFAF7] p-1.5 rounded-2xl border border-[#E7E5DD] mb-6 sm:mb-8 max-w-md w-full shadow-inner">
-            <button
-              type="button"
-              onClick={() => setActiveTab('citizen')}
-              className={`flex-1 py-2.5 sm:py-3 rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer ${
-                activeTab === 'citizen'
-                  ? 'bg-[#22D3A6] text-[#151726] shadow-md'
-                  : 'text-[#5B5F73] hover:text-[#151726]'
-              }`}
-            >
-              <Smartphone className="w-4 h-4 shrink-0" />
-              <span>Citizen Visitor</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('admin')}
-              className={`flex-1 py-2.5 sm:py-3 rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer ${
-                activeTab === 'admin'
-                  ? 'bg-[#2C7BE5] text-white shadow-md'
-                  : 'text-[#5B5F73] hover:text-[#151726]'
-              }`}
-            >
-              <Lock className="w-4 h-4 shrink-0" />
-              <span>Control Room</span>
-            </button>
-          </div>
-
-          {/* Login Card Container */}
-          <div className="w-full max-w-2xl bg-[#FAFAF7] border border-[#E7E5DD] rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-md relative">
-            
+          {/* Login/Register Card Container */}
+          <div className="w-full max-w-md bg-[#FAFAF7] border border-[#E7E5DD] rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-md relative">
             {/* Enhanced Error Banner */}
             {errorMsg && (
               <div className="mb-5 p-3 sm:p-4 rounded-xl bg-red-50 border border-red-500/50 flex items-start gap-3 text-red-700 text-xs font-semibold animate-fadeIn shadow-sm">
@@ -321,176 +278,162 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
               </div>
             )}
 
-            {activeTab === 'citizen' ? (
-              <form onSubmit={handleCitizenSubmit} className="flex flex-col gap-4 sm:gap-5">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#E7E5DD] pb-4 gap-2">
-                  <div>
-                    <h3 className="font-heading font-bold text-base sm:text-xl text-[#151726] flex items-center gap-2">
-                      <Smartphone className="w-5 h-5 text-[#059669] shrink-0" />
-                      <span>Citizen Safety Portal Sign-In</span>
-                    </h3>
-                    <p className="text-xs text-[#5B5F73] mt-0.5">
-                      Log in using Mobile Number or Email to view density and upload media SOS.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={fillDemoCitizen}
-                    className="self-start sm:self-auto px-3 py-1.5 bg-[#22D3A6]/15 hover:bg-[#22D3A6]/25 border border-[#22D3A6]/40 text-[#059669] rounded-lg text-xs font-mono-num font-bold transition-colors cursor-pointer shrink-0"
-                  >
-                    Demo Citizen Fill
-                  </button>
+            {authMode === 'login' ? (
+              <form onSubmit={handleLoginSubmit} className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1 border-b border-[#E7E5DD] pb-3">
+                  <h3 className="font-heading font-bold text-base text-[#151726] flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-[#2C7BE5] shrink-0" />
+                    <span>Secure Sign In</span>
+                  </h3>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-[11px] font-semibold text-[#5B5F73] uppercase tracking-wider flex items-center gap-1.5">
-                      <Mail className="w-3.5 h-3.5 text-[#2C7BE5]" />
-                      Mobile Number or Email
-                    </label>
-                    <input
-                      type="text"
-                      value={citizenContact}
-                      onChange={(e) => setCitizenContact(e.target.value)}
-                      placeholder="+91 98765-43210 or email@domain.com"
-                      className="w-full mt-1.5 p-3 rounded-xl bg-white border border-[#E7E5DD] text-xs text-[#151726] font-mono-num focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/20"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-semibold text-[#5B5F73] uppercase tracking-wider flex items-center gap-1.5">
-                      <User className="w-3.5 h-3.5 text-[#2C7BE5]" />
-                      Your Name / Visitor Alias
-                    </label>
-                    <input
-                      type="text"
-                      value={citizenName}
-                      onChange={(e) => setCitizenName(e.target.value)}
-                      className="w-full mt-1.5 p-3 rounded-xl bg-white border border-[#E7E5DD] text-xs text-[#151726] font-body focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/20"
-                      required
-                    />
-                  </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-[#5B5F73] uppercase tracking-wider flex items-center gap-1.5">
+                    <Mail className="w-3.5 h-3.5 text-[#2C7BE5]" />
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@domain.com"
+                    className="w-full mt-1.5 p-3 rounded-xl bg-white border border-[#E7E5DD] text-xs text-[#151726] focus:outline-none focus:border-[#2C7BE5] focus:ring-2 focus:ring-[#2C7BE5]/20"
+                    required
+                  />
                 </div>
 
-                  <div className="w-full">
-                    <label className="text-[11px] font-semibold text-[#5B5F73] uppercase tracking-wider flex items-center gap-1.5">
-                      <KeyRound className="w-3.5 h-3.5 text-[#2C7BE5]" />
-                      Verification Code (OTP)
-                    </label>
+                <div>
+                  <label className="text-[11px] font-semibold text-[#5B5F73] uppercase tracking-wider flex items-center gap-1.5">
+                    <KeyRound className="w-3.5 h-3.5 text-[#2C7BE5]" />
+                    Security Passcode
+                  </label>
+                  <div className="relative mt-1.5">
                     <input
-                      type="text"
-                      value={citizenOtp}
-                      onChange={(e) => setCitizenOtp(e.target.value)}
-                      className="w-full mt-1.5 p-3 rounded-xl bg-white border border-[#E7E5DD] text-xs text-[#151726] font-mono-num focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/20"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••••••"
+                      className="w-full p-3 pr-10 rounded-xl bg-white border border-[#E7E5DD] text-xs text-[#151726] focus:outline-none focus:border-[#2C7BE5] focus:ring-2 focus:ring-[#2C7BE5]/20"
+                      required
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5B5F73] hover:text-[#2C7BE5] transition-colors cursor-pointer bg-transparent border-none"
+                      title={showPassword ? "Hide Password" : "Show Password"}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
-
-                {/* Feature Callout */}
-                <div className="p-3.5 sm:p-4 rounded-2xl bg-white border border-[#E7E5DD] flex items-center justify-between shadow-xs gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <Camera className="w-5 h-5 text-[#059669] shrink-0" />
-                    <div className="min-w-0">
-                      <span className="text-xs font-bold text-[#151726] block truncate">Photo & Video Media SOS Upload Enabled</span>
-                      <span className="text-[11px] text-[#5B5F73] block truncate">Allows submitting live media clips directly to emergency controllers.</span>
-                    </div>
-                  </div>
-                  <CheckCircle2 className="w-5 h-5 text-[#059669] shrink-0" />
                 </div>
 
                 <button
                   type="submit"
-                  className="py-3.5 bg-[#22D3A6] hover:bg-[#1ebf95] text-[#151726] rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer active:scale-[0.99]"
+                  disabled={isLoading}
+                  className="mt-2 py-3 bg-[#2C7BE5] hover:bg-[#2066c6] text-white rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed border-none"
                 >
-                  <span>Authenticate & Launch Citizen Portal</span>
+                  <span>{isLoading ? 'Signing In...' : 'Authenticate & Launch Portal'}</span>
                   <ArrowRight className="w-4 h-4 shrink-0" />
                 </button>
-              </form>
-            ) : (
-              <form onSubmit={handleAdminSubmit} className="flex flex-col gap-4 sm:gap-5">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#E7E5DD] pb-4 gap-2">
-                  <div>
-                    <h3 className="font-heading font-bold text-base sm:text-xl text-[#151726] flex items-center gap-2">
-                      <Lock className="w-5 h-5 text-[#2C7BE5] shrink-0" />
-                      <span>Command Control Access</span>
-                    </h3>
-                    <p className="text-xs text-[#5B5F73] mt-0.5">
-                      For Security Controllers, Police Marshals & AI Operators.
-                    </p>
-                  </div>
+
+                <div className="text-center mt-3 pt-3 border-t border-[#E7E5DD] text-xs">
+                  <span className="text-[#5B5F73]">Don't have a citizen account? </span>
                   <button
                     type="button"
-                    onClick={fillDemoAdmin}
-                    className="self-start sm:self-auto px-3 py-1.5 bg-[#2C7BE5]/10 hover:bg-[#2C7BE5]/20 border border-[#2C7BE5]/30 text-[#2C7BE5] rounded-lg text-xs font-mono-num font-bold transition-colors cursor-pointer shrink-0"
+                    onClick={() => {
+                      setAuthMode('register');
+                      setErrorMsg(null);
+                    }}
+                    className="text-[#2C7BE5] font-bold hover:underline cursor-pointer bg-transparent border-none"
                   >
-                    Auto-Fill Credentials
+                    Register as Citizen
                   </button>
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-[11px] font-semibold text-[#5B5F73] uppercase tracking-wider">Operator ID</label>
-                    <input
-                      type="text"
-                      value={operatorId}
-                      onChange={(e) => setOperatorId(e.target.value)}
-                      className="w-full mt-1.5 p-3 rounded-xl bg-white border border-[#E7E5DD] text-xs text-[#151726] font-mono-num focus:outline-none focus:border-[#2C7BE5] focus:ring-2 focus:ring-[#2C7BE5]/20"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-semibold text-[#5B5F73] uppercase tracking-wider">Security Passcode</label>
-                    <div className="relative mt-1.5">
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full p-3 pr-10 rounded-xl bg-white border border-[#E7E5DD] text-xs text-[#151726] font-mono-num focus:outline-none focus:border-[#2C7BE5] focus:ring-2 focus:ring-[#2C7BE5]/20"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5B5F73] hover:text-[#2C7BE5] transition-colors cursor-pointer"
-                        title={showPassword ? "Hide Password" : "Show Password"}
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
+              </form>
+            ) : (
+              <form onSubmit={handleRegisterSubmit} className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1 border-b border-[#E7E5DD] pb-3">
+                  <h3 className="font-heading font-bold text-base text-[#151726] flex items-center gap-2">
+                    <User className="w-4 h-4 text-[#22D3A6] shrink-0" />
+                    <span>Citizen Registration</span>
+                  </h3>
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-semibold text-[#5B5F73] uppercase tracking-wider">Active Venue Command Node</label>
-                  <select
-                    value={selectedAdminVenue}
-                    onChange={(e) => setSelectedAdminVenue(e.target.value)}
-                    className="w-full mt-1.5 p-3 rounded-xl bg-white border border-[#E7E5DD] text-xs text-[#151726] font-body focus:outline-none focus:border-[#2C7BE5]"
-                  >
-                    <option value="Jawaharlal Nehru Stadium - Sector 7G">Jawaharlal Nehru Stadium · Sector 7G (12,450 Headcount)</option>
-                    <option value="Kumbh Mela Sector 4 - Sangam Ghat">Kumbh Mela Sector 4 · Sangam Ghat Corridor (28,900 Headcount)</option>
-                    <option value="Central Railway Station Concourse">Central Railway Station Concourse (54,200 Headcount)</option>
-                  </select>
+                  <label className="text-[11px] font-semibold text-[#5B5F73] uppercase tracking-wider flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-[#2C7BE5]" />
+                    Full Name / Alias
+                  </label>
+                  <input
+                    type="text"
+                    value={registerName}
+                    onChange={(e) => setRegisterName(e.target.value)}
+                    placeholder="Ananya Sharma"
+                    className="w-full mt-1.5 p-3 rounded-xl bg-white border border-[#E7E5DD] text-xs text-[#151726] focus:outline-none focus:border-[#22D3A6] focus:ring-2 focus:ring-[#22D3A6]/20"
+                    required
+                  />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
-                  <div>
-                    <label className="text-[11px] font-semibold text-[#5B5F73] uppercase tracking-wider">NDRF MFA Token</label>
-                    <input
-                      type="text"
-                      value={mfaCode}
-                      onChange={(e) => setMfaCode(e.target.value)}
-                      className="w-full mt-1.5 p-3 rounded-xl bg-white border border-[#E7E5DD] text-xs text-[#151726] font-mono-num focus:outline-none focus:border-[#2C7BE5]"
-                    />
-                  </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-[#5B5F73] uppercase tracking-wider flex items-center gap-1.5">
+                    <Mail className="w-3.5 h-3.5 text-[#2C7BE5]" />
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={registerEmail}
+                    onChange={(e) => setRegisterEmail(e.target.value)}
+                    placeholder="name@domain.com"
+                    className="w-full mt-1.5 p-3 rounded-xl bg-white border border-[#E7E5DD] text-xs text-[#151726] focus:outline-none focus:border-[#22D3A6] focus:ring-2 focus:ring-[#22D3A6]/20"
+                    required
+                  />
+                </div>
 
+                <div>
+                  <label className="text-[11px] font-semibold text-[#5B5F73] uppercase tracking-wider flex items-center gap-1.5">
+                    <KeyRound className="w-3.5 h-3.5 text-[#2C7BE5]" />
+                    Create Password
+                  </label>
+                  <div className="relative mt-1.5">
+                    <input
+                      type={showRegisterPassword ? "text" : "password"}
+                      value={registerPassword}
+                      onChange={(e) => setRegisterPassword(e.target.value)}
+                      placeholder="••••••••••••"
+                      className="w-full p-3 pr-10 rounded-xl bg-white border border-[#E7E5DD] text-xs text-[#151726] focus:outline-none focus:border-[#22D3A6] focus:ring-2 focus:ring-[#22D3A6]/20"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowRegisterPassword(!showRegisterPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5B5F73] hover:text-[#22D3A6] transition-colors cursor-pointer bg-transparent border-none"
+                      title={showRegisterPassword ? "Hide Password" : "Show Password"}
+                    >
+                      {showRegisterPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="mt-2 py-3 bg-[#22D3A6] hover:bg-[#1ebf95] text-[#151726] rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed border-none"
+                >
+                  <span>{isLoading ? 'Creating Account...' : 'Register & Enter Portal'}</span>
+                  <ArrowRight className="w-4 h-4 shrink-0" />
+                </button>
+
+                <div className="text-center mt-3 pt-3 border-t border-[#E7E5DD] text-xs">
+                  <span className="text-[#5B5F73]">Already have an account? </span>
                   <button
-                    type="submit"
-                    className="sm:mt-6 py-3.5 bg-[#2C7BE5] hover:bg-[#2066c6] text-white rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer active:scale-[0.99]"
+                    type="button"
+                    onClick={() => {
+                      setAuthMode('login');
+                      setErrorMsg(null);
+                    }}
+                    className="text-[#2C7BE5] font-bold hover:underline cursor-pointer bg-transparent border-none"
                   >
-                    <span>Authenticate & Launch Deck</span>
-                    <ArrowRight className="w-4 h-4 shrink-0" />
+                    Sign In here
                   </button>
                 </div>
               </form>
@@ -628,22 +571,22 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
             <span className="font-heading font-bold text-xs text-[#151726] uppercase tracking-wider">Control Deck</span>
             <ul className="flex flex-col gap-2 text-xs">
               <li>
-                <button onClick={() => { setActiveTab('admin'); scrollToSection('login-deck'); }} className="hover:text-[#2C7BE5] transition-colors cursor-pointer">
+                <button onClick={() => { setAuthMode('login'); scrollToSection('login-deck'); }} className="hover:text-[#2C7BE5] transition-colors cursor-pointer bg-transparent border-none p-0 text-[#5B5F73]">
                   Command Dashboard
                 </button>
               </li>
               <li>
-                <button onClick={() => { setActiveTab('admin'); scrollToSection('login-deck'); }} className="hover:text-[#2C7BE5] transition-colors cursor-pointer">
+                <button onClick={() => { setAuthMode('login'); scrollToSection('login-deck'); }} className="hover:text-[#2C7BE5] transition-colors cursor-pointer bg-transparent border-none p-0 text-[#5B5F73]">
                   Live GIS Map
                 </button>
               </li>
               <li>
-                <button onClick={() => { setActiveTab('admin'); scrollToSection('login-deck'); }} className="hover:text-[#2C7BE5] transition-colors cursor-pointer">
+                <button onClick={() => { setAuthMode('login'); scrollToSection('login-deck'); }} className="hover:text-[#2C7BE5] transition-colors cursor-pointer bg-transparent border-none p-0 text-[#5B5F73]">
                   YOLO Camera Feeds
                 </button>
               </li>
               <li>
-                <button onClick={() => { setActiveTab('admin'); scrollToSection('login-deck'); }} className="hover:text-[#2C7BE5] transition-colors cursor-pointer">
+                <button onClick={() => { setAuthMode('login'); scrollToSection('login-deck'); }} className="hover:text-[#2C7BE5] transition-colors cursor-pointer bg-transparent border-none p-0 text-[#5B5F73]">
                   Sentinel AI Alerts
                 </button>
               </li>
@@ -655,22 +598,22 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
             <span className="font-heading font-bold text-xs text-[#151726] uppercase tracking-wider">Citizen Companion</span>
             <ul className="flex flex-col gap-2 text-xs">
               <li>
-                <button onClick={() => { setActiveTab('citizen'); scrollToSection('login-deck'); }} className="hover:text-[#059669] transition-colors cursor-pointer">
+                <button onClick={() => { setAuthMode('login'); scrollToSection('login-deck'); }} className="hover:text-[#059669] transition-colors cursor-pointer bg-transparent border-none p-0 text-[#5B5F73]">
                   Live Density Gauge
                 </button>
               </li>
               <li>
-                <button onClick={() => { setActiveTab('citizen'); scrollToSection('login-deck'); }} className="hover:text-[#059669] transition-colors cursor-pointer">
+                <button onClick={() => { setAuthMode('login'); scrollToSection('login-deck'); }} className="hover:text-[#059669] transition-colors cursor-pointer bg-transparent border-none p-0 text-[#5B5F73]">
                   Evacuation Path Finder
                 </button>
               </li>
               <li>
-                <button onClick={() => { setActiveTab('citizen'); scrollToSection('login-deck'); }} className="hover:text-[#059669] transition-colors cursor-pointer">
+                <button onClick={() => { setAuthMode('login'); scrollToSection('login-deck'); }} className="hover:text-[#059669] transition-colors cursor-pointer bg-transparent border-none p-0 text-[#5B5F73]">
                   Photo & Video SOS Upload
                 </button>
               </li>
               <li>
-                <button onClick={() => { setActiveTab('citizen'); scrollToSection('login-deck'); }} className="hover:text-[#059669] transition-colors cursor-pointer">
+                <button onClick={() => { setAuthMode('login'); scrollToSection('login-deck'); }} className="hover:text-[#059669] transition-colors cursor-pointer bg-transparent border-none p-0 text-[#5B5F73]">
                   Bhashini Multilingual PA
                 </button>
               </li>
