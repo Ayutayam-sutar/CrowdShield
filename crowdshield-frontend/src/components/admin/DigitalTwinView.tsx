@@ -67,8 +67,7 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
       const row = Math.floor(index / cols);
       const x = 16.66 + col * 33.33;
       const y = 16.66 + row * 33.33;
-      const effectiveDensity = zone.density * (isScenarioActive && (zone.id === 'z-2' || zone.id === 'z-3' || zone.id === 'zone_west_exit') ? 1.8 : 1.0);
-      const isHighRisk = zone.riskScore > 65 || effectiveDensity > 3.8 || (isScenarioActive && (zone.id === 'z-2' || zone.id === 'z-3' || zone.id === 'zone_west_exit'));
+      const isHighRisk = zone.riskLevel === 'critical' || zone.riskLevel === 'warning';
 
       return {
         id: zone.id,
@@ -76,11 +75,11 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
         code: zone.code,
         x,
         y,
-        density: Number(effectiveDensity.toFixed(1)),
+        density: Number(zone.density.toFixed(1)),
         isHighRisk,
       };
     });
-  }, [zones, isScenarioActive]);
+  }, [zones]);
 
   // A* Shortest Safe Path Calculation
   const aStarResult = useMemo(() => {
@@ -373,7 +372,7 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
               <div className="grid grid-cols-3 gap-3 relative z-10 h-full">
                 {zones.map((zone) => {
                   const isSelected = zone.id === selectedZone.id;
-                  const isHighRisk = zone.riskScore > 65 || (isScenarioActive && (zone.id === 'z-2' || zone.id === 'z-3'));
+                  const isHighRisk = zone.riskLevel === 'critical' || zone.riskLevel === 'warning';
                   const isOnPath = aStarResult.path.some((p) => p.id === zone.id);
                   const pathIndex = aStarResult.path.findIndex((p) => p.id === zone.id);
 
@@ -427,7 +426,7 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
                         <div className={`font-mono-num font-bold text-sm ${
                           isHighRisk ? 'text-[#FF3B5C]' : 'text-[#2C7BE5]'
                         }`}>
-                          {(zone.density * (isScenarioActive && (zone.id === 'z-2' || zone.id === 'z-3') ? 1.8 : 1)).toFixed(1)} <span className="text-[10px] font-normal text-[#5B5F73]">p/m²</span>
+                          {zone.density.toFixed(1)} <span className="text-[10px] font-normal text-[#5B5F73]">p/m²</span>
                         </div>
                       </div>
 
@@ -582,7 +581,7 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
               <div className="p-3.5 rounded-xl bg-[#FAFAF7] border border-[#E7E5DD]">
                 <div className="text-[11px] font-semibold text-[#5B5F73]">Live Density</div>
                 <div className="font-mono-num font-bold text-xl text-[#151726] mt-0.5">
-                  {(selectedZone.density * (isScenarioActive && (selectedZone.id === 'z-2' || selectedZone.id === 'z-3') ? 1.8 : 1)).toFixed(1)} <span className="text-xs text-[#5B5F73]">p/m²</span>
+                  {selectedZone.density.toFixed(1)} <span className="text-xs text-[#5B5F73]">p/m²</span>
                 </div>
               </div>
 
@@ -618,7 +617,7 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
                 Predictive Physics Advisory
               </span>
               <p className="text-xs text-[#5B5F73] leading-relaxed">
-                {isScenarioActive && (selectedZone.id === 'z-2' || selectedZone.id === 'z-3')
+                {selectedZone.riskLevel === 'critical' || selectedZone.riskLevel === 'warning'
                   ? 'CRITICAL BOTTLENECK SURGE: Pressure buildup at turnstile. Activate auxiliary diversion channels immediately to prevent laminar-to-turbulent flow transition.'
                   : 'Crowd movement in optimal laminar flow state. Vector velocity balanced across all exit corridors.'}
               </p>
