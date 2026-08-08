@@ -1,40 +1,52 @@
 """
-Authentication endpoints.
+Unified Authentication endpoints.
 """
 
 from datetime import timedelta
 from typing import Any
-from fastapi import APIRouter, Body, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from pydantic import BaseModel
 
 from app.api import deps
 from app.core import security
 from app.core.config import settings
 from app.models.user import User, UserRole
 from app.schemas.token import Token
-from pydantic import BaseModel
 
 router = APIRouter()
 
-@router.post("/login/admin", response_model=Token)
-async def login_admin(
-    db: AsyncSession = Depends(deps.get_db),
-    form_data: OAuth2PasswordRequestForm = Depends()
+class UnifiedLoginRequest(BaseModel):
+    email: str
+    password: str
+
+class CitizenRegisterRequest(BaseModel):
+    name: str
+    email: str
+    password: str
+
+@router.post("/login", response_model=Token)
+async def login(
+    data: UnifiedLoginRequest,
+    db: AsyncSession = Depends(deps.get_db)
 ) -> Any:
     """
-    OAuth2 compatible token login, get an access token for future requests.
+    Unified login endpoint for both Admins and Citizens using email and password.
     """
-    result = await db.execute(select(User).where(User.username == form_data.username))
+    result = await db.execute(select(User).where(User.username == data.email))
     user = result.scalars().first()
     
-    if not user or not security.verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(status_code=400, detail="Incorrect email or password")
+    if not user or not security.verify_password(data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Incorrect email or password"
+        )
     elif not user.is_active:
-        raise HTTPException(status_code=400, detail="Inactive user")
-    elif user.role != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Not an admin user")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Inactive user"
+        )
 
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return {
@@ -45,43 +57,37 @@ async def login_admin(
         "role": user.role.value
     }
 
-
-class CitizenLoginRequest(BaseModel):
-    contact: str
-    name: str
-    otp: str
-
-@router.post("/login/citizen", response_model=Token)
-async def login_citizen(
-    data: CitizenLoginRequest,
+@router.post("/register", response_model=Token)
+async def register(
+    data: CitizenRegisterRequest,
     db: AsyncSession = Depends(deps.get_db)
 ) -> Any:
     """
-    Citizen login via Contact Number and OTP.
-    For the hackathon MVP, we mock the OTP validation and auto-create the user if they don't exist.
+    Citizen registration endpoint. Creates a new user with the CITIZEN role.
     """
-    # MVP: Any OTP works, or we can check a static one
-    if not data.otp or len(data.otp) < 4:
-         raise HTTPException(status_code=400, detail="Invalid OTP")
-         
-    result = await db.execute(select(User).where(User.username == data.contact))
-    user = result.scalars().first()
+    result = await db.execute(select(User).where(User.username == data.email))
+    existing_user = result.scalars().first()
     
-    if not user:
-        # Auto-create citizen user for MVP
-        user = User(
-            username=data.contact,
-            hashed_password=security.get_password_hash(data.otp),
-            role=UserRole.CITIZEN
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email is already registered"
         )
-        db.add(user)
-        await db.flush()
-        
+
+    # Create new citizen user
+    new_user = User(
+        username=data.email,
+        hashed_password=security.get_password_hash(data.password),
+        role=UserRole.CITIZEN
+    )
+    db.add(new_user)
+    await db.flush() # Flush to get the generated ID
+    
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return {
         "access_token": security.create_access_token(
-            user.id, role=user.role.value, expires_delta=access_token_expires
+            new_user.id, role=new_user.role.value, expires_delta=access_token_expires
         ),
         "token_type": "bearer",
-        "role": user.role.value
+        "role": new_user.role.value
     }

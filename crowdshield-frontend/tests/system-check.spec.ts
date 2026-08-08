@@ -22,14 +22,12 @@ test.describe('CrowdShield End-to-End System Check', () => {
     console.log("HTML snippet:", html.substring(0, 500));
     await page.screenshot({ path: 'debug-auth.png' });
     
-    // Switch to Admin (Control Room) tab
-    await page.locator('button', { hasText: 'Control Room' }).last().click();
-
-    // Auto fill credentials
-    await page.locator('button', { hasText: 'Auto-Fill Credentials' }).click();
+    // Fill Admin credentials on the unified login form
+    await page.locator('input[placeholder="name@domain.com"]').fill('admin@crowdshield.com');
+    await page.locator('input[placeholder="••••••••••••"]').fill('Sentinel@2026');
     
     // Submit
-    await page.locator('button', { hasText: 'Authenticate & Launch Deck' }).click();
+    await page.locator('button', { hasText: 'Authenticate & Launch Portal' }).click();
 
     // Assert that we reach the dashboard
     await expect(page.locator('text=Venue Composite Risk Index')).toBeVisible({ timeout: 15000 });
@@ -40,9 +38,11 @@ test.describe('CrowdShield End-to-End System Check', () => {
 
   test('Flow 2: Dashboard UI & WebSocket Stability', async ({ page }) => {
     await page.goto('/');
-    await page.locator('button', { hasText: 'Control Room' }).last().click();
-    await page.locator('button', { hasText: 'Auto-Fill Credentials' }).click();
-    await page.locator('button', { hasText: 'Authenticate & Launch Deck' }).click();
+    
+    // Fill Admin credentials on the unified login form
+    await page.locator('input[placeholder="name@domain.com"]').fill('admin@crowdshield.com');
+    await page.locator('input[placeholder="••••••••••••"]').fill('Sentinel@2026');
+    await page.locator('button', { hasText: 'Authenticate & Launch Portal' }).click();
 
     // Wait for the Dashboard
     await expect(page.locator('text=Venue Composite Risk Index')).toBeVisible({ timeout: 15000 });
@@ -85,14 +85,17 @@ test.describe('CrowdShield End-to-End System Check', () => {
       }
     });
 
-    // Default tab is Citizen Visitor, but let's click it just in case
-    await page.locator('button', { hasText: 'Citizen Visitor' }).last().click();
+    // Switch to Register as Citizen view
+    await page.locator('button', { hasText: 'Register as Citizen' }).click();
 
-    // Auto fill citizen
-    await page.locator('button', { hasText: 'Demo Citizen Fill' }).click();
+    // Fill registration credentials
+    await page.locator('input[placeholder="Ananya Sharma"]').fill('Test Citizen');
+    const testEmail = `citizen_${Date.now()}@test.com`;
+    await page.locator('input[placeholder="name@domain.com"]').fill(testEmail);
+    await page.locator('input[placeholder="••••••••••••"]').fill('password123');
     
-    // Submit
-    await page.locator('button', { hasText: 'Authenticate & Launch Citizen Portal' }).click();
+    // Click register
+    await page.locator('button', { hasText: 'Register & Enter Portal' }).click();
 
     // Wait for Citizen Portal to load
     await expect(page.locator('text=Safe Exit Guide').or(page.locator('text=Evacuation Map'))).toBeVisible({ timeout: 15000 });

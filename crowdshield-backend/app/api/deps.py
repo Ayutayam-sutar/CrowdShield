@@ -16,7 +16,7 @@ from app.models.user import User, UserRole
 from app.schemas.token import TokenPayload
 
 oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl="/api/v1/auth/login/admin"
+    tokenUrl="/api/v1/auth/login"
 )
 
 async def get_current_user(
