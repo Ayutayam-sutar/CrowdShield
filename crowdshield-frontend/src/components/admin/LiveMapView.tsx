@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { VenueZone, CCTVFeed, VenueInfo } from '../../types';
-import { MapContainer, TileLayer, Polygon, Marker, Popup, Polyline, Tooltip } from 'react-leaflet';
+import { MapContainer, TileLayer, Polygon, Marker, Popup, Polyline, Tooltip, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { 
   Video, 
@@ -12,8 +12,51 @@ import {
   Eye,
   X,
   VideoOff,
-  RefreshCw
+  RefreshCw,
+  Navigation
 } from 'lucide-react';
+
+const MapUpdater: React.FC<{ center: [number, number] }> = ({ center }) => {
+  const map = useMap();
+  React.useEffect(() => {
+    map.setView(center, map.getZoom());
+  }, [center, map]);
+  return null;
+};
+
+const LocateMeControl = ({ onLocate, onError }: { onLocate: (loc: [number, number]) => void, onError: (msg: string) => void }) => {
+  const map = useMap();
+
+  const handleLocate = () => {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const loc: [number, number] = [position.coords.latitude, position.coords.longitude];
+          onLocate(loc);
+          map.flyTo(loc, 16);
+        },
+        (err) => {
+          onError('Geolocation permission denied or unavailable.');
+        }
+      );
+    } else {
+      onError('Geolocation is not supported by your browser.');
+    }
+  };
+
+  return (
+    <div className="absolute top-4 right-4 z-[400]">
+      <button 
+        onClick={handleLocate}
+        className="bg-white/95 backdrop-blur-md p-2 px-3 rounded-xl shadow-lg border border-[#E7E5DD] text-[#2C7BE5] hover:bg-[#2C7BE5] hover:text-white transition-colors flex items-center gap-2 font-bold text-sm cursor-pointer"
+        title="My Location"
+      >
+        <Navigation className="w-5 h-5" />
+        <span className="hidden sm:inline">Locate Me</span>
+      </button>
+    </div>
+  );
+};
 
 export const getRiskColor = (riskLevel: string): string => {
   switch ((riskLevel || '').toLowerCase()) {
@@ -43,8 +86,15 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
   const [activeCameraModal, setActiveCameraModal] = useState<CCTVFeed | null>(null);
   const [failedFeeds, setFailedFeeds] = useState<Record<string, boolean>>({});
   const [streamCacheBusters, setStreamCacheBusters] = useState<Record<string, number>>({});
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const [localToast, setLocalToast] = useState<string | null>(null);
 
   const centerCoords: [number, number] = selectedVenue?.centerCoords || [28.5833, 77.2333];
+
+  const showToastError = (msg: string) => {
+    setLocalToast(msg);
+    setTimeout(() => setLocalToast(null), 3500);
+  };
 
   const handleImageError = (feedId: string) => {
     setFailedFeeds((prev) => ({ ...prev, [feedId]: true }));
@@ -132,12 +182,36 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
 
       {/* Main Leaflet Map View */}
       <div className="flex-1 w-full h-full relative z-0">
+        {localToast && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[500] bg-[#FF3B5C] text-white px-4 py-2 rounded-lg shadow-xl font-body text-sm font-bold animate-fadeIn">
+            {localToast}
+          </div>
+        )}
         <MapContainer
           center={centerCoords}
           zoom={16}
           scrollWheelZoom={true}
           className="w-full h-full"
         >
+          <MapUpdater center={centerCoords} />
+          <LocateMeControl onLocate={setUserLocation} onError={showToastError} />
+          
+          {userLocation && (
+            <Marker
+              position={userLocation}
+              icon={L.divIcon({
+                className: 'custom-user-marker',
+                html: `<div class="w-4 h-4 bg-[#2C7BE5] border-2 border-white rounded-full shadow-[0_0_10px_rgba(44,123,229,0.8)] animate-pulse"></div>`,
+                iconSize: [16, 16],
+                iconAnchor: [8, 8],
+              })}
+            >
+              <Popup>
+                <div className="text-xs font-bold text-center font-heading text-[#151726]">You Are Here</div>
+              </Popup>
+            </Marker>
+          )}
+
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

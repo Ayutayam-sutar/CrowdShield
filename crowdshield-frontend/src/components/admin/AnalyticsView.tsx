@@ -34,49 +34,62 @@ export const AnalyticsView: React.FC = () => {
   const [aiSummary, setAiSummary] = useState<string>('');
   const [isLoadingSummary, setIsLoadingSummary] = useState<boolean>(false);
   const [historicalData, setHistoricalData] = useState<any[]>([]);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoadingLogs, setIsLoadingLogs] = useState<boolean>(true);
 
   useEffect(() => {
-    const fetchHistoricalData = async () => {
+    const fetchData = async () => {
       try {
         const api = (await import('../../utils/api')).default;
-        const response = await api.get('/analytics/history');
-        setHistoricalData(response.data);
+        const [historyRes, logsRes] = await Promise.all([
+          api.get('/analytics/history'),
+          api.get('/analytics/audit-logs')
+        ]);
+        
+        setHistoricalData(historyRes.data);
+        setAuditLogs(logsRes.data);
       } catch (err) {
-        console.error("Failed to fetch historical analytics data", err);
+        console.error("Failed to fetch analytics data", err);
       } finally {
         setIsLoading(false);
+        setIsLoadingLogs(false);
       }
     };
-    fetchHistoricalData();
+    fetchData();
   }, []);
 
   const handleExportCSV = () => {
     const csvContent = "data:text/csv;charset=utf-8," 
-      + "Hour,Footfall,Bottlenecks\n"
-      + historicalData.map(e => `${e.hour},${e.footfall},${e.bottlenecks}`).join("\n");
+      + "Log ID,Timestamp,Zone,Peak Density,Intervention Applied,Resolution Time\n"
+      + auditLogs.map(e => `"${e.id}","${e.timestamp}","${e.zone}","${e.peak_density}","${e.intervention}","${e.resolution_time}"`).join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "CrowdShield_Incident_Report_Sector7G.csv");
+    link.setAttribute("download", "CrowdShield_Incident_Report.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  const handleGenerateSummary = async (alertId: string = "LOG-4482") => {
+  const handleGenerateSummary = async (alertId?: string) => {
     setIsAiModalOpen(true);
     setIsLoadingSummary(true);
     setAiSummary('');
     
+    let targetId = alertId;
+    if (!targetId || targetId === "LOG-4482") {
+      // Find the real ID from the most recent audit log if "LOG-4482" dummy is passed
+      targetId = auditLogs.length > 0 ? auditLogs[0].id.replace('#LOG-', '') : "dummy_id";
+    }
+    
     try {
-      // Import api dynamically or add to top imports
       const api = (await import('../../utils/api')).default;
-      const response = await api.post(`/analytics/summary/${alertId}`);
+      const response = await api.post(`/analytics/summary/${targetId}`);
       setAiSummary(response.data.summary);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to generate summary", err);
-      setAiSummary("Failed to generate AI summary. Please check API keys and connection.");
+      setAiSummary(`Failed to generate AI summary. ${err.response?.data?.detail || "Please check API keys and connection."}`);
     } finally {
       setIsLoadingSummary(false);
     }
@@ -103,7 +116,7 @@ export const AnalyticsView: React.FC = () => {
 
         <div className="flex items-center gap-3">
           <button
-            onClick={() => handleGenerateSummary("LOG-4482")}
+            onClick={() => handleGenerateSummary()}
             className="px-4 py-2 bg-[#7C6CFF] hover:bg-[#6856FF] text-white rounded-xl font-heading font-bold text-xs flex items-center gap-2 shadow-md transition-colors cursor-pointer"
           >
             <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
@@ -219,30 +232,26 @@ export const AnalyticsView: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E7E5DD]">
-              <tr className="hover:bg-[#FAFAF7]">
-                <td className="py-3 px-3 font-mono-num font-bold">#LOG-4482</td>
-                <td className="py-3 px-3 font-mono-num">04:48:10</td>
-                <td className="py-3 px-3 font-bold">West Exit Gate 3</td>
-                <td className="py-3 px-3 font-mono-num text-[#FF3B5C] font-bold">4.8 p/m²</td>
-                <td className="py-3 px-3">Aux Exit Gate 4 Unlocked + Bhashini PA</td>
-                <td className="py-3 px-3 font-mono-num text-[#22D3A6] font-bold">2.4 mins</td>
-              </tr>
-              <tr className="hover:bg-[#FAFAF7]">
-                <td className="py-3 px-3 font-mono-num font-bold">#LOG-4410</td>
-                <td className="py-3 px-3 font-mono-num">04:30:15</td>
-                <td className="py-3 px-3 font-bold">North Plaza Gate 1</td>
-                <td className="py-3 px-3 font-mono-num text-[#FF7A45] font-bold">3.6 p/m²</td>
-                <td className="py-3 px-3">Rerouted inflow to Sector Delta</td>
-                <td className="py-3 px-3 font-mono-num text-[#22D3A6] font-bold">4.1 mins</td>
-              </tr>
-              <tr className="hover:bg-[#FAFAF7]">
-                <td className="py-3 px-3 font-mono-num font-bold">#LOG-4390</td>
-                <td className="py-3 px-3 font-mono-num">03:55:00</td>
-                <td className="py-3 px-3 font-bold">South Concourse Hub</td>
-                <td className="py-3 px-3 font-mono-num text-[#FFB627] font-bold">3.1 p/m²</td>
-                <td className="py-3 px-3">Security Guard Squad Dispatched</td>
-                <td className="py-3 px-3 font-mono-num text-[#22D3A6] font-bold">1.8 mins</td>
-              </tr>
+              {isLoadingLogs ? (
+                <tr>
+                  <td colSpan={6} className="py-6 text-center text-[#5B5F73]">Loading audit logs...</td>
+                </tr>
+              ) : auditLogs.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-6 text-center text-[#5B5F73]">No past incidents found.</td>
+                </tr>
+              ) : (
+                auditLogs.map((log) => (
+                  <tr key={log.id} className="hover:bg-[#FAFAF7]">
+                    <td className="py-3 px-3 font-mono-num font-bold">{log.id}</td>
+                    <td className="py-3 px-3 font-mono-num">{log.timestamp}</td>
+                    <td className="py-3 px-3 font-bold">{log.zone}</td>
+                    <td className="py-3 px-3 font-mono-num text-[#FF3B5C] font-bold">{log.peak_density}</td>
+                    <td className="py-3 px-3">{log.intervention}</td>
+                    <td className="py-3 px-3 font-mono-num text-[#22D3A6] font-bold">{log.resolution_time}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

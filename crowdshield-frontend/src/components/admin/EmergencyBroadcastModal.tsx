@@ -11,19 +11,22 @@ import {
   Play,
   Square
 } from 'lucide-react';
-import { SupportedLanguage } from '../../types';
+import { SupportedLanguage, VenueZone } from '../../types';
 import { BHASHINI_TRANSLATIONS } from '../../data/mockData';
+import api from '../../utils/api';
 
 interface EmergencyBroadcastModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedLanguage: SupportedLanguage;
+  zones?: VenueZone[];
 }
 
 export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = ({
   isOpen,
   onClose,
   selectedLanguage,
+  zones = [],
 }) => {
   const [activeLang, setActiveLang] = useState<SupportedLanguage>(selectedLanguage);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
@@ -36,39 +39,79 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
 
   const currentTranslation = BHASHINI_TRANSLATIONS[activeLang];
 
-  const handlePlayPA = () => {
+  const highestRiskZone = zones && zones.length > 0 
+    ? [...zones].sort((a, b) => (b.riskScore || 0) - (a.riskScore || 0))[0]
+    : null;
+
+  const getDynamicScript = () => {
+    if (!highestRiskZone) return currentTranslation.announcementText;
+    if (activeLang === 'en') {
+      return `Attention visitors in ${highestRiskZone.name}. Please move calmly towards the designated safe exits.`;
+    }
+    return currentTranslation.announcementText.replace('West Exit', highestRiskZone.name);
+  };
+
+  const handlePlayPA = async () => {
     setIsPlayingAudio(true);
-    setDispatchLog((prev) => [
-      `[${new Date().toLocaleTimeString()}] Bhashini PA Broadcast (${currentTranslation.langName}) initiated across Sector Speakers 1-12.`,
-      ...prev
-    ]);
+    try {
+      const res = await api.post('/interventions/dispatch', { action: 'pa_broadcast', zoneId: highestRiskZone?.id });
+      if (res.status === 200) {
+        setDispatchLog((prev) => [
+          `[${new Date().toLocaleTimeString()}] Bhashini PA Broadcast (${currentTranslation.langName}) initiated for ${highestRiskZone?.name || 'All Sectors'}.`,
+          ...prev
+        ]);
+      }
+    } catch (error) {
+      console.error('Failed to dispatch PA:', error);
+    }
     setTimeout(() => {
       setIsPlayingAudio(false);
     }, 4000);
   };
 
-  const handleSendSMS = () => {
-    setIsCellBroadcastSent(true);
-    setDispatchLog((prev) => [
-      `[${new Date().toLocaleTimeString()}] Emergency Cell Broadcast SMS sent to 12,450 mobile devices in Sector 7G radius.`,
-      ...prev
-    ]);
+  const handleSendSMS = async () => {
+    try {
+      const res = await api.post('/interventions/dispatch', { action: 'sms', zoneId: highestRiskZone?.id });
+      if (res.status === 200) {
+        setIsCellBroadcastSent(true);
+        setDispatchLog((prev) => [
+          `[${new Date().toLocaleTimeString()}] Emergency Cell Broadcast SMS sent to ${highestRiskZone?.currentHeadcount || 12450} mobile devices near ${highestRiskZone?.name || 'Sector 7G'}.`,
+          ...prev
+        ]);
+      }
+    } catch (error) {
+      console.error('Failed to dispatch SMS:', error);
+    }
   };
 
-  const handleUnlockGates = () => {
-    setIsGateUnlocked(true);
-    setDispatchLog((prev) => [
-      `[${new Date().toLocaleTimeString()}] Override signal dispatched: Auxiliary Exit Gate 4 & Gate 6 unlocked remotely.`,
-      ...prev
-    ]);
+  const handleUnlockGates = async () => {
+    try {
+      const res = await api.post('/interventions/dispatch', { action: 'unlock_gates', zoneId: highestRiskZone?.id });
+      if (res.status === 200) {
+        setIsGateUnlocked(true);
+        setDispatchLog((prev) => [
+          `[${new Date().toLocaleTimeString()}] Override signal dispatched: Auxiliary gates near ${highestRiskZone?.name || 'Gate 4'} unlocked remotely.`,
+          ...prev
+        ]);
+      }
+    } catch (error) {
+      console.error('Failed to unlock gates:', error);
+    }
   };
 
-  const handleDeployGuards = () => {
-    setIsGuardsDispatched(true);
-    setDispatchLog((prev) => [
-      `[${new Date().toLocaleTimeString()}] Emergency Security Team Alpha (8 Officers) dispatched to West Exit Gate 3.`,
-      ...prev
-    ]);
+  const handleDeployGuards = async () => {
+    try {
+      const res = await api.post('/interventions/dispatch', { action: 'deploy_guards', zoneId: highestRiskZone?.id });
+      if (res.status === 200) {
+        setIsGuardsDispatched(true);
+        setDispatchLog((prev) => [
+          `[${new Date().toLocaleTimeString()}] Emergency Security Team dispatched to ${highestRiskZone?.name || 'West Exit Gate 3'}.`,
+          ...prev
+        ]);
+      }
+    } catch (error) {
+      console.error('Failed to deploy guards:', error);
+    }
   };
 
   return (
@@ -85,7 +128,7 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
                 EMERGENCY CROWD DISPATCH & PA BROADCAST
               </h2>
               <p className="text-xs text-white/80">
-                Venue: Jawaharlal Nehru Stadium · Sector 7G (12,450 Headcount)
+                Target Sector: {highestRiskZone ? `${highestRiskZone.name} (${(highestRiskZone.currentHeadcount ?? 0).toLocaleString()} Headcount)` : 'Awaiting Telemetry...'}
               </p>
             </div>
           </div>
@@ -125,7 +168,7 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
               <span className="font-bold text-[#7C6CFF] block mb-1">
                 Script ({currentTranslation.langName}):
               </span>
-              "{currentTranslation.announcementText}"
+              "{getDynamicScript()}"
             </div>
 
             <div className="flex items-center justify-between gap-3">

@@ -8,14 +8,12 @@ interface ThreeDigitalTwinCanvasProps {
   zones: VenueZone[];
   selectedZoneId: string;
   onSelectZone: (zoneId: string) => void;
-  isScenarioActive: boolean;
 }
 
 export const ThreeDigitalTwinCanvas: React.FC<ThreeDigitalTwinCanvasProps> = ({
   zones,
   selectedZoneId,
   onSelectZone,
-  isScenarioActive,
 }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const [hoveredZoneName, setHoveredZoneName] = useState<string | null>(null);
@@ -109,7 +107,8 @@ export const ThreeDigitalTwinCanvas: React.FC<ThreeDigitalTwinCanvasProps> = ({
       else if (zone.riskLevel === 'caution') colorHex = 0xFFB627; // Yellow caution
       else if (isSelected) colorHex = 0x2C7BE5; // Blue selected
 
-      const boxGeo = new THREE.BoxGeometry(pos.w, pos.h, pos.d);
+      const dynamicHeight = pos.h + (zone.density * 1.5);
+      const boxGeo = new THREE.BoxGeometry(pos.w, dynamicHeight, pos.d);
       const boxMat = new THREE.MeshStandardMaterial({
         color: colorHex,
         roughness: 0.3,
@@ -119,7 +118,7 @@ export const ThreeDigitalTwinCanvas: React.FC<ThreeDigitalTwinCanvasProps> = ({
       });
 
       const mesh = new THREE.Mesh(boxGeo, boxMat);
-      mesh.position.set(pos.x, pos.h / 2, pos.z);
+      mesh.position.set(pos.x, dynamicHeight / 2, pos.z);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
       mesh.userData = { zoneId: zone.id, zoneName: zone.name };
@@ -128,7 +127,7 @@ export const ThreeDigitalTwinCanvas: React.FC<ThreeDigitalTwinCanvasProps> = ({
       zoneMeshes.push({
         mesh,
         zoneId: zone.id,
-        initialY: pos.h / 2,
+        initialY: dynamicHeight / 2,
         isHighRisk,
         density: zone.density,
         flowRate: zone.flowRate,
@@ -225,7 +224,7 @@ export const ThreeDigitalTwinCanvas: React.FC<ThreeDigitalTwinCanvasProps> = ({
       renderer.dispose();
       controls.dispose();
     };
-  }, [zones, selectedZoneId, isScenarioActive, onSelectZone]);
+  }, [zones, selectedZoneId, onSelectZone]);
 
   return (
     <div className="relative w-full h-[380px] bg-[#0D0F1A] rounded-xl border border-white/10 overflow-hidden shadow-inner group">

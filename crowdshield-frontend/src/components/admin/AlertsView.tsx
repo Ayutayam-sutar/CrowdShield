@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { CrowdAlert, SupportedLanguage, CCTVFeed } from '../../types';
+import React, { useState, useEffect } from 'react';
+import { CrowdAlert, SupportedLanguage, CCTVFeed, VenueZone } from '../../types';
 import { BHASHINI_TRANSLATIONS } from '../../data/mockData';
+import api from '../../utils/api';
 import { 
   Sparkles, 
   Volume2, 
@@ -13,7 +14,8 @@ import {
   ChevronRight,
   Radio,
   X,
-  VolumeX
+  VolumeX,
+  Loader2
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { speakAnnouncement } from '../../utils/speech';
@@ -21,6 +23,7 @@ import { speakAnnouncement } from '../../utils/speech';
 interface AlertsViewProps {
   alerts: CrowdAlert[];
   cctvFeeds: CCTVFeed[];
+  zones: VenueZone[];
   selectedLanguage: SupportedLanguage;
   onChangeLanguage: (lang: SupportedLanguage) => void;
   onOpenEmergencyBroadcast: () => void;
@@ -29,6 +32,7 @@ interface AlertsViewProps {
 export const AlertsView: React.FC<AlertsViewProps> = ({
   alerts,
   cctvFeeds,
+  zones,
   selectedLanguage,
   onChangeLanguage,
   onOpenEmergencyBroadcast,
@@ -42,26 +46,74 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
     targetGateOrZone: string;
   } | null>(null);
   const [executedActionIds, setExecutedActionIds] = useState<string[]>([]);
+  const [isExecutingAction, setIsExecutingAction] = useState(false);
+  const [historyData, setHistoryData] = useState<{time: string, density: number}[]>([]);
 
   const selectedAlert = alerts.find((a) => a.id === selectedAlertId) || alerts[0] || null;
-  const matchingCctv = selectedAlert ? (cctvFeeds.find((c) => c.zoneId === selectedAlert.zoneId) || cctvFeeds[0]) : null;
+  const activeZone = selectedAlert ? zones.find((z) => z.id === selectedAlert.zoneId) : null;
+  const displayDensity = activeZone ? activeZone.density : (selectedAlert?.density || 0);
+  const displayFlowRate = activeZone ? activeZone.flowRate : (selectedAlert?.flowRate || 0);
+
+  const getStreamUrl = (zoneId?: string) => {
+    switch ((zoneId || '').toLowerCase()) {
+      case 'z-01':
+      case 'z-1': return 'http://localhost:5000/video_feed';
+      case 'z-02':
+      case 'z-2': return 'http://localhost:5001/video_feed';
+      case 'z-03':
+      case 'z-3': return 'http://localhost:5002/video_feed';
+      case 'z-04':
+      case 'z-4': return 'http://localhost:5003/video_feed';
+      default: return 'http://localhost:5000/video_feed';
+    }
+  };
+
+  useEffect(() => {
+    if (!selectedAlert) return;
+    
+    const fetchHistory = async () => {
+      try {
+        const res = await api.get(`/telemetry/history/${selectedAlert.zoneId}?minutes=60`);
+        if (res.status === 200 && Array.isArray(res.data)) {
+          setHistoryData(res.data);
+        } else {
+          throw new Error('Invalid data');
+        }
+      } catch (err) {
+        const curr = displayDensity;
+        setHistoryData([
+          { time: '-50m', density: Number((curr * 0.4).toFixed(1)) },
+          { time: '-40m', density: Number((curr * 0.55).toFixed(1)) },
+          { time: '-30m', density: Number((curr * 0.7).toFixed(1)) },
+          { time: '-20m', density: Number((curr * 0.85).toFixed(1)) },
+          { time: '-10m', density: Number((curr * 0.95).toFixed(1)) },
+          { time: 'Now', density: Number(curr.toFixed(2)) },
+        ]);
+      }
+    };
+    
+    fetchHistory();
+  }, [selectedAlert, displayDensity]);
 
   const currentTranslation = BHASHINI_TRANSLATIONS[activeLang];
 
-  // Dynamic 60-min trend bar data relative to selected alert density
-  const densityHistoryData = [
-    { time: '-50m', density: selectedAlert ? Number((selectedAlert.density * 0.4).toFixed(1)) : 0 },
-    { time: '-40m', density: selectedAlert ? Number((selectedAlert.density * 0.55).toFixed(1)) : 0 },
-    { time: '-30m', density: selectedAlert ? Number((selectedAlert.density * 0.7).toFixed(1)) : 0 },
-    { time: '-20m', density: selectedAlert ? Number((selectedAlert.density * 0.85).toFixed(1)) : 0 },
-    { time: '-10m', density: selectedAlert ? Number((selectedAlert.density * 0.95).toFixed(1)) : 0 },
-    { time: 'Now', density: selectedAlert ? Number(selectedAlert.density.toFixed(2)) : 0 },
-  ];
-
-  const handleExecuteAction = () => {
+  const handleExecuteAction = async () => {
     if (confirmationModalAction) {
-      setExecutedActionIds((prev) => [...prev, confirmationModalAction.actionText]);
-      setConfirmationModalAction(null);
+      setIsExecutingAction(true);
+      try {
+        const res = await api.post('/interventions/execute', {
+          actionId: confirmationModalAction.actionText,
+          zoneId: selectedAlert?.zoneId
+        });
+        if (res.status === 200) {
+          setExecutedActionIds((prev) => [...prev, confirmationModalAction.actionText]);
+        }
+      } catch (err) {
+        console.error('Action execution failed:', err);
+      } finally {
+        setIsExecutingAction(false);
+        setConfirmationModalAction(null);
+      }
     }
   };
 
@@ -225,22 +277,22 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
 
                   {/* Live Camera Snapshot */}
                   <div className="relative aspect-video rounded-xl overflow-hidden border border-[#E7E5DD] bg-black">
-                    {matchingCctv ? (
+                    {selectedAlert ? (
                       <img
-                        src={matchingCctv.imageUrl}
-                        alt={matchingCctv.name}
+                        src={getStreamUrl(selectedAlert.zoneId)}
+                        alt={`Live stream for ${selectedAlert.zoneName}`}
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-cover"
                       />
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center text-white text-xs gap-1">
                         <Radio className="w-6 h-6 text-[#FF3B5C] animate-pulse" />
-                        <span>Live CCTV Snapshot ({selectedAlert.zoneName})</span>
+                        <span>Live CCTV Snapshot ({selectedAlert?.zoneName})</span>
                       </div>
                     )}
                     <div className="absolute top-2 left-2 bg-black/80 text-white text-[10px] font-mono-num px-2 py-0.5 rounded flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#FF3B5C] animate-ping" />
-                      <span>LIVE FEED Snapshot · {matchingCctv?.name || selectedAlert.zoneName}</span>
+                      <span>LIVE FEED Snapshot · {selectedAlert?.zoneName}</span>
                     </div>
                   </div>
 
@@ -249,14 +301,14 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
                     <div className="bg-[#FAFAF7] border border-[#E7E5DD] p-3 rounded-xl font-mono-num">
                       <span className="text-[11px] text-[#5B5F73] block uppercase font-bold">Current Density</span>
                       <span className="font-heading font-extrabold text-2xl text-[#FF3B5C]">
-                        {Number(selectedAlert.density || 0).toFixed(2)} <span className="text-xs font-normal">p/m²</span>
+                        {Number(displayDensity).toFixed(2)} <span className="text-xs font-normal">p/m²</span>
                       </span>
                     </div>
 
                     <div className="bg-[#FAFAF7] border border-[#E7E5DD] p-3 rounded-xl font-mono-num">
                       <span className="text-[11px] text-[#5B5F73] block uppercase font-bold">Flow Egress Rate</span>
                       <span className="font-heading font-extrabold text-2xl text-[#151726]">
-                        {selectedAlert.flowRate ?? 0} <span className="text-xs font-normal">p/min</span>
+                        {displayFlowRate} <span className="text-xs font-normal">p/min</span>
                       </span>
                     </div>
                   </div>
@@ -268,7 +320,7 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
                     </span>
                     <div className="h-32 w-full mt-1">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={densityHistoryData}>
+                        <BarChart data={historyData}>
                           <XAxis dataKey="time" stroke="#5B5F73" fontSize={10} tickLine={false} />
                           <YAxis stroke="#5B5F73" fontSize={10} tickLine={false} />
                           <Tooltip contentStyle={{ backgroundColor: '#151726', borderRadius: '8px', color: '#fff', fontSize: '11px' }} />
@@ -499,9 +551,17 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
               </button>
               <button
                 onClick={handleExecuteAction}
-                className="flex-1 py-2 bg-[#7C6CFF] hover:bg-[#6856ff] text-white font-heading font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer"
+                disabled={isExecutingAction}
+                className="flex-1 py-2 bg-[#7C6CFF] hover:bg-[#6856ff] text-white font-heading font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                Dispatch Action Now
+                {isExecutingAction ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Executing...</span>
+                  </>
+                ) : (
+                  <span>Dispatch Action Now</span>
+                )}
               </button>
             </div>
           </div>
