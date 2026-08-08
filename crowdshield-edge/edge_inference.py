@@ -53,10 +53,10 @@ EXIT_VECTOR = np.array([0, 1])
 print(f"[Init] Starting node for Zone: {ZONE_ID}, Source: {VIDEO_SOURCE}, Port: {PORT}")
 print("[Init] Loading YOLOv11 and XGBoost models...")
 try:
-    model = YOLO('weights/yolo11_custom_best.pt')
+    model = YOLO('weights/best (1).pt')
     print("[Init] Vision model loaded successfully.")
 except Exception as e:
-    print(f"[Warning] Failed to load custom YOLO. Falling back to default YOLOv8n. Error: {e}")
+    print(f"[Warning] Failed to load custom YOLO (weights/best (1).pt). Falling back to default YOLOv8n. Error: {e}")
     model = YOLO('yolov11m.pt')
 
 try:
