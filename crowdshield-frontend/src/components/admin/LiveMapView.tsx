@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { VenueZone, CCTVFeed, VenueInfo } from '../../types';
-import { MapContainer, TileLayer, Polygon, Marker, Popup, Polyline } from 'react-leaflet';
+import { MapContainer, TileLayer, Polygon, Marker, Popup, Polyline, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
 import { 
   Video, 
@@ -14,6 +14,20 @@ import {
   VideoOff,
   RefreshCw
 } from 'lucide-react';
+
+export const getRiskColor = (riskLevel: string): string => {
+  switch ((riskLevel || '').toLowerCase()) {
+    case 'critical':
+      return '#FF3B5C'; // Red
+    case 'warning':
+      return '#FF7A45'; // Orange
+    case 'caution':
+      return '#FFB627'; // Yellow
+    case 'safe':
+    default:
+      return '#22D3A6'; // Green
+  }
+};
 
 interface LiveMapViewProps {
   selectedVenue: VenueInfo | null;
@@ -79,26 +93,12 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
       html: `
         <div class="px-2 py-1 rounded-md font-mono font-bold text-xs shadow-lg border border-white flex items-center gap-1 ${colorClass}">
           <span>${code}</span>
-          <span class="text-[10px] bg-black/20 px-1 rounded">${density}p/m²</span>
+          <span class="text-[10px] bg-black/20 px-1 rounded">${Number(density || 0).toFixed(2)}p/m²</span>
         </div>
       `,
       iconSize: [80, 26],
       iconAnchor: [40, 13],
     });
-  };
-
-  const getPolygonColor = (level: string) => {
-    switch (level) {
-      case 'critical':
-        return '#FF3B5C';
-      case 'warning':
-        return '#FF7A45';
-      case 'caution':
-        return '#FFB627';
-      case 'safe':
-      default:
-        return '#2C7BE5';
-    }
   };
 
   return (
@@ -115,11 +115,17 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
         </div>
 
         <div className="flex items-center gap-3 text-xs font-mono-num">
-          <span className="flex items-center gap-1 text-[#2C7BE5]">
-            <span className="w-3 h-3 rounded bg-[#2C7BE5]/40 border border-[#2C7BE5]" /> Sector Alpha (Secure)
+          <span className="flex items-center gap-1 text-[#22D3A6]">
+            <span className="w-3 h-3 rounded bg-[#22D3A6]" /> Safe
+          </span>
+          <span className="flex items-center gap-1 text-[#FFB627]">
+            <span className="w-3 h-3 rounded bg-[#FFB627]" /> Caution
+          </span>
+          <span className="flex items-center gap-1 text-[#FF7A45]">
+            <span className="w-3 h-3 rounded bg-[#FF7A45]" /> Warning
           </span>
           <span className="flex items-center gap-1 text-[#FF3B5C]">
-            <span className="w-3 h-3 rounded bg-[#FF3B5C]/40 border border-[#FF3B5C]" /> Sector Bravo (Alert)
+            <span className="w-3 h-3 rounded bg-[#FF3B5C]" /> Critical
           </span>
         </div>
       </div>
@@ -139,7 +145,7 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
 
           {/* Render Zone Polygons */}
           {zones.map((zone) => {
-            const polygonColor = getPolygonColor(zone.riskLevel);
+            const polygonColor = getRiskColor(zone.riskLevel);
             return (
               <React.Fragment key={zone.id}>
                 <Polygon
@@ -152,27 +158,58 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
                   }}
                 >
                   <Popup>
-                    <div className="p-1 font-body text-xs flex flex-col gap-1 min-w-[160px]">
+                    <div className="p-1 font-body text-xs flex flex-col gap-1 min-w-[170px]">
                       <span className="font-heading font-bold text-sm text-[#151726]">
                         {zone.name} ({zone.code})
                       </span>
                       <span className="text-[11px] text-[#5B5F73] font-mono-num">
-                        Density: {zone.density} p/m²
+                        Headcount: <strong className="text-[#151726]">{(zone.currentHeadcount ?? 0).toLocaleString()}</strong> / {zone.maxCapacity?.toLocaleString() ?? 'N/A'}
                       </span>
                       <span className="text-[11px] text-[#5B5F73] font-mono-num">
-                        Headcount: {zone.currentHeadcount ?? 0} / {zone.maxCapacity}
+                        Density: <strong className="text-[#151726]">{Number(zone.density || 0).toFixed(2)} p/m²</strong>
                       </span>
-                      <span className="font-bold uppercase text-[10px] mt-1" style={{ color: polygonColor }}>
+                      <span className="text-[11px] text-[#5B5F73] font-mono-num">
+                        Risk Score: <strong className="text-[#151726]">{zone.riskScore ?? 0}%</strong>
+                      </span>
+                      <span className="font-bold uppercase text-[10px] mt-1 px-1.5 py-0.5 rounded w-fit text-white font-mono-num" style={{ backgroundColor: polygonColor }}>
                         Status: {zone.riskLevel}
                       </span>
                     </div>
                   </Popup>
+                  <Tooltip sticky>
+                    <div className="p-0.5 font-body text-xs flex flex-col gap-0.5 font-mono-num">
+                      <span className="font-bold font-heading text-xs">{zone.name}</span>
+                      <span>Headcount: {zone.currentHeadcount ?? 0}</span>
+                      <span>Density: {Number(zone.density || 0).toFixed(2)} p/m²</span>
+                      <span>Risk Score: {zone.riskScore ?? 0}%</span>
+                    </div>
+                  </Tooltip>
                 </Polygon>
 
                 <Marker
                   position={zone.center}
                   icon={createZoneMarkerIcon(zone.code, zone.density, zone.riskLevel)}
-                />
+                >
+                  <Popup>
+                    <div className="p-1 font-body text-xs flex flex-col gap-1 min-w-[170px]">
+                      <span className="font-heading font-bold text-sm text-[#151726]">
+                        {zone.name} ({zone.code})
+                      </span>
+                      <span className="text-[11px] text-[#5B5F73] font-mono-num">
+                        Headcount: <strong className="text-[#151726]">{(zone.currentHeadcount ?? 0).toLocaleString()}</strong> / {zone.maxCapacity?.toLocaleString() ?? 'N/A'}
+                      </span>
+                      <span className="text-[11px] text-[#5B5F73] font-mono-num">
+                        Density: <strong className="text-[#151726]">{Number(zone.density || 0).toFixed(2)} p/m²</strong>
+                      </span>
+                      <span className="text-[11px] text-[#5B5F73] font-mono-num">
+                        Risk Score: <strong className="text-[#151726]">{zone.riskScore ?? 0}%</strong>
+                      </span>
+                      <span className="font-bold uppercase text-[10px] mt-1 px-1.5 py-0.5 rounded w-fit text-white font-mono-num" style={{ backgroundColor: polygonColor }}>
+                        Status: {zone.riskLevel}
+                      </span>
+                    </div>
+                  </Popup>
+                </Marker>
               </React.Fragment>
             );
           })}
@@ -210,31 +247,32 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
 
           <div className="flex flex-col gap-2.5 text-xs">
             {zones.length > 0 ? (
-              zones.slice(0, 3).map((z) => (
-                <div 
-                  key={z.id} 
-                  className={`flex items-center justify-between p-2 rounded-lg border ${
-                    z.riskLevel === 'critical' ? 'bg-[#FF3B5C]/10 border-[#FF3B5C]/30' :
-                    z.riskLevel === 'warning' ? 'bg-[#FF7A45]/10 border-[#FF7A45]/30' :
-                    z.riskLevel === 'caution' ? 'bg-[#FFB627]/10 border-[#FFB627]/30' :
-                    'bg-[#22D3A6]/10 border-[#22D3A6]/30'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    {z.riskLevel === 'critical' || z.riskLevel === 'warning' ? (
-                      <AlertTriangle className="w-4 h-4 text-[#FF3B5C]" />
-                    ) : (
-                      <CheckCircle2 className="w-4 h-4 text-[#22D3A6]" />
-                    )}
-                    <span className="font-bold text-[#151726]">{z.name}</span>
+              zones.map((z) => {
+                const zColor = getRiskColor(z.riskLevel);
+                return (
+                  <div 
+                    key={z.id} 
+                    className={`flex items-center justify-between p-2 rounded-lg border ${
+                      z.riskLevel === 'critical' ? 'bg-[#FF3B5C]/10 border-[#FF3B5C]/30' :
+                      z.riskLevel === 'warning' ? 'bg-[#FF7A45]/10 border-[#FF7A45]/30' :
+                      z.riskLevel === 'caution' ? 'bg-[#FFB627]/10 border-[#FFB627]/30' :
+                      'bg-[#22D3A6]/10 border-[#22D3A6]/30'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      {z.riskLevel === 'critical' || z.riskLevel === 'warning' ? (
+                        <AlertTriangle className="w-4 h-4 text-[#FF3B5C]" />
+                      ) : (
+                        <CheckCircle2 className="w-4 h-4 text-[#22D3A6]" />
+                      )}
+                      <span className="font-bold text-[#151726]">{z.name}</span>
+                    </div>
+                    <span className="font-mono-num font-bold uppercase text-[11px]" style={{ color: zColor }}>
+                      {z.currentHeadcount} p · {Number(z.density || 0).toFixed(2)} p/m² · Risk: {z.riskScore}%
+                    </span>
                   </div>
-                  <span className="font-mono-num font-bold uppercase text-[11px]" style={{
-                    color: z.riskLevel === 'critical' ? '#FF3B5C' : z.riskLevel === 'warning' ? '#FF7A45' : z.riskLevel === 'caution' ? '#FFB627' : '#22D3A6'
-                  }}>
-                    {z.currentHeadcount} p · {z.density.toFixed(1)} p/m²
-                  </span>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className="flex items-center justify-between p-2 rounded-lg bg-[#22D3A6]/10 border border-[#22D3A6]/30">
                 <div className="flex items-center gap-2">
