@@ -154,3 +154,51 @@ async def generate_ai_summary(alert_id: str, db: AsyncSession = Depends(get_db))
         return {"summary": response.text}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Gemini API Error: {str(e)}")
+
+class AuditLogResponse(BaseModel):
+    id: str
+    timestamp: str
+    zone: str
+    peak_density: str
+    intervention: str
+    resolution_time: str
+
+@router.get("/audit-logs", response_model=list[AuditLogResponse])
+async def get_audit_logs(db: AsyncSession = Depends(get_db)):
+    """
+    Fetches past incidents for the audit log.
+    """
+    query = (
+        select(CrowdAlert, Zone.name.label("zone_name"))
+        .outerjoin(Zone, CrowdAlert.zone_id == Zone.id)
+        .order_by(CrowdAlert.created_at.desc())
+        .limit(20)
+    )
+    result = await db.execute(query)
+    rows = result.all()
+    
+    audit_logs = []
+    for alert, zone_name in rows:
+        res_time = "Unresolved"
+        if alert.resolved_at and alert.created_at:
+            diff = (alert.resolved_at - alert.created_at).total_seconds() / 60.0
+            res_time = f"{diff:.1f} mins"
+            
+        intervention = "None"
+        if alert.recommended_actions and len(alert.recommended_actions) > 0:
+            intervention = alert.recommended_actions[0].get("actionText", "Action Dispatched")
+            
+        # Ensure we have a valid string ID
+        alert_id_str = str(alert.id)
+        short_id = f"#LOG-{alert_id_str[-4:].upper()}" if len(alert_id_str) >= 4 else f"#LOG-{alert_id_str.upper()}"
+            
+        audit_logs.append({
+            "id": short_id,
+            "timestamp": alert.created_at.strftime("%H:%M:%S") if alert.created_at else "Unknown",
+            "zone": zone_name or str(alert.zone_id) or "Unknown Zone",
+            "peak_density": f"{alert.density:.1f} p/m²" if alert.density else "N/A",
+            "intervention": intervention,
+            "resolution_time": res_time
+        })
+        
+    return audit_logs

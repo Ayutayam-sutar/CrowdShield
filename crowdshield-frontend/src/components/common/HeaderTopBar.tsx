@@ -90,7 +90,7 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
             >
               <MapPin className="w-4 h-4 text-[#2C7BE5]" />
               <span className="truncate max-w-[180px] sm:max-w-[240px] font-heading">
-                {selectedVenue ? selectedVenue.name : 'Awaiting Edge Telemetry...'}
+                {selectedVenue ? selectedVenue.name : (venues.length === 0 ? 'Select Venue' : 'Awaiting Edge Telemetry...')}
               </span>
               <ChevronDown className="w-3.5 h-3.5 text-[#5B5F73]" />
             </button>

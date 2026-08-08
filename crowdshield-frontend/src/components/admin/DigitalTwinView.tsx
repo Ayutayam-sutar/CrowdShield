@@ -24,8 +24,6 @@ import {
 
 interface DigitalTwinViewProps {
   zones: VenueZone[];
-  isScenarioActive: boolean;
-  onTriggerScenario: () => void;
 }
 
 // Helper interface for A* Node Graph
@@ -41,28 +39,33 @@ interface GraphNode {
 
 export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
   zones,
-  isScenarioActive,
-  onTriggerScenario,
 }) => {
   const [simulationSpeed, setSimulationSpeed] = useState<'1x' | '2x' | '5x'>('1x');
+  const [displayZones, setDisplayZones] = useState<VenueZone[]>(zones);
   const [selectedZoneId, setSelectedZoneId] = useState<string>(zones[0]?.id || 'z-1');
   const [showHeatmap, setShowHeatmap] = useState(true);
   const [showFlowVectors, setShowFlowVectors] = useState(true);
   const [isSimulating, setIsSimulating] = useState(true);
 
+  React.useEffect(() => {
+    if (isSimulating) {
+      setDisplayZones(zones);
+    }
+  }, [zones, isSimulating]);
+
   // Path Finding Visualizer States
   const [showPathFinding, setShowPathFinding] = useState(true);
   const [is3dBlockModelActive, setIs3dBlockModelActive] = useState(true);
-  const [startZoneId, setStartZoneId] = useState<string>(zones[1]?.id || zones[0]?.id || 'z-2');
-  const [targetZoneId, setTargetZoneId] = useState<string>(zones[zones.length - 1]?.id || 'z-4');
+  const [startZoneId, setStartZoneId] = useState<string>(displayZones[1]?.id || displayZones[0]?.id || 'z-2');
+  const [targetZoneId, setTargetZoneId] = useState<string>(displayZones[displayZones.length - 1]?.id || 'z-4');
   const [densityPenaltyFactor, setDensityPenaltyFactor] = useState<number>(2.5);
 
-  const selectedZone = zones.find((z) => z.id === selectedZoneId) || zones[0];
+  const selectedZone = displayZones.find((z) => z.id === selectedZoneId) || displayZones[0];
 
   // Map zones to 2D Spatial Grid Coordinates for graph layout & SVG path drawing
   const spatialNodes: GraphNode[] = useMemo(() => {
     const cols = 3;
-    return zones.map((zone, index) => {
+    return displayZones.map((zone, index) => {
       const col = index % cols;
       const row = Math.floor(index / cols);
       const x = 16.66 + col * 33.33;
@@ -79,7 +82,7 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
         isHighRisk,
       };
     });
-  }, [zones]);
+  }, [displayZones]);
 
   // A* Shortest Safe Path Calculation
   const aStarResult = useMemo(() => {
@@ -105,9 +108,12 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
     const getEdgeCost = (u: GraphNode, v: GraphNode) => {
       const baseDist = distance(u, v);
       // Density Penalty: exponential cost increase for overcrowded zones
-      const densityMultiplier = 1 + Math.pow(v.density, 2) * (densityPenaltyFactor * 0.3);
+      let penalty = 1 + Math.pow(v.density, 2) * (densityPenaltyFactor * 0.3);
+      if (v.isHighRisk || v.density > 4.0) {
+        penalty += 9999;
+      }
       const riskBonus = v.isHighRisk ? 5.0 : 1.0;
-      return baseDist * densityMultiplier * riskBonus;
+      return baseDist * penalty * riskBonus;
     };
 
     // Build Adjacency List (Connect adjacent grid nodes)
@@ -232,18 +238,6 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
             {isSimulating ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
             <span>{isSimulating ? 'Pause Engine' : 'Run Live Simulation'}</span>
           </button>
-
-          <button
-            onClick={onTriggerScenario}
-            className={`px-4 py-2 rounded-xl font-heading font-bold text-xs flex items-center gap-2 shadow-sm transition-colors cursor-pointer ${
-              isScenarioActive
-                ? 'bg-[#FF3B5C] text-white animate-pulse'
-                : 'bg-[#151726] text-white hover:bg-[#25283e]'
-            }`}
-          >
-            <AlertTriangle className="w-4 h-4 text-[#22D3A6]" />
-            <span>{isScenarioActive ? 'Reset Crisis Test' : 'Simulate Surge Crisis'}</span>
-          </button>
         </div>
       </div>
 
@@ -301,10 +295,9 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
             {is3dBlockModelActive && (
               <div className="w-full">
                 <ThreeDigitalTwinCanvas
-                  zones={zones}
+                  zones={displayZones}
                   selectedZoneId={selectedZoneId}
                   onSelectZone={(id) => setSelectedZoneId(id)}
-                  isScenarioActive={isScenarioActive}
                 />
               </div>
             )}
@@ -370,7 +363,7 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
 
               {/* Spatial Zones Array */}
               <div className="grid grid-cols-3 gap-3 relative z-10 h-full">
-                {zones.map((zone) => {
+                {displayZones.map((zone) => {
                   const isSelected = zone.id === selectedZone.id;
                   const isHighRisk = zone.riskLevel === 'critical' || zone.riskLevel === 'warning';
                   const isOnPath = aStarResult.path.some((p) => p.id === zone.id);
@@ -470,7 +463,7 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
                       onChange={(e) => setStartZoneId(e.target.value)}
                       className="bg-transparent text-white font-bold font-mono-num focus:outline-none cursor-pointer"
                     >
-                      {zones.map((z) => (
+                      {displayZones.map((z) => (
                         <option key={`start-${z.id}`} value={z.id} className="bg-[#151726] text-white">
                           {z.name}
                         </option>
@@ -487,7 +480,7 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
                       onChange={(e) => setTargetZoneId(e.target.value)}
                       className="bg-transparent text-white font-bold font-mono-num focus:outline-none cursor-pointer"
                     >
-                      {zones.map((z) => (
+                      {displayZones.map((z) => (
                         <option key={`target-${z.id}`} value={z.id} className="bg-[#151726] text-white">
                           {z.name}
                         </option>

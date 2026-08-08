@@ -101,6 +101,7 @@ export default function App() {
   const [networkMode, setNetworkMode] = useState<NetworkMode>('edge');
   const [language, setLanguage] = useState<SupportedLanguage>('en');
   const [isScenarioActive, setIsScenarioActive] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Core Data Collections State
   const [zones, setZones] = useState<VenueZone[]>([]);
@@ -371,6 +372,11 @@ export default function App() {
   };
 
   const activeAlertCount = alerts.filter((a) => a.status === 'active').length;
+  
+  const displayedZones = zones.filter((z) => 
+    z.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    z.code.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   // Render Auth View
   if (!isAuthenticated) {
@@ -431,7 +437,7 @@ export default function App() {
         onTriggerScenario={handleTriggerScenario}
         onResetScenario={handleResetScenario}
         onOpenVoiceModal={() => setIsVoiceModalOpen(true)}
-        onSearch={() => {}}
+        onSearch={setSearchQuery}
         activeAlertCount={activeAlertCount}
         onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
       />
@@ -454,7 +460,7 @@ export default function App() {
         <main className="flex-1 min-w-0 pb-28 sm:pb-32">
           {adminRoute === 'dashboard' && (
             <DashboardView
-              zones={zones}
+              zones={displayedZones}
               alerts={alerts}
               isScenarioActive={isScenarioActive}
               onNavigateToMap={() => setAdminRoute('map')}
@@ -466,19 +472,20 @@ export default function App() {
           {adminRoute === 'map' && (
             <LiveMapView
               selectedVenue={selectedVenue}
-              zones={zones}
+              zones={displayedZones}
               cctvFeeds={cctvFeeds}
             />
           )}
 
           {adminRoute === 'cameras' && (
-            <CamerasView cctvFeeds={cctvFeeds} zones={zones} />
+            <CamerasView cctvFeeds={cctvFeeds} zones={displayedZones} />
           )}
 
           {adminRoute === 'alerts' && (
             <AlertsView
               alerts={alerts}
               cctvFeeds={cctvFeeds}
+              zones={zones}
               selectedLanguage={language}
               onChangeLanguage={(lang) => setLanguage(lang)}
               onOpenEmergencyBroadcast={() => setIsEmergencyBroadcastOpen(true)}
@@ -489,9 +496,7 @@ export default function App() {
 
           {adminRoute === 'twin' && (
             <DigitalTwinView
-              zones={zones}
-              isScenarioActive={isScenarioActive}
-              onTriggerScenario={handleTriggerScenario}
+              zones={displayedZones}
             />
           )}
 
@@ -520,6 +525,7 @@ export default function App() {
         isOpen={isEmergencyBroadcastOpen}
         onClose={() => setIsEmergencyBroadcastOpen(false)}
         selectedLanguage={language}
+        zones={zones}
       />
 
       <VoiceAssistantModal

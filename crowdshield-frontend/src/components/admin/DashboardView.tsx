@@ -34,28 +34,38 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   // Dynamic Trend Chart state listening to live `zones` updates
   const [trendData, setTrendData] = useState<{ time: string; density: number; predicted: number }[]>([]);
 
+  const zonesRef = React.useRef(zones);
   useEffect(() => {
-    if (!zones || zones.length === 0) return;
-
-    const currentTimeString = new Date().toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit', 
-      second: '2-digit' 
-    });
-
-    const calculatedMean = Number(
-      (zones.reduce((acc, z) => acc + (z.density || 0), 0) / zones.length).toFixed(2)
-    );
-
-    const calculatedPredicted = Number(
-      (zones.reduce((acc, z) => acc + (z.density * (1 + ((z.riskScore || 0) / 100))), 0) / zones.length).toFixed(2)
-    );
-
-    setTrendData((prev) => {
-      const nextData = [...prev, { time: currentTimeString, density: calculatedMean, predicted: calculatedPredicted }];
-      return nextData.slice(-20); // Keep rolling state array capped at ~15-20 data points
-    });
+    zonesRef.current = zones;
   }, [zones]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const currentZones = zonesRef.current;
+      if (!currentZones || currentZones.length === 0) return;
+
+      const currentTimeString = new Date().toLocaleTimeString([], { 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        second: '2-digit' 
+      });
+
+      const calculatedMean = Number(
+        (currentZones.reduce((acc, z) => acc + (z.density || 0), 0) / currentZones.length).toFixed(2)
+      );
+
+      const calculatedPredicted = Number(
+        (currentZones.reduce((acc, z) => acc + (z.density * (1 + ((z.riskScore || 0) / 100))), 0) / currentZones.length).toFixed(2)
+      );
+
+      setTrendData((prev) => {
+        const nextData = [...prev, { time: currentTimeString, meanDensity: calculatedMean, predicted: calculatedPredicted } as any];
+        return nextData.slice(-20); // Keep rolling state array capped at ~20 data points
+      });
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Calculated aggregate metrics with zero fallbacks
   const totalZoneRisk = zones.reduce((acc, z) => acc + (z.riskScore || 0), 0);
@@ -64,8 +74,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const totalHeadcount = zones.length > 0 ? zones.reduce((acc, z) => acc + (z.currentHeadcount ?? 0), 0) : 0;
   const totalFlowRate = zones.reduce((acc, z) => acc + (z.flowRate ?? 0), 0);
-  const meanFlowVelocity = zones.length > 0 ? (totalFlowRate / zones.length).toFixed(1) : '0';
+  const meanFlowVelocity = zones.length > 0 ? (totalFlowRate / zones.length).toFixed(1) : '0.0';
   const affectedZonesCount = zones.filter((z) => z.riskLevel === 'critical' || z.riskLevel === 'warning').length;
+  const affectedZonesList = zones.filter((z) => z.riskLevel === 'critical' || z.riskLevel === 'warning');
 
   const getRiskLevelBadge = (level: RiskLevel, score: number) => {
     switch (level) {
@@ -147,8 +158,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div className="font-heading font-bold text-3xl text-[#151726] font-mono-num">
               {affectedZonesCount} <span className="text-sm font-normal text-[#5B5F73]">/ {zones.length} Total</span>
             </div>
-            <p className="text-[11px] text-[#FF3B5C] font-semibold mt-1">
-              Zone 3 (West Exit) CRITICAL
+            <p className="text-[11px] text-[#FF3B5C] font-semibold mt-1 truncate">
+              {affectedZonesList.length > 0 
+                ? affectedZonesList.map(z => `${z.name} ${z.riskLevel.toUpperCase()}`).join(', ') 
+                : 'No critical zones'}
             </p>
           </div>
         </div>
@@ -307,7 +320,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   itemStyle={{ color: '#fff' }}
                 />
                 <ReferenceLine y={4.0} stroke="#FF3B5C" strokeDasharray="4 4" label={{ value: 'CRITICAL SAFETY THRESHOLD (4.0 p/m²)', fill: '#FF3B5C', fontSize: 10, position: 'insideTopRight' }} />
-                <Area type="monotone" dataKey="density" stroke="#2C7BE5" strokeWidth={3} fillOpacity={1} fill="url(#currentGrad)" name="Mean Density" />
+                <Area type="monotone" dataKey="meanDensity" stroke="#2C7BE5" strokeWidth={3} fillOpacity={1} fill="url(#currentGrad)" name="Mean Density" />
                 <Area type="monotone" dataKey="predicted" stroke="#FF3B5C" strokeWidth={3} strokeDasharray="5 5" fillOpacity={1} fill="url(#predictedGrad)" name="Predicted Risk" />
               </AreaChart>
             </ResponsiveContainer>
