@@ -85,7 +85,7 @@ export const AnalyticsView: React.FC = () => {
     
     try {
       const api = (await import('../../utils/api')).default;
-      const response = await api.post(`/analytics/summary/${targetId}`);
+      const response = await api.post(`/analytics/generate-summary/${targetId}`);
       setAiSummary(response.data.summary);
     } catch (err: any) {
       console.error("Failed to generate summary", err);
@@ -102,14 +102,14 @@ export const AnalyticsView: React.FC = () => {
   };
 
   return (
-    <div className="p-6 flex flex-col gap-6 font-body">
+    <div className="p-6 flex flex-col gap-6 font-body text-white">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-heading font-bold text-2xl text-[#151726] tracking-tight">
+          <h1 className="font-heading font-bold text-2xl tracking-tight">
             Analytics & Historic Incident Intelligence
           </h1>
-          <p className="text-xs text-[#5B5F73] mt-1">
+          <p className="text-xs text-white/50 mt-1">
             Aggregate footfall trends, bottleneck frequency logs, and downloadable compliance audit exports.
           </p>
         </div>
@@ -134,30 +134,30 @@ export const AnalyticsView: React.FC = () => {
 
       {/* Grid of Analytics Charts */}
       {isLoading ? (
-        <div className="flex items-center justify-center h-64 bg-white border border-[#E7E5DD] rounded-2xl shadow-[0_2px_12px_rgba(21,23,38,0.04)]">
+        <div className="flex items-center justify-center h-64 bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl shadow-2xl">
           <div className="flex flex-col items-center gap-3 text-[#7C6CFF]">
             <div className="w-8 h-8 border-4 border-current border-t-transparent rounded-full animate-spin"></div>
             <span className="font-heading font-bold animate-pulse text-sm">Fetching telemetry history...</span>
           </div>
         </div>
       ) : historicalData.length === 0 ? (
-        <div className="flex items-center justify-center h-64 bg-white border border-[#E7E5DD] rounded-2xl shadow-[0_2px_12px_rgba(21,23,38,0.04)]">
-          <p className="text-[#5B5F73] text-sm font-heading">Awaiting sufficient telemetry data to generate reports.</p>
+        <div className="flex items-center justify-center h-64 bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl shadow-2xl">
+          <p className="text-white/50 text-sm font-heading">Awaiting sufficient telemetry data to generate reports.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Footfall Trend */}
-          <div className="bg-white border border-[#E7E5DD] rounded-2xl p-6 shadow-[0_2px_12px_rgba(21,23,38,0.04)] flex flex-col gap-4">
+          <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-2xl flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-heading font-bold text-base text-[#151726]">
+                <h3 className="font-heading font-bold text-base text-white">
                   Hourly Footfall Surge Pattern
                 </h3>
-                <p className="text-xs text-[#5B5F73]">
+                <p className="text-xs text-white/50">
                   Aggregated entrance counts across all 12 venue turnstiles.
                 </p>
               </div>
-              <span className="font-mono-num text-xs font-bold text-[#2C7BE5]">
+              <span className="font-mono-num text-xs font-bold text-[#06b6d4]">
                 Peak: {Math.max(0, ...historicalData.map(d => d.footfall)).toLocaleString()}
               </span>
             </div>
@@ -167,31 +167,31 @@ export const AnalyticsView: React.FC = () => {
                 <AreaChart data={historicalData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="footfallGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#2C7BE5" stopOpacity={0.4} />
-                      <stop offset="95%" stopColor="#2C7BE5" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.6} />
+                      <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <XAxis dataKey="hour" stroke="#5B5F73" fontSize={11} tickLine={false} />
-                  <YAxis stroke="#5B5F73" fontSize={11} tickLine={false} />
-                  <Tooltip contentStyle={{ backgroundColor: '#151726', borderRadius: '10px', color: '#fff', fontSize: '12px' }} />
-                  <Area type="monotone" dataKey="footfall" stroke="#2C7BE5" strokeWidth={3} fillOpacity={1} fill="url(#footfallGrad)" />
+                  <XAxis dataKey="hour" stroke="rgba(255,255,255,0.3)" fontSize={11} tickLine={false} />
+                  <YAxis stroke="rgba(255,255,255,0.3)" fontSize={11} tickLine={false} />
+                  <Tooltip contentStyle={{ backgroundColor: '#111827', borderRadius: '10px', color: '#fff', fontSize: '12px', border: '1px solid rgba(255,255,255,0.1)' }} />
+                  <Area type="monotone" dataKey="footfall" stroke="#06b6d4" strokeWidth={3} fillOpacity={1} fill="url(#footfallGrad)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>
   
           {/* Bottlenecks by Hour */}
-          <div className="bg-white border border-[#E7E5DD] rounded-2xl p-6 shadow-[0_2px_12px_rgba(21,23,38,0.04)] flex flex-col gap-4">
+          <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-2xl flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-heading font-bold text-base text-[#151726]">
+                <h3 className="font-heading font-bold text-base text-white">
                   Bottleneck Frequency Incident Bar
                 </h3>
-                <p className="text-xs text-[#5B5F73]">
+                <p className="text-xs text-white/50">
                   Number of detected crush risk warnings by hour.
                 </p>
               </div>
-              <span className="font-mono-num text-xs font-bold text-[#FF3B5C]">
+              <span className="font-mono-num text-xs font-bold text-[#f43f5e]">
                 Max: {Math.max(0, ...historicalData.map(d => d.bottlenecks))} Bottlenecks
               </span>
             </div>
@@ -199,10 +199,10 @@ export const AnalyticsView: React.FC = () => {
             <div className="h-64 w-full mt-2">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={historicalData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <XAxis dataKey="hour" stroke="#5B5F73" fontSize={11} tickLine={false} />
-                  <YAxis stroke="#5B5F73" fontSize={11} tickLine={false} />
-                  <Tooltip contentStyle={{ backgroundColor: '#151726', borderRadius: '10px', color: '#fff', fontSize: '12px' }} />
-                  <Bar dataKey="bottlenecks" fill="#FF7A45" radius={[6, 6, 0, 0]} />
+                  <XAxis dataKey="hour" stroke="rgba(255,255,255,0.3)" fontSize={11} tickLine={false} />
+                  <YAxis stroke="rgba(255,255,255,0.3)" fontSize={11} tickLine={false} />
+                  <Tooltip contentStyle={{ backgroundColor: '#111827', borderRadius: '10px', color: '#fff', fontSize: '12px', border: '1px solid rgba(255,255,255,0.1)' }} />
+                  <Bar dataKey="bottlenecks" fill="#f43f5e" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -211,18 +211,18 @@ export const AnalyticsView: React.FC = () => {
       )}
 
       {/* Audit Log Table */}
-      <div className="bg-white border border-[#E7E5DD] rounded-2xl p-6 shadow-[0_2px_12px_rgba(21,23,38,0.04)] flex flex-col gap-4">
+      <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-2xl flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-heading font-bold text-base text-[#151726]">
+          <h3 className="font-heading font-bold text-base text-white">
             Past Incident & Dispatch Audit Log
           </h3>
-          <span className="text-xs text-[#5B5F73] font-mono-num">Showing last 4 entries</span>
+          <span className="text-xs text-white/50 font-mono-num">Showing last 4 entries</span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs font-body">
             <thead>
-              <tr className="border-b border-[#E7E5DD] text-[#5B5F73] font-bold uppercase tracking-wider text-[11px]">
+              <tr className="border-b border-white/10 text-white/50 font-bold uppercase tracking-wider text-[11px]">
                 <th className="py-3 px-3">Log ID</th>
                 <th className="py-3 px-3">Timestamp</th>
                 <th className="py-3 px-3">Zone</th>
@@ -231,23 +231,23 @@ export const AnalyticsView: React.FC = () => {
                 <th className="py-3 px-3">Resolution Time</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E7E5DD]">
+            <tbody className="divide-y divide-white/10">
               {isLoadingLogs ? (
                 <tr>
-                  <td colSpan={6} className="py-6 text-center text-[#5B5F73]">Loading audit logs...</td>
+                  <td colSpan={6} className="py-6 text-center text-white/50">Loading audit logs...</td>
                 </tr>
               ) : auditLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-6 text-center text-[#5B5F73]">No past incidents found.</td>
+                  <td colSpan={6} className="py-6 text-center text-white/50">No past incidents found.</td>
                 </tr>
               ) : (
                 auditLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-[#FAFAF7]">
-                    <td className="py-3 px-3 font-mono-num font-bold">{log.id}</td>
-                    <td className="py-3 px-3 font-mono-num">{log.timestamp}</td>
-                    <td className="py-3 px-3 font-bold">{log.zone}</td>
-                    <td className="py-3 px-3 font-mono-num text-[#FF3B5C] font-bold">{log.peak_density}</td>
-                    <td className="py-3 px-3">{log.intervention}</td>
+                  <tr key={log.id} className="hover:bg-white/5 transition-colors">
+                    <td className="py-3 px-3 font-mono-num font-bold text-white">{log.id}</td>
+                    <td className="py-3 px-3 font-mono-num text-white">{log.timestamp}</td>
+                    <td className="py-3 px-3 font-bold text-white">{log.zone}</td>
+                    <td className="py-3 px-3 font-mono-num text-[#f43f5e] font-bold">{log.peak_density}</td>
+                    <td className="py-3 px-3 text-white">{log.intervention}</td>
                     <td className="py-3 px-3 font-mono-num text-[#22D3A6] font-bold">{log.resolution_time}</td>
                   </tr>
                 ))

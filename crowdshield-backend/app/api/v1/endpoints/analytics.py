@@ -16,6 +16,10 @@ from app.models.venue import Zone
 from app.models.telemetry import TelemetryLog
 from app.api.deps import get_current_active_admin
 from app.core.config import settings
+from app.services.predictive_engine import predict_density
+from typing import Any
+from app.api.deps import get_current_active_admin
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -98,16 +102,13 @@ async def get_historical_analytics(db: AsyncSession = Depends(get_db)):
 class SummaryResponse(BaseModel):
     summary: str
 
-@router.post("/summary/{alert_id}", response_model=SummaryResponse, dependencies=[Depends(get_current_active_admin)])
-async def generate_ai_summary(alert_id: str, db: AsyncSession = Depends(get_db)):
+@router.post("/generate-summary/{incident_id}", response_model=SummaryResponse, dependencies=[Depends(get_current_active_admin)])
+async def generate_ai_summary(incident_id: str, db: AsyncSession = Depends(get_current_active_admin)):
     """
-    Generates an NDRF-compliant post-incident executive summary using Gemini.
+    Generates an NDRF-compliant post-incident executive summary using Gemini or a mocked LLM.
     """
-    if not settings.GEMINI_API_KEY:
-        raise HTTPException(status_code=500, detail="GEMINI_API_KEY not configured")
-
-    # Fetch Alert
-    result = await db.execute(select(CrowdAlert).where(CrowdAlert.id == alert_id))
+    # Fetch Alert (using incident_id which corresponds to alert.id in our system)
+    result = await db.execute(select(CrowdAlert).where(CrowdAlert.id == incident_id))
     alert = result.scalars().first()
     
     if not alert:
@@ -143,6 +144,11 @@ async def generate_ai_summary(alert_id: str, db: AsyncSession = Depends(get_db))
     
     Format the response clearly using Markdown (bolding key metrics).
     """
+
+    if not settings.GEMINI_API_KEY or len(settings.GEMINI_API_KEY) < 5:
+        # MOCK LLM SERVICE Fallback
+        mock_summary = f"**Executive Summary (Simulated LLM)**\n\nIncident **{alert.id}** occurred at **{zone_name}** and was triggered due to **{alert.trigger_reason}**. Peak density reached an unsafe level of **{alert.density} p/m²**. \n\nMitigation actions deployed: {mitigation_actions}. The incident was officially resolved in **{resolution_time}**."
+        return {"summary": mock_summary}
 
     try:
         # Initialize the new google-genai client
@@ -202,3 +208,22 @@ async def get_audit_logs(db: AsyncSession = Depends(get_db)):
         })
         
     return audit_logs
+
+
+class PredictiveForecastResponse(BaseModel):
+    historical: list[dict[str, Any]]
+    projected: list[dict[str, Any]]
+    warning_triggered: bool
+    current_density: float
+    predicted_10m: float
+
+@router.get("/predictive-forecast/{zone_id}", response_model=PredictiveForecastResponse)
+async def get_predictive_forecast(zone_id: str, db: AsyncSession = Depends(get_db)):
+    """
+    Fetches 10-minute predictive forecast for a zone based on historical telemetry.
+    """
+    res = await predict_density(zone_id, db)
+    if "error" in res:
+        raise HTTPException(status_code=400, detail=res["error"])
+    return res
+

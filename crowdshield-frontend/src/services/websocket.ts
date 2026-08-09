@@ -39,6 +39,7 @@ class WebSocketService {
       this.ws.onopen = () => {
         console.log('[WebSocket] Connected to Telemetry Engine');
         this.reconnectAttempts = 0;
+        window.dispatchEvent(new CustomEvent('network_status', { detail: { status: 'online' } }));
       };
 
       this.ws.onmessage = (event) => {
@@ -54,6 +55,7 @@ class WebSocketService {
 
       this.ws.onclose = () => {
         console.log('[WebSocket] Disconnected');
+        window.dispatchEvent(new CustomEvent('network_status', { detail: { status: 'offline' } }));
         this.handleReconnect();
       };
 
@@ -68,8 +70,8 @@ class WebSocketService {
 
   private handleReconnect() {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
+      const timeout = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 8000); // 1s, 2s, 4s, 8s
       this.reconnectAttempts++;
-      const timeout = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 10000);
       console.log(`[WebSocket] Reconnecting in ${timeout}ms (Attempt ${this.reconnectAttempts})`);
       setTimeout(() => this.connect(), timeout);
     }

@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 from app.services.bhashini import bhashini_service
+from app.services.audio_service import audio_service
 from app.api.deps import get_current_active_admin
 from fastapi import Depends
 
@@ -36,3 +37,16 @@ async def broadcast_message(request: BroadcastRequest):
         language=translation_result["language"],
         status=f"Broadcasted to {request.zone_id} via {translation_result['audio_source']}"
     )
+
+class BhashiniBroadcastRequest(BaseModel):
+    text: str
+    target_language: str
+
+@router.post("/bhashini", dependencies=[Depends(get_current_active_admin)])
+async def broadcast_bhashini_audio(request: BhashiniBroadcastRequest):
+    """
+    Simulate generating and dispatching multilingual Bhashini TTS audio.
+    """
+    result = audio_service.generate_bhashini_audio(request.text, request.target_language)
+    return result
+

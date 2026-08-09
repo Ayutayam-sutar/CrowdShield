@@ -11,6 +11,8 @@ from app.db.session import get_db
 from app.models.venue import Zone
 from app.services.pathfinding import pathfinder
 from app.api.deps import get_current_active_admin
+from app.services.venue_topology import venue_topology_engine
+from typing import Dict, Optional
 
 router = APIRouter()
 
@@ -113,3 +115,34 @@ async def compute_evacuation_route(request: RoutingRequest, db: AsyncSession = D
         avoided_surge_zones=list(avoided_zones),
         waypoints=waypoints
     )
+
+class EvacuationRequest(BaseModel):
+    source_node: str
+    live_densities: Dict[str, float]
+
+class EvacuationResponse(BaseModel):
+    status: str
+    optimal_path: Optional[List[str]] = None
+    cost: Optional[float] = None
+    recommendation: Optional[str] = None
+    target_exit: Optional[str] = None
+    message: Optional[str] = None
+
+@router.post("/calculate-evacuation", response_model=EvacuationResponse)
+async def calculate_evacuation(request: EvacuationRequest):
+    result = venue_topology_engine.calculate_evacuation_path(
+        source_node_id=request.source_node,
+        live_densities=request.live_densities
+    )
+    if "error" in result:
+        return EvacuationResponse(status="ERROR", message=result["error"])
+        
+    return EvacuationResponse(
+        status=result.get("status"),
+        optimal_path=result.get("optimal_path"),
+        cost=result.get("cost"),
+        recommendation=result.get("recommendation"),
+        target_exit=result.get("target_exit"),
+        message=result.get("message")
+    )
+
