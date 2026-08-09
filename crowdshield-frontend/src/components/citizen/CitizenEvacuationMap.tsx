@@ -8,7 +8,6 @@ interface CitizenEvacuationMapProps {
   isScenarioActive: boolean;
 }
 
-// Custom Leaflet DivIcons for Node A (Blue Dot) and Node B (Green Safe Exit Pin)
 const createBlueDotIcon = () =>
   L.divIcon({
     className: 'custom-blue-dot-icon',
@@ -35,18 +34,17 @@ const createGreenExitIcon = () =>
   });
 
 export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({ isScenarioActive }) => {
-  // Mock current user location
-  const currentLat = 20.2516;
-  const currentLng = 85.7968;
+  // Mock current user location near Admin Block
+  const currentLat = 20.2510;
+  const currentLng = 85.7983;
 
-  // Center of Map around venue coordinates
   const centerLat = 20.2496;
   const centerLng = 85.7988;
 
   const [pathCoordinates, setPathCoordinates] = useState<[number, number][]>([
-    [20.2516, 85.7968],
-    [20.2496, 85.7988],
-    [20.2476, 85.8008]
+    [20.2510, 85.7983],
+    [20.2485, 85.7980],
+    [20.2475, 85.7975]
   ]);
   const [estimatedTime, setEstimatedTime] = useState<number>(3);
   const [directions, setDirections] = useState<string[]>([]);
@@ -54,8 +52,8 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({ isSc
   useEffect(() => {
     const fetchRoute = async () => {
       try {
-        const response = await api.post('/api/v1/routing/evacuate', {
-          venue_id: 'soa_univ', // Using soa_univ from mockData
+        const response = await api.post('/routing/evacuate', {
+          venue_id: 'soa-iter-01', // FIXED: Now matches our DB Seeder!
           current_lat: currentLat,
           current_lng: currentLng
         });
@@ -80,22 +78,20 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({ isSc
     fetchRoute();
   }, [isScenarioActive]);
 
-  // 1. Red High-Risk Surge Zone Polygon (Gate 3 Bottleneck)
+  // Red High-Risk Surge Zone Polygon around the Library Roundabout
   const surgeZonePolygon: [number, number][] = [
-    [20.2505, 85.7995],
-    [20.2495, 85.8005],
-    [20.2485, 85.7995],
-    [20.2495, 85.7985],
+    [20.2499, 85.7985],
+    [20.2499, 85.7991],
+    [20.2493, 85.7991],
+    [20.2493, 85.7985],
   ];
 
-  // Midpoint coordinate for permanently visible Tooltip
   const midTooltipPoint: [number, number] = pathCoordinates.length > 2 
     ? pathCoordinates[Math.floor(pathCoordinates.length / 2)]
-    : [20.2496, 85.7988];
+    : [20.2485, 85.7980];
 
   return (
     <div className="bg-white border border-[#E7E5DD] rounded-2xl p-3.5 sm:p-5 shadow-xs flex flex-col gap-3 sm:gap-4 font-body text-[#151726] w-full max-w-full">
-      {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#E7E5DD] pb-3 gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="p-2 rounded-xl bg-[#2C7BE5]/10 text-[#2C7BE5] shrink-0">
@@ -119,27 +115,24 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({ isSc
         <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
           <span className="px-2.5 py-1 rounded-full bg-[#22D3A6]/15 text-[#059669] font-mono-num font-bold text-[10px] sm:text-[11px] flex items-center gap-1">
             <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-            <span>Estimated Walk: 3 mins</span>
+            <span>Estimated Walk: {estimatedTime} mins</span>
           </span>
         </div>
       </div>
 
-      {/* Light Theme Leaflet Map Container */}
       <div className="relative w-full h-60 sm:h-72 md:h-80 rounded-xl sm:rounded-2xl border border-[#E7E5DD] overflow-hidden shadow-inner z-10">
         <MapContainer
           center={[centerLat, centerLng]}
-          zoom={16}
+          zoom={17}
           scrollWheelZoom={false}
           className="w-full h-full"
           attributionControl={false}
         >
-          {/* CartoDB Positron Light Tile Layer */}
           <TileLayer
             url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
             maxZoom={19}
           />
 
-          {/* Red Polygon for High-Risk Surge Zone (Gate 3) */}
           <Polygon
             positions={surgeZonePolygon}
             pathOptions={{
@@ -152,12 +145,11 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({ isSc
             <Popup>
               <div className="p-1 font-heading font-bold text-xs text-[#FF3B5C] flex items-center gap-1">
                 <AlertTriangle className="w-3.5 h-3.5" />
-                <span>Gate 3 (Very Crowded Area)</span>
+                <span>Central Library Roundabout (Crowded)</span>
               </div>
             </Popup>
           </Polygon>
 
-          {/* Dynamic Segmented Polyline Path (Bending around red polygon) */}
           <Polyline
             positions={pathCoordinates}
             pathOptions={{
@@ -168,7 +160,6 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({ isSc
               lineCap: 'round',
             }}
           >
-            {/* Permanent Distance Tooltip along middle segment */}
             <Tooltip position={midTooltipPoint} permanent direction="top" className="custom-leaflet-tooltip">
               <span className="font-mono-num font-bold text-[11px] text-[#2C7BE5] bg-white px-2 py-0.5 rounded-md shadow-xs border border-[#2C7BE5]">
                 {estimatedTime}m Walk
@@ -176,7 +167,6 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({ isSc
             </Tooltip>
           </Polyline>
 
-          {/* Marker Node A: Blue Dot User Location */}
           <Marker position={pathCoordinates[0] || [centerLat, centerLng]} icon={createBlueDotIcon()}>
             <Popup>
               <div className="p-1 font-heading font-bold text-xs text-[#2C7BE5]">
@@ -185,7 +175,6 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({ isSc
             </Popup>
           </Marker>
 
-          {/* Marker Node B: Green Exit Pin */}
           <Marker position={pathCoordinates[pathCoordinates.length - 1] || [centerLat, centerLng]} icon={createGreenExitIcon()}>
             <Popup>
               <div className="p-1 font-heading font-bold text-xs text-[#059669]">
@@ -195,7 +184,6 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({ isSc
           </Marker>
         </MapContainer>
 
-        {/* Map Legend Overlay */}
         <div className="absolute bottom-2.5 left-2.5 bg-white/95 backdrop-blur-md px-2.5 sm:px-3 py-1.5 rounded-xl border border-[#E7E5DD] shadow-md z-20 text-[10px] sm:text-[11px] font-mono-num flex items-center gap-2.5 sm:gap-3 flex-wrap max-w-[calc(100%-20px)]">
           <div className="flex items-center gap-1">
             <span className="w-2.5 h-2.5 rounded-full bg-[#38BDF8] border border-white shrink-0" />
@@ -212,7 +200,6 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({ isSc
         </div>
       </div>
 
-      {/* Turn-by-Turn Instruction List */}
       <div className="bg-[#FAFAF7] border border-[#E7E5DD] rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col gap-2.5">
         <span className="font-heading font-bold text-xs text-[#151726] uppercase tracking-wider flex items-center gap-1.5">
           <Footprints className="w-3.5 h-3.5 text-[#2C7BE5] shrink-0" />

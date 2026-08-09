@@ -11,9 +11,10 @@ from sqlalchemy.future import select
 
 async def seed_venue():
     async with async_session() as session:
-        print("Seeding venue and zones...")
+        print("Seeding ITER Campus venue and zones...")
         
-        venue_id = "venue_iter"
+        # Matches the DEFAULT_VENUE_ID in your .env
+        venue_id = "soa-iter-01"
         
         # Upsert Venue
         result = await session.execute(select(Venue).where(Venue.id == venue_id))
@@ -22,18 +23,18 @@ async def seed_venue():
         if not venue:
             venue = Venue(
                 id=venue_id,
-                name="ITER",
-                location="Siksha 'O' Anusandhan Campus, Bhubaneswar",
-                gps_center_lat=20.2496, # TODO: Placeholder, needs real GPS
-                gps_center_lng=85.8000, # TODO: Placeholder, needs real GPS
-                total_capacity=2500
+                name="Institute of Technical Education and Research (SOA)",
+                location="Bhubaneswar, Odisha",
+                gps_center_lat=20.2496,
+                gps_center_lng=85.7988,
+                total_capacity=15000
             )
             session.add(venue)
             print(f"Created Venue: {venue.name}")
         else:
             print(f"Venue {venue.name} already exists. Updating...")
         
-        # Define Zones
+        # Define Zones matching venue_graph.json EXACTLY, with realistic spatial offsets
         zones_data = [
             {
                 "id": "gate_1",
@@ -41,8 +42,8 @@ async def seed_venue():
                 "name": "Main Gate",
                 "sector": "gate",
                 "capacity_limit": 300,
-                "center_lat": 20.2500, # TODO: Needs real GPS coordinates
-                "center_lng": 85.8010  # TODO: Needs real GPS coordinates
+                "center_lat": 20.2515,
+                "center_lng": 85.7980
             },
             {
                 "id": "zone_admin_block_rd",
@@ -50,8 +51,8 @@ async def seed_venue():
                 "name": "Administrative Block Road + Gate Approach",
                 "sector": "pathway",
                 "capacity_limit": 500,
-                "center_lat": 20.2501, # TODO: Needs real GPS coordinates
-                "center_lng": 85.8015  # TODO: Needs real GPS coordinates
+                "center_lat": 20.2508,
+                "center_lng": 85.7984
             },
             {
                 "id": "zone_library_roundabout",
@@ -59,8 +60,8 @@ async def seed_venue():
                 "name": "Central Library Roundabout",
                 "sector": "junction",
                 "capacity_limit": 400,
-                "center_lat": 20.2505, # TODO: Needs real GPS coordinates
-                "center_lng": 85.8020  # TODO: Needs real GPS coordinates
+                "center_lat": 20.2496,
+                "center_lng": 85.7988
             },
             {
                 "id": "zone_sports_complex_rd",
@@ -68,8 +69,8 @@ async def seed_venue():
                 "name": "Sports Complex / Physics Dept Road",
                 "sector": "pathway",
                 "capacity_limit": 500,
-                "center_lat": 20.2510, # TODO: Needs real GPS coordinates
-                "center_lng": 85.8025  # TODO: Needs real GPS coordinates
+                "center_lat": 20.2485,
+                "center_lng": 85.7980
             },
             {
                 "id": "gate_2",
@@ -77,8 +78,8 @@ async def seed_venue():
                 "name": "EV Charging / Food Court Junction",
                 "sector": "gate",
                 "capacity_limit": 300,
-                "center_lat": 20.2515, # TODO: Needs real GPS coordinates
-                "center_lng": 85.8030  # TODO: Needs real GPS coordinates
+                "center_lat": 20.2475,
+                "center_lng": 85.7975
             },
             {
                 "id": "zone_e_block_lawn_rd",
@@ -86,8 +87,8 @@ async def seed_venue():
                 "name": "E Block Lawn / F Block Road",
                 "sector": "pathway",
                 "capacity_limit": 500,
-                "center_lat": 20.2508, # TODO: Needs real GPS coordinates
-                "center_lng": 85.8018  # TODO: Needs real GPS coordinates
+                "center_lat": 20.2488,
+                "center_lng": 85.7995
             }
         ]
         
