@@ -8,3 +8,9 @@ coverage/
 !.env.example
 __pycache__/
 *.py[cod]
+pycache/
+**/pycache/
+*.py[cod]
+__pycache__/
+*.pyc
+*.pyo

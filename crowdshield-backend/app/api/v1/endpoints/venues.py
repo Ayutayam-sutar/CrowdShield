@@ -1,6 +1,7 @@
 """
 Venue API Endpoints — Live database queries for venues & associated zones.
 """
+import os
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -17,7 +18,8 @@ router = APIRouter()
 async def read_venues(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
     """
     Get all active venues with their associated zones.
-    If zones exist in the database without a venue, automatically assigns a default venue.
+    If zones exist in the database without a venue, automatically assigns a default venue
+    pulled from environment variables.
     """
     result = await db.execute(select(Venue).offset(skip).limit(limit))
     venues = result.scalars().all()
@@ -27,13 +29,14 @@ async def read_venues(skip: int = 0, limit: int = 100, db: AsyncSession = Depend
         zones_result = await db.execute(select(Zone))
         zones = zones_result.scalars().all()
         if zones:
+            # Dynamically pull the default venue from the .env file
             default_venue = Venue(
-                id="v-1",
-                name="Siksha 'O' Anusandhan University Campus",
-                location="Bhubaneswar, Odisha",
-                gps_center_lat=20.2496,
-                gps_center_lng=85.7988,
-                total_capacity=60000
+                id=os.getenv("DEFAULT_VENUE_ID", "v-default"),
+                name=os.getenv("DEFAULT_VENUE_NAME", "Standard Venue"),
+                location=os.getenv("DEFAULT_VENUE_LOCATION", "Global"),
+                gps_center_lat=float(os.getenv("DEFAULT_VENUE_LAT", "0.0")),
+                gps_center_lng=float(os.getenv("DEFAULT_VENUE_LNG", "0.0")),
+                total_capacity=int(os.getenv("DEFAULT_VENUE_CAPACITY", "10000"))
             )
             db.add(default_venue)
             await db.flush()

@@ -16,7 +16,6 @@ type MessageCallback = (data: TelemetryEvent) => void;
 
 class WebSocketService {
   private ws: WebSocket | null = null;
-  private url = 'ws://localhost:8000/ws/telemetry';
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private listeners: MessageCallback[] = [];
@@ -26,18 +25,20 @@ class WebSocketService {
       return;
     }
 
-    if (this.ws) return;
     const token = localStorage.getItem('token') || '';
+    
+    // FIX: Explicitly force 127.0.0.1 instead of localhost to bypass IPv6 routing delays
     const wsBaseUrl = import.meta.env.VITE_API_URL 
-      ? import.meta.env.VITE_API_URL.replace('http', 'ws') 
-      : 'ws://localhost:8000';
+      ? import.meta.env.VITE_API_URL.replace('http', 'ws').replace('localhost', '127.0.0.1')
+      : 'ws://127.0.0.1:8000';
+      
     const wsUrl = `${wsBaseUrl}/api/v1/ws/telemetry?token=${token}`;
 
     try {
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
-        console.log('[WebSocket] Connected to Telemetry Engine');
+        console.log('🟢 [WebSocket] Connected to Telemetry Engine via IPv4');
         this.reconnectAttempts = 0;
         window.dispatchEvent(new CustomEvent('network_status', { detail: { status: 'online' } }));
       };
@@ -45,32 +46,36 @@ class WebSocketService {
       this.ws.onmessage = (event) => {
         try {
           const data: TelemetryEvent = JSON.parse(event.data);
+          
+          // Debug log so we can prove data is reaching the frontend
           if (data.event === 'TELEMETRY_UPDATE') {
-            this.listeners.forEach(listener => listener(data));
+            console.log(`⚡ [WebSocket] Inbound Packet -> Zone: ${data.zone?.id} | Density: ${data.zone?.density}`);
           }
+          
+          this.listeners.forEach(listener => listener(data));
         } catch (err) {
-          console.error('[WebSocket] Error parsing message', err);
+          console.error('🔴 [WebSocket] Error parsing message payload:', err);
         }
       };
 
       this.ws.onclose = () => {
-        console.log('[WebSocket] Disconnected');
+        console.warn('🟠 [WebSocket] Disconnected from server');
         window.dispatchEvent(new CustomEvent('network_status', { detail: { status: 'offline' } }));
         this.handleReconnect();
       };
 
       this.ws.onerror = (error) => {
-        console.error('[WebSocket] Error', error);
+        console.error('🔴 [WebSocket] Network Error:', error);
       };
     } catch (err) {
-      console.error('[WebSocket] Connection failed', err);
+      console.error('🔴 [WebSocket] Connection initialization failed:', err);
       this.handleReconnect();
     }
   }
 
   private handleReconnect() {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
-      const timeout = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 8000); // 1s, 2s, 4s, 8s
+      const timeout = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 8000);
       this.reconnectAttempts++;
       console.log(`[WebSocket] Reconnecting in ${timeout}ms (Attempt ${this.reconnectAttempts})`);
       setTimeout(() => this.connect(), timeout);
@@ -88,7 +93,7 @@ class WebSocketService {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       try {
         this.ws.send(JSON.stringify({ action: 'subscribe_zone', zone_id: zoneId }));
-        console.log(`[WebSocket] Subscribed to telemetry for zone: ${zoneId}`);
+        console.log(`[WebSocket] Sent explicit subscription for zone: ${zoneId}`);
       } catch (err) {
         console.error('[WebSocket] Error subscribing to zone', err);
       }

@@ -12,7 +12,9 @@ import {
   Layers,
   VideoOff,
   RefreshCw,
-  AlertTriangle
+  AlertTriangle,
+  Upload,
+  Loader2
 } from 'lucide-react';
 
 interface CamerasViewProps {
@@ -25,6 +27,8 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [] 
   const [selectedFeed, setSelectedFeed] = useState<CCTVFeed | null>(null);
   const [failedFeeds, setFailedFeeds] = useState<Record<string, boolean>>({});
   const [streamCacheBusters, setStreamCacheBusters] = useState<Record<string, number>>({});
+  const [uploadingFeeds, setUploadingFeeds] = useState<Record<string, boolean>>({});
+  const [uploadStatus, setUploadStatus] = useState<Record<string, string>>({});
 
   const handleImageError = (feedId: string) => {
     setFailedFeeds((prev) => ({ ...prev, [feedId]: true }));
@@ -39,6 +43,40 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [] 
   const getPortFromUrl = (url: string, defaultPort: string = '5000') => {
     const match = url.match(/:(\d+)\//);
     return match ? match[1] : defaultPort;
+  };
+
+  // Handle direct file upload to specific Edge Camera Node port
+  const handleFileUpload = async (feedId: string, port: string, file: File) => {
+    if (!file) return;
+
+    setUploadingFeeds((prev) => ({ ...prev, [feedId]: true }));
+    setUploadStatus((prev) => ({ ...prev, [feedId]: `Uploading ${file.name}...` }));
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${port}/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        setUploadStatus((prev) => ({ ...prev, [feedId]: `Hot-swapped: ${file.name}` }));
+        // Instantly force stream reload
+        handleRetryFeed(feedId);
+      } else {
+        setUploadStatus((prev) => ({ ...prev, [feedId]: 'Upload failed on edge node' }));
+      }
+    } catch (err) {
+      console.error(`Failed to upload media to edge port ${port}:`, err);
+      setUploadStatus((prev) => ({ ...prev, [feedId]: 'Edge server unreachable' }));
+    } finally {
+      setUploadingFeeds((prev) => ({ ...prev, [feedId]: false }));
+      setTimeout(() => {
+        setUploadStatus((prev) => ({ ...prev, [feedId]: '' }));
+      }, 4000);
+    }
   };
 
   // Match feed with live telemetry zone data
@@ -106,6 +144,8 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [] 
           const port = getPortFromUrl(feed.imageUrl);
           const matchedZone = findMatchedZone(feed);
           const isOffline = failedFeeds[feed.id];
+          const isUploading = uploadingFeeds[feed.id];
+          const currentStatus = uploadStatus[feed.id];
           const cacheBuster = streamCacheBusters[feed.id];
           const streamUrl = cacheBuster ? `${feed.imageUrl}?t=${cacheBuster}` : feed.imageUrl;
 
@@ -123,6 +163,11 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [] 
                 <div className="flex items-center gap-2">
                   <span className={`w-2.5 h-2.5 rounded-full ${isOffline ? 'bg-[#FF3B5C]' : 'bg-[#22D3A6] animate-pulse'}`} />
                   <span className="font-heading font-bold text-sm">{feed.name}</span>
+                  {currentStatus && (
+                    <span className="text-[10px] bg-[#06b6d4]/20 text-[#06b6d4] px-2 py-0.5 rounded font-mono font-bold">
+                      {currentStatus}
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 font-mono-num text-xs text-gray-400">
                   <span className="px-1.5 py-0.5 rounded bg-white/10 text-[10px] font-bold text-white">Port {port}</span>
@@ -145,17 +190,33 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [] 
                       <span className="px-2.5 py-1 rounded bg-[#FF3B5C]/15 border border-[#FF3B5C]/30 text-[#FF3B5C] font-mono-num font-bold text-xs">
                         Target Port {port}
                       </span>
-                      <span className="text-xs text-gray-400 font-mono-num">
-                        {feed.imageUrl}
-                      </span>
                     </div>
-                    <button
-                      onClick={() => handleRetryFeed(feed.id)}
-                      className="mt-2 px-4 py-1.5 bg-[#2C7BE5] hover:bg-[#2C7BE5]/80 rounded-xl text-xs font-bold text-white flex items-center gap-2 cursor-pointer transition-colors shadow-md"
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                      <span>Retry Stream</span>
-                    </button>
+
+                    <div className="flex items-center gap-3 mt-2">
+                      <button
+                        onClick={() => handleRetryFeed(feed.id)}
+                        className="px-3.5 py-1.5 bg-[#2C7BE5] hover:bg-[#2C7BE5]/80 rounded-xl text-xs font-bold text-white flex items-center gap-2 cursor-pointer transition-colors shadow-md"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                        <span>Retry Stream</span>
+                      </button>
+
+                      {/* Direct Upload Fallback Trigger */}
+                      <label className="px-3.5 py-1.5 bg-[#7C6CFF] hover:bg-[#7C6CFF]/80 rounded-xl text-xs font-bold text-white flex items-center gap-2 cursor-pointer transition-colors shadow-md">
+                        {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                        <span>{isUploading ? 'Uploading...' : 'Hot-Swap Video'}</span>
+                        <input
+                          type="file"
+                          accept="video/*,image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              handleFileUpload(feed.id, port, e.target.files[0]);
+                            }
+                          }}
+                        />
+                      </label>
+                    </div>
                   </div>
                 ) : (
                   <img
@@ -194,16 +255,35 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [] 
                   </div>
                 )}
 
-                {/* Controls Overlay on Hover */}
+                {/* Hover Controls Overlay */}
                 {!isOffline && (
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                    {/* Expand Feed Modal */}
                     <button
                       onClick={() => setSelectedFeed(feed)}
-                      className="p-2.5 bg-white text-[#151726] rounded-full shadow-lg hover:bg-gray-100 transition-transform hover:scale-110 cursor-pointer"
+                      className="p-3 bg-white text-[#151726] rounded-full shadow-lg hover:bg-gray-100 transition-transform hover:scale-110 cursor-pointer"
                       title="Expand Feed"
                     >
                       <Maximize2 className="w-5 h-5" />
                     </button>
+
+                    {/* Hot-Swap Media File Upload Button */}
+                    <label
+                      className="p-3 bg-[#7C6CFF] text-white rounded-full shadow-lg hover:bg-[#6b58ff] transition-transform hover:scale-110 cursor-pointer flex items-center justify-center"
+                      title="Hot-Swap Video Feed File"
+                    >
+                      {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
+                      <input
+                        type="file"
+                        accept="video/*,image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            handleFileUpload(feed.id, port, e.target.files[0]);
+                          }
+                        }}
+                      />
+                    </label>
                   </div>
                 )}
               </div>
@@ -250,12 +330,12 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [] 
                   {selectedFeed.name}
                 </h3>
                 <p className="text-xs text-gray-400 font-mono-num">
-                  Location: {selectedFeed.location} · Stream: http://localhost:{getPortFromUrl(selectedFeed.imageUrl)}/video_feed
+                  Location: {selectedFeed.location} · Stream: http://127.0.0.1:{getPortFromUrl(selectedFeed.imageUrl)}/video_feed
                 </p>
               </div>
               <button
                 onClick={() => setSelectedFeed(null)}
-                className="px-3 py-1 bg-white/10 rounded-lg hover:bg-white/20 text-xs font-bold"
+                className="px-3 py-1 bg-white/10 rounded-lg hover:bg-white/20 text-xs font-bold cursor-pointer"
               >
                 Close
               </button>

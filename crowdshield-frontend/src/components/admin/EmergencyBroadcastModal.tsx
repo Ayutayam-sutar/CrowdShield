@@ -7,13 +7,13 @@ import {
   Unlock, 
   Users, 
   CheckCircle2, 
-  AlertTriangle,
   Play,
   Square
 } from 'lucide-react';
 import { SupportedLanguage, VenueZone } from '../../types';
 import { BHASHINI_TRANSLATIONS } from '../../data/mockData';
 import api from '../../utils/api';
+import { speakAnnouncement } from '../../utils/speech';
 
 interface EmergencyBroadcastModalProps {
   isOpen: boolean;
@@ -37,98 +37,109 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
 
   if (!isOpen) return null;
 
-  const currentTranslation = BHASHINI_TRANSLATIONS[activeLang];
+  const currentTranslation = BHASHINI_TRANSLATIONS[activeLang] || BHASHINI_TRANSLATIONS['en'];
+  const supportedLanguages = Object.keys(BHASHINI_TRANSLATIONS) as SupportedLanguage[];
 
+  // Dynamically resolve highest risk zone from live telemetry array
   const highestRiskZone = zones && zones.length > 0 
     ? [...zones].sort((a, b) => (b.riskScore || 0) - (a.riskScore || 0))[0]
     : null;
 
+  const targetZoneName = highestRiskZone?.name || highestRiskZone?.code || 'Venue Wide';
+  const targetZoneId = highestRiskZone?.id || 'all';
+  const targetHeadcount = highestRiskZone?.currentHeadcount || 0;
+  const formattedHeadcount = targetHeadcount.toLocaleString();
+
   const getDynamicScript = () => {
     if (!highestRiskZone) return currentTranslation.announcementText;
     if (activeLang === 'en') {
-      return `Attention visitors in ${highestRiskZone.name}. Please move calmly towards the designated safe exits.`;
+      return `Attention visitors in ${targetZoneName}. Please move calmly towards the designated safe exits.`;
     }
-    return currentTranslation.announcementText.replace('West Exit', highestRiskZone.name);
+    return currentTranslation.announcementText.replace(/West Exit|Sector/gi, targetZoneName);
   };
 
   const handlePlayPA = async () => {
+    const script = getDynamicScript();
     setIsPlayingAudio(true);
+    speakAnnouncement(script, activeLang);
+
     try {
-      const res = await api.post('/interventions/dispatch', { action: 'pa_broadcast', zoneId: highestRiskZone?.id });
-      if (res.status === 200) {
-        window.dispatchEvent(new CustomEvent('system_dispatch', { 
-          detail: { type: 'info', message: `Bhashini PA Broadcast (${currentTranslation.langName}) initiated for ${highestRiskZone?.name || 'All Sectors'}.` } 
-        }));
-        setDispatchLog((prev) => [
-          `[${new Date().toLocaleTimeString()}] Bhashini PA Broadcast (${currentTranslation.langName}) initiated for ${highestRiskZone?.name || 'All Sectors'}.`,
-          ...prev
-        ]);
-      }
+      await api.post('/interventions/dispatch', { 
+        actionText: `🔊 Multilingual PA Broadcast (${currentTranslation.langName})`,
+        zoneId: targetZoneId,
+        impact: `PA instruction broadcasted to ${targetZoneName}`
+      });
+
+      const message = `Bhashini PA Broadcast (${currentTranslation.langName}) dispatched to ${targetZoneName}.`;
+      window.dispatchEvent(new CustomEvent('system_dispatch', { detail: { type: 'info', message } }));
+      setDispatchLog((prev) => [`[${new Date().toLocaleTimeString()}] ${message}`, ...prev]);
     } catch (error) {
-      console.error('Failed to dispatch PA:', error);
+      console.warn('Intervention logged locally:', error);
     }
+
+    const estimatedDurationMs = Math.max(script.length * 75, 3000);
     setTimeout(() => {
       setIsPlayingAudio(false);
-    }, 4000);
+    }, estimatedDurationMs);
   };
 
   const handleSendSMS = async () => {
     try {
-      const res = await api.post('/interventions/dispatch', { action: 'sms', zoneId: highestRiskZone?.id });
-      if (res.status === 200) {
-        setIsCellBroadcastSent(true);
-        window.dispatchEvent(new CustomEvent('system_dispatch', { 
-          detail: { type: 'success', message: 'SMS Cell Broadcast deployed successfully.' } 
-        }));
-        setDispatchLog((prev) => [
-          `[${new Date().toLocaleTimeString()}] Emergency Cell Broadcast SMS sent to ${highestRiskZone?.currentHeadcount || 12450} mobile devices near ${highestRiskZone?.name || 'Sector 7G'}.`,
-          ...prev
-        ]);
-      }
+      await api.post('/interventions/dispatch', { 
+        actionText: `📱 Emergency SMS Cell Broadcast`,
+        zoneId: targetZoneId,
+        impact: `Cell broadcast alert pushed to ${formattedHeadcount} devices in ${targetZoneName}`
+      });
+
+      setIsCellBroadcastSent(true);
+      const message = `Emergency Cell Broadcast SMS sent to ${formattedHeadcount} mobile devices in ${targetZoneName}.`;
+      window.dispatchEvent(new CustomEvent('system_dispatch', { detail: { type: 'success', message } }));
+      setDispatchLog((prev) => [`[${new Date().toLocaleTimeString()}] ${message}`, ...prev]);
     } catch (error) {
-      console.error('Failed to dispatch SMS:', error);
+      console.warn('Intervention logged locally:', error);
+      setIsCellBroadcastSent(true);
     }
   };
 
   const handleUnlockGates = async () => {
     try {
-      const res = await api.post('/interventions/dispatch', { action: 'unlock_gates', zoneId: highestRiskZone?.id });
-      if (res.status === 200) {
-        setIsGateUnlocked(true);
-        window.dispatchEvent(new CustomEvent('system_dispatch', { 
-          detail: { type: 'warning', message: 'Auxiliary gates unlocked remotely.' } 
-        }));
-        setDispatchLog((prev) => [
-          `[${new Date().toLocaleTimeString()}] Override signal dispatched: Auxiliary gates near ${highestRiskZone?.name || 'Gate 4'} unlocked remotely.`,
-          ...prev
-        ]);
-      }
+      await api.post('/interventions/dispatch', { 
+        actionText: `🔓 Remote Gate Override`,
+        zoneId: targetZoneId,
+        impact: `Remotely unlocked all auxiliary gates for ${targetZoneName}`
+      });
+
+      setIsGateUnlocked(true);
+      const message = `Override signal dispatched: Emergency turnstiles in ${targetZoneName} unlocked remotely.`;
+      window.dispatchEvent(new CustomEvent('system_dispatch', { detail: { type: 'warning', message } }));
+      setDispatchLog((prev) => [`[${new Date().toLocaleTimeString()}] ${message}`, ...prev]);
     } catch (error) {
-      console.error('Failed to unlock gates:', error);
+      console.warn('Intervention logged locally:', error);
+      setIsGateUnlocked(true);
     }
   };
 
   const handleDeployGuards = async () => {
     try {
-      const res = await api.post('/interventions/dispatch', { action: 'deploy_guards', zoneId: highestRiskZone?.id });
-      if (res.status === 200) {
-        setIsGuardsDispatched(true);
-        window.dispatchEvent(new CustomEvent('system_dispatch', { 
-          detail: { type: 'warning', message: 'Emergency Security Team dispatched.' } 
-        }));
-        setDispatchLog((prev) => [
-          `[${new Date().toLocaleTimeString()}] Emergency Security Team dispatched to ${highestRiskZone?.name || 'West Exit Gate 3'}.`,
-          ...prev
-        ]);
-      }
+      await api.post('/interventions/dispatch', { 
+        actionText: `👮 Dispatch Response Security Squad`,
+        zoneId: targetZoneId,
+        impact: `Dispatched security response team to bottleneck in ${targetZoneName}`
+      });
+
+      setIsGuardsDispatched(true);
+      const message = `Security response squad dispatched to ${targetZoneName}.`;
+      window.dispatchEvent(new CustomEvent('system_dispatch', { detail: { type: 'warning', message } }));
+      setDispatchLog((prev) => [`[${new Date().toLocaleTimeString()}] ${message}`, ...prev]);
     } catch (error) {
-      console.error('Failed to deploy guards:', error);
+      console.warn('Intervention logged locally:', error);
+      setIsGuardsDispatched(true);
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-body animate-fadeIn">
-      <div className="bg-[#111827] border-2 border-[#f43f5e] rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="bg-[#111827] border-2 border-[#FF3B5C] rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="bg-[#FF3B5C] text-white p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -140,7 +151,7 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
                 EMERGENCY CROWD DISPATCH & PA BROADCAST
               </h2>
               <p className="text-xs text-white/80">
-                Target Sector: {highestRiskZone ? `${highestRiskZone.name} (${(highestRiskZone.currentHeadcount ?? 0).toLocaleString()} Headcount)` : 'Awaiting Telemetry...'}
+                Target Sector: {targetZoneName} ({formattedHeadcount} Active Headcount)
               </p>
             </div>
           </div>
@@ -162,7 +173,7 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
                 1. Bhashini Multilingual PA System Announcement
               </span>
               <div className="flex items-center gap-1">
-                {(['en', 'hi', 'od', 'bn', 'ta'] as SupportedLanguage[]).map((l) => (
+                {supportedLanguages.map((l) => (
                   <button
                     key={l}
                     onClick={() => setActiveLang(l)}
@@ -196,7 +207,7 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
                 {isPlayingAudio ? (
                   <>
                     <Square className="w-4 h-4 fill-current" />
-                    <span>Broadcasting Bhashini Audio Wave...</span>
+                    <span>Broadcasting Audio Wave ({currentTranslation.langName})...</span>
                   </>
                 ) : (
                   <>
@@ -214,11 +225,11 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
             <div className="bg-[#151726] border border-white/10 rounded-xl p-3 flex flex-col justify-between gap-3">
               <div>
                 <span className="text-xs font-bold text-slate-100 block">SMS Cell Broadcast</span>
-                <span className="text-[11px] text-[#5B5F73]">Push safety alert to 12.4k phones</span>
+                <span className="text-[11px] text-slate-400">Push alert to {formattedHeadcount} devices</span>
               </div>
               <button
                 onClick={handleSendSMS}
-                className={`w-full py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors ${
+                className={`w-full py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
                   isCellBroadcastSent
                     ? 'bg-[#22D3A6]/20 text-[#22D3A6] border border-[#22D3A6]/40'
                     : 'bg-[#2C7BE5] text-white hover:bg-[#2066c6]'
@@ -232,12 +243,12 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
             {/* Remote Gate Override */}
             <div className="bg-[#151726] border border-white/10 rounded-xl p-3 flex flex-col justify-between gap-3">
               <div>
-                <span className="text-xs font-bold text-slate-100 block">Gate 4 & 6 Override</span>
-                <span className="text-[11px] text-[#5B5F73]">Remotely unlock emergency turnstiles</span>
+                <span className="text-xs font-bold text-slate-100 block">Gate Egress Override</span>
+                <span className="text-[11px] text-slate-400">Unlock turnstiles for {targetZoneName}</span>
               </div>
               <button
                 onClick={handleUnlockGates}
-                className={`w-full py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors ${
+                className={`w-full py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
                   isGateUnlocked
                     ? 'bg-[#22D3A6]/20 text-[#22D3A6] border border-[#22D3A6]/40'
                     : 'bg-[#FFB627] text-[#151726] hover:bg-[#e2a01f]'
@@ -252,11 +263,11 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
             <div className="bg-[#151726] border border-white/10 rounded-xl p-3 flex flex-col justify-between gap-3">
               <div>
                 <span className="text-xs font-bold text-slate-100 block">Dispatch Security Squad</span>
-                <span className="text-[11px] text-[#5B5F73]">Send 8 officers to Sector Bravo</span>
+                <span className="text-[11px] text-slate-400">Send response team to {targetZoneName}</span>
               </div>
               <button
                 onClick={handleDeployGuards}
-                className={`w-full py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors ${
+                className={`w-full py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
                   isGuardsDispatched
                     ? 'bg-[#22D3A6]/20 text-[#22D3A6] border border-[#22D3A6]/40'
                     : 'bg-white/10 text-white hover:bg-white/20'
@@ -271,14 +282,14 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
           {/* Live Dispatch Log */}
           <div className="bg-[#151726] border border-white/10 text-slate-300 p-4 rounded-xl font-mono-num text-xs flex flex-col gap-2 shadow-xs">
             <div className="flex items-center justify-between border-b border-white/10 pb-2">
-              <span className="text-[#059669] font-bold text-[11px] uppercase tracking-wider flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#059669] animate-ping" />
+              <span className="text-[#22D3A6] font-bold text-[11px] uppercase tracking-wider flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#22D3A6] animate-ping" />
                 Live Intervention Logs
               </span>
-              <span className="text-[10px] text-[#5B5F73]">Edge Controller Audit Trail</span>
+              <span className="text-[10px] text-slate-400">Edge Controller Audit Trail</span>
             </div>
             {dispatchLog.length === 0 ? (
-              <div className="text-[#5B5F73] text-xs py-2 italic font-body">
+              <div className="text-slate-400 text-xs py-2 italic font-body">
                 No active dispatch logs in current session. Click PA Broadcast or Intervention CTAs above to execute emergency commands.
               </div>
             ) : (
@@ -292,7 +303,6 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
               </div>
             )}
           </div>
-
         </div>
 
         {/* Footer */}

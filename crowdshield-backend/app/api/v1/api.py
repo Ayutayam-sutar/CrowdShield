@@ -11,7 +11,8 @@ from app.api.v1.endpoints import (
     broadcast,
     routing,
     auth,
-    analytics
+    analytics,
+    interventions
 )
 from app.api.v1 import websocket
 
@@ -26,4 +27,5 @@ api_router.include_router(incidents.router, prefix="/citizen-reports", tags=["ci
 api_router.include_router(broadcast.router, prefix="/broadcast", tags=["broadcast"])
 api_router.include_router(routing.router, prefix="/routing", tags=["routing"])
 api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
+api_router.include_router(interventions.router, prefix="/interventions", tags=["interventions"])
 api_router.include_router(websocket.router, tags=["websocket"])

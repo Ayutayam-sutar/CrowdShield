@@ -3,7 +3,7 @@ Analytics endpoints for post-incident reporting and AI summaries.
 """
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, text, literal_column
 from pydantic import BaseModel
 
 import os
@@ -18,8 +18,6 @@ from app.api.deps import get_current_active_admin
 from app.core.config import settings
 from app.services.predictive_engine import predict_density
 from typing import Any
-from app.api.deps import get_current_active_admin
-from app.core.config import settings
 
 router = APIRouter()
 
@@ -38,27 +36,27 @@ async def get_historical_analytics(db: AsyncSession = Depends(get_db)):
     now = datetime.now(timezone.utc)
     twenty_four_hours_ago = now - timedelta(hours=24)
 
-    # 1. Footfall query (max headcount per hour)
+    # 1. Footfall query (max headcount per hour) - FIXED GROUPING
     footfall_query = (
         select(
-            func.date_trunc('hour', TelemetryLog.timestamp).label('hour_ts'),
+            func.date_trunc(text("'hour'"), TelemetryLog.timestamp).label('hour_ts'),
             func.max(TelemetryLog.person_count).label('footfall')
         )
         .where(TelemetryLog.timestamp >= twenty_four_hours_ago)
-        .group_by(func.date_trunc('hour', TelemetryLog.timestamp))
-        .order_by('hour_ts')
+        .group_by(literal_column('hour_ts'))
+        .order_by(literal_column('hour_ts'))
     )
     footfall_result = await db.execute(footfall_query)
     footfall_rows = footfall_result.all()
 
-    # 2. Alerts query for bottlenecks
+    # 2. Alerts query for bottlenecks - FIXED GROUPING
     alerts_query = (
         select(
-            func.date_trunc('hour', CrowdAlert.created_at).label('hour_ts'),
+            func.date_trunc(text("'hour'"), CrowdAlert.created_at).label('hour_ts'),
             func.count(CrowdAlert.id).label('bottlenecks')
         )
         .where(CrowdAlert.created_at >= twenty_four_hours_ago)
-        .group_by(func.date_trunc('hour', CrowdAlert.created_at))
+        .group_by(literal_column('hour_ts'))
     )
     alerts_result = await db.execute(alerts_query)
     alerts_rows = alerts_result.all()
@@ -103,7 +101,7 @@ class SummaryResponse(BaseModel):
     summary: str
 
 @router.post("/generate-summary/{incident_id}", response_model=SummaryResponse, dependencies=[Depends(get_current_active_admin)])
-async def generate_ai_summary(incident_id: str, db: AsyncSession = Depends(get_current_active_admin)):
+async def generate_ai_summary(incident_id: str, db: AsyncSession = Depends(get_db)):
     """
     Generates an NDRF-compliant post-incident executive summary using Gemini or a mocked LLM.
     """
@@ -226,4 +224,3 @@ async def get_predictive_forecast(zone_id: str, db: AsyncSession = Depends(get_d
     if "error" in res:
         raise HTTPException(status_code=400, detail=res["error"])
     return res
-

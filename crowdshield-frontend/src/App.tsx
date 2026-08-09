@@ -388,20 +388,29 @@ export default function App() {
   const handleTriggerScenario = () => {
     setIsScenarioActive(true);
     setZones((prevZones) =>
-      prevZones.map((z) =>
-        z.id === 'z-2' || z.id === 'z-3'
-          ? {
-              ...z,
-              riskScore: 92,
-              riskLevel: 'critical',
-              density: 4.8,
-              currentHeadcount: 3840,
-              maxCapacity: 4000,
-              flowRate: 10,
-              gateStatus: 'restricted',
-            }
-          : z
-      )
+      prevZones.map((z) => {
+        const zid = (z.id || '').toLowerCase();
+        
+        // Include CAM-04 (z-4 / z-04) alongside CAM-03 (z-3 / z-03)
+        if (
+          zid.includes('z-3') || 
+          zid.includes('z-03') || 
+          zid.includes('z-4') || 
+          zid.includes('z-04')
+        ) {
+          return {
+            ...z,
+            riskScore: 95,
+            riskLevel: 'critical',
+            density: 4.8,
+            currentHeadcount: 3840,
+            maxCapacity: 4000,
+            flowRate: 12,
+            gateStatus: 'restricted',
+          };
+        }
+        return z;
+      })
     );
   };
 
@@ -480,9 +489,10 @@ export default function App() {
 
   const activeAlertCount = alerts.filter((a) => a.status === 'active').length;
   
+ // Safe filtering: Add optional chaining to prevent silent UI crashes if a zone name is missing
   const displayedZones = zones.filter((z) => 
-    z.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    z.code.toLowerCase().includes(searchQuery.toLowerCase())
+    (z?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (z?.code || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Render Auth View

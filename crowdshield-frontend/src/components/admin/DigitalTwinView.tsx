@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { VenueZone } from '../../types';
 import { ThreeDigitalTwinCanvas } from './ThreeDigitalTwinCanvas';
 import { 
@@ -26,68 +26,100 @@ interface DigitalTwinViewProps {
   zones: VenueZone[];
 }
 
-// Helper interface for A* Node Graph
 interface GraphNode {
   id: string;
   name: string;
-  x: number; // 0..100 relative grid position
+  x: number; // Relative percentage grid position (0..100)
   y: number;
   density: number;
   isHighRisk: boolean;
   code: string;
 }
 
-export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
-  zones,
-}) => {
+export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones }) => {
   const [simulationSpeed, setSimulationSpeed] = useState<'1x' | '2x' | '5x'>('1x');
-  const [displayZones, setDisplayZones] = useState<VenueZone[]>(zones);
-  const [selectedZoneId, setSelectedZoneId] = useState<string>(zones[0]?.id || 'z-1');
   const [showHeatmap, setShowHeatmap] = useState(true);
   const [showFlowVectors, setShowFlowVectors] = useState(true);
   const [isSimulating, setIsSimulating] = useState(true);
-
-  React.useEffect(() => {
-    let frameId: number;
-    const updateZones = () => {
-      if (isSimulating) {
-        setDisplayZones(zones);
-      }
-      // Throttle updates to ~15 FPS to drastically save CPU/Battery
-      setTimeout(() => { frameId = requestAnimationFrame(updateZones); }, 66);
-    };
-    frameId = requestAnimationFrame(updateZones);
-    return () => {
-      cancelAnimationFrame(frameId);
-    };
-  }, [zones, isSimulating]);
-
-  // Path Finding Visualizer States
   const [showPathFinding, setShowPathFinding] = useState(true);
   const [is3dBlockModelActive, setIs3dBlockModelActive] = useState(true);
-  const [startZoneId, setStartZoneId] = useState<string>(displayZones[1]?.id || displayZones[0]?.id || 'z-2');
-  const [targetZoneId, setTargetZoneId] = useState<string>(displayZones[displayZones.length - 1]?.id || 'z-4');
   const [densityPenaltyFactor, setDensityPenaltyFactor] = useState<number>(2.5);
 
-  const selectedZone = displayZones.find((z) => z.id === selectedZoneId) || displayZones[0];
+  // Sync displayZones cleanly without thrashing React render loops
+  const [displayZones, setDisplayZones] = useState<VenueZone[]>(zones);
 
-  // Map zones to 2D Spatial Grid Coordinates for graph layout & SVG path drawing
+  useEffect(() => {
+    if (isSimulating && zones && zones.length > 0) {
+      setDisplayZones(zones);
+    }
+  }, [zones, isSimulating]);
+
+  // Selected Zone ID with automatic fallback initialization
+  const [selectedZoneId, setSelectedZoneId] = useState<string>('');
+
+  useEffect(() => {
+    if (zones && zones.length > 0 && !selectedZoneId) {
+      setSelectedZoneId(zones[0].id);
+    }
+  }, [zones, selectedZoneId]);
+
+  // Start & Target Zone IDs for A* Router (Handles both z-1 and z-01 formats)
+  const [startZoneId, setStartZoneId] = useState<string>('');
+  const [targetZoneId, setTargetZoneId] = useState<string>('');
+
+  useEffect(() => {
+    if (displayZones.length > 0) {
+      if (!startZoneId) setStartZoneId(displayZones[0].id);
+      if (!targetZoneId) setTargetZoneId(displayZones[displayZones.length - 1].id);
+    }
+  }, [displayZones, startZoneId, targetZoneId]);
+
+  // Safe fallback object for selectedZone to prevent undefined property crashes
+  const selectedZone: VenueZone = useMemo(() => {
+    const found = displayZones.find((z) => {
+      if (z.id === selectedZoneId) return true;
+      const zNum = parseInt((z.id || '').replace(/\D/g, ''), 10);
+      const targetNum = parseInt((selectedZoneId || '').replace(/\D/g, ''), 10);
+      return !isNaN(zNum) && !isNaN(targetNum) && zNum === targetNum;
+    });
+
+    return found || displayZones[0] || {
+      id: 'z-01',
+      name: 'Sector General',
+      code: 'Z-01',
+      sector: 'Sector Alpha',
+      density: 0.0,
+      maxCapacity: 3500,
+      currentHeadcount: 0,
+      flowRate: 0,
+      riskScore: 0,
+      riskLevel: 'safe',
+      trend: 'stable',
+      polygon: [],
+      center: [20.2496, 85.7988],
+      gateStatus: 'open'
+    };
+  }, [displayZones, selectedZoneId]);
+
+  // Map zones to 2D Spatial Grid Coordinates for SVG path drawing
   const spatialNodes: GraphNode[] = useMemo(() => {
-    const cols = 3;
+    if (!displayZones || displayZones.length === 0) return [];
+    const cols = Math.min(4, Math.max(2, Math.ceil(Math.sqrt(displayZones.length))));
+    
     return displayZones.map((zone, index) => {
       const col = index % cols;
       const row = Math.floor(index / cols);
-      const x = 16.66 + col * 33.33;
-      const y = 16.66 + row * 33.33;
+      const x = 15 + col * (70 / Math.max(1, cols - 1));
+      const y = 20 + row * 50;
       const isHighRisk = zone.riskLevel === 'critical' || zone.riskLevel === 'warning';
 
       return {
         id: zone.id,
-        name: zone.name,
-        code: zone.code,
+        name: zone.name || zone.code || zone.id,
+        code: zone.code || zone.id,
         x,
         y,
-        density: Number(zone.density.toFixed(1)),
+        density: Number((zone.density || 0).toFixed(1)),
         isHighRisk,
       };
     });
@@ -106,42 +138,30 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
 
     if (!startNode || !targetNode) return { path: [], cost: 0, avoidedSurgeCount: 0, ms: 0 };
 
-    // Distance heuristic: Euclidean distance
     const distance = (a: GraphNode, b: GraphNode) => {
       const dx = a.x - b.x;
       const dy = a.y - b.y;
       return Math.sqrt(dx * dx + dy * dy);
     };
 
-    // Edge cost considering distance AND current zone crowd density
     const getEdgeCost = (u: GraphNode, v: GraphNode) => {
       const baseDist = distance(u, v);
-      // Density Penalty: exponential cost increase for overcrowded zones
       let penalty = 1 + Math.pow(v.density, 2) * (densityPenaltyFactor * 0.3);
-      if (v.isHighRisk || v.density > 4.0) {
-        penalty += 9999;
-      }
-      const riskBonus = v.isHighRisk ? 5.0 : 1.0;
-      return baseDist * penalty * riskBonus;
+      if (v.isHighRisk || v.density > 4.0) penalty += 500;
+      return baseDist * penalty;
     };
 
-    // Build Adjacency List (Connect adjacent grid nodes)
     const adj = new Map<string, string[]>();
     spatialNodes.forEach((u) => {
       const neighbors: string[] = [];
       spatialNodes.forEach((v) => {
-        if (u.id !== v.id) {
-          const dist = distance(u, v);
-          // Connect nodes that are close (adjacent in 3x3 grid)
-          if (dist <= 40) {
-            neighbors.push(v.id);
-          }
+        if (u.id !== v.id && distance(u, v) <= 60) {
+          neighbors.push(v.id);
         }
       });
       adj.set(u.id, neighbors);
     });
 
-    // A* Priority Queue sets
     const openSet = new Set<string>([startNode.id]);
     const cameFrom = new Map<string, string>();
 
@@ -154,7 +174,6 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
     fScore.set(startNode.id, distance(startNode, targetNode));
 
     while (openSet.size > 0) {
-      // Get node in openSet with lowest fScore
       let currentId = Array.from(openSet)[0];
       let lowestF = fScore.get(currentId) ?? Infinity;
 
@@ -167,7 +186,6 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
       });
 
       if (currentId === targetNode.id) {
-        // Reconstruct path
         const reconstructedPath: GraphNode[] = [];
         let curr: string | undefined = currentId;
         while (curr) {
@@ -178,8 +196,6 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
 
         const endTime = performance.now();
         const totalCost = gScore.get(targetNode.id) || 0;
-
-        // Count high risk zones in grid that were bypassed
         const avoidedSurgeCount = spatialNodes.filter(
           (n) => n.isHighRisk && !reconstructedPath.some((p) => p.id === n.id)
         ).length;
@@ -223,7 +239,7 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
 
   return (
     <div className="p-6 flex flex-col gap-6 font-body">
-      {/* Top Header */}
+      {/* Header Bar */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="font-heading font-bold text-2xl text-slate-100 tracking-tight flex items-center gap-2">
@@ -252,9 +268,9 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
 
       {/* Main 3D Canvas & Zone Details Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Improved Light 3D Canvas View */}
+        {/* 3D Canvas View */}
         <div className="lg:col-span-2 bg-[#111827] border border-slate-800/80 text-slate-100 rounded-2xl p-6 shadow-xl relative overflow-hidden flex flex-col justify-between min-h-[500px]">
-          {/* Overlay Control Bar */}
+          {/* Controls Bar */}
           <div className="flex flex-wrap items-center justify-between gap-2 z-10 bg-[#151726] p-3 rounded-xl border border-white/10">
             <div className="flex items-center gap-2">
               <Cpu className="w-4 h-4 text-[#059669] animate-pulse" />
@@ -268,7 +284,7 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
                 onClick={() => setIs3dBlockModelActive(!is3dBlockModelActive)}
                 className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
                   is3dBlockModelActive
-                    ? 'bg-[#7C6CFF] border-[#7C6CFF] text-white shadow-xs'
+                    ? 'bg-[#7C6CFF] border-[#7C6CFF] text-white'
                     : 'bg-[#0B0F19] border-white/10 text-slate-400 hover:text-white'
                 }`}
               >
@@ -279,7 +295,7 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
                 onClick={() => setShowPathFinding(!showPathFinding)}
                 className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
                   showPathFinding
-                    ? 'bg-[#22D3A6] border-[#22D3A6] text-[#151726] shadow-xs'
+                    ? 'bg-[#22D3A6] border-[#22D3A6] text-[#151726]'
                     : 'bg-[#0B0F19] border-white/10 text-slate-400 hover:text-white'
                 }`}
               >
@@ -290,7 +306,7 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
                 onClick={() => setShowHeatmap(!showHeatmap)}
                 className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
                   showHeatmap
-                    ? 'bg-[#2C7BE5] border-[#2C7BE5] text-white shadow-xs'
+                    ? 'bg-[#2C7BE5] border-[#2C7BE5] text-white'
                     : 'bg-[#0B0F19] border-white/10 text-slate-400 hover:text-white'
                 }`}
               >
@@ -299,76 +315,51 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
             </div>
           </div>
 
-          {/* Interactive Simulated Venue View */}
+          {/* Interactive Three.js View */}
           <div className="my-auto py-4 relative flex flex-col gap-4">
             {is3dBlockModelActive && (
-              <div className="w-full">
+              <div className="w-full h-80 rounded-xl overflow-hidden border border-white/10 bg-black">
                 <ThreeDigitalTwinCanvas
                   zones={displayZones}
-                  selectedZoneId={selectedZoneId}
+                  selectedZoneId={selectedZone.id}
                   onSelectZone={(id) => setSelectedZoneId(id)}
                 />
               </div>
             )}
 
+            {/* Spatial Grid & SVG Path Visualizer */}
             <div className="w-full max-w-xl mx-auto aspect-video rounded-2xl border border-white/10 bg-[#0B0F19] p-6 relative flex flex-col justify-between shadow-inner overflow-hidden">
-              {/* Subtle Spatial Grid Dots */}
               <div className="absolute inset-0 bg-[radial-gradient(#2C7BE5_1px,transparent_1px)] [background-size:20px_20px] opacity-15" />
 
-              {/* A* Dynamic Shortest Safe Route SVG Path Visualizer */}
+              {/* A* Dynamic Shortest Safe Route SVG Path */}
               {showPathFinding && aStarResult.path.length > 1 && (
-                <svg className="absolute inset-0 w-full h-full pointer-events-none z-20 overflow-visible">
-                  <defs>
-                    <linearGradient id="aStarPathGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#2C7BE5" />
-                      <stop offset="50%" stopColor="#38BDF8" />
-                      <stop offset="100%" stopColor="#22D3A6" />
-                    </linearGradient>
-                  </defs>
+  <svg 
+    className="absolute inset-0 w-full h-full pointer-events-none z-20 overflow-visible"
+    viewBox="0 0 100 100"
+    preserveAspectRatio="none"
+  >
+    <defs>
+      <linearGradient id="aStarPathGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#2C7BE5" />
+        <stop offset="50%" stopColor="#38BDF8" />
+        <stop offset="100%" stopColor="#22D3A6" />
+      </linearGradient>
+    </defs>
 
-                  {/* Connecting Line Path */}
-                  <path
-                    d={aStarResult.path.reduce((acc, curr, idx) => {
-                      return idx === 0 ? `M ${curr.x}% ${curr.y}%` : `${acc} L ${curr.x}% ${curr.y}%`;
-                    }, '')}
-                    fill="none"
-                    stroke="url(#aStarPathGradient)"
-                    strokeWidth="5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeDasharray="8 4"
-                    className="animate-pulse drop-shadow-md"
-                  />
-
-                  {/* Waypoint Markers on Path Nodes */}
-                  {aStarResult.path.map((stepNode, index) => {
-                    const isStart = index === 0;
-                    const isTarget = index === aStarResult.path.length - 1;
-
-                    return (
-                      <g key={`path-step-${stepNode.id}-${index}`} transform={`translate(${stepNode.x * 5.76}, ${stepNode.y * 3.24})`}>
-                        <circle
-                          r={isStart || isTarget ? '10' : '7'}
-                          fill={isStart ? '#2C7BE5' : isTarget ? '#22D3A6' : '#38BDF8'}
-                          stroke="#FFFFFF"
-                          strokeWidth="2.5"
-                          className="drop-shadow-lg"
-                        />
-                        <text
-                          y="3.5"
-                          textAnchor="middle"
-                          fill={isStart || isTarget ? '#FFFFFF' : '#151726'}
-                          fontSize="9"
-                          fontWeight="bold"
-                          fontFamily="sans-serif"
-                        >
-                          {isStart ? 'S' : isTarget ? 'E' : index}
-                        </text>
-                      </g>
-                    );
-                  })}
-                </svg>
-              )}
+    <path
+      d={aStarResult.path.reduce((acc, curr, idx) => {
+        return idx === 0 ? `M ${curr.x} ${curr.y}` : `${acc} L ${curr.x} ${curr.y}`;
+      }, '')}
+      fill="none"
+      stroke="url(#aStarPathGradient)"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeDasharray="2 1"
+      className="animate-pulse"
+    />
+  </svg>
+)}
 
               {/* Spatial Zones Array */}
               <div className="grid grid-cols-4 gap-3 relative z-10 h-full">
@@ -384,18 +375,17 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
                       onClick={() => setSelectedZoneId(zone.id)}
                       className={`p-3.5 rounded-xl border flex flex-col justify-between transition-all cursor-pointer text-left relative overflow-hidden ${
                         isSelected
-                          ? 'border-[#2C7BE5] bg-[#2C7BE5]/20 ring-2 ring-[#2C7BE5] shadow-md'
+                          ? 'border-[#2C7BE5] bg-[#2C7BE5]/20 ring-2 ring-[#2C7BE5]'
                           : isOnPath
-                          ? 'border-[#22D3A6] bg-[#151726] ring-2 ring-[#22D3A6]/50 shadow-md'
+                          ? 'border-[#22D3A6] bg-[#151726] ring-2 ring-[#22D3A6]/50'
                           : isHighRisk
-                          ? 'border-[#FF3B5C] bg-[#FF3B5C]/10 hover:bg-[#FF3B5C]/20 shadow-xs'
-                          : 'border-white/10 bg-[#151726] hover:border-slate-600 shadow-xs'
+                          ? 'border-[#FF3B5C] bg-[#FF3B5C]/10'
+                          : 'border-white/10 bg-[#151726] hover:border-slate-600'
                       }`}
                     >
-                      {/* Top Row: Zone Name & Risk Indicator */}
                       <div className="flex items-center justify-between">
                         <span className="font-heading font-bold text-xs text-slate-100 truncate">
-                          {zone.name}
+                          {zone.name || zone.code}
                         </span>
                         {isOnPath ? (
                           <span className="px-1.5 py-0.5 rounded-full bg-[#22D3A6] text-[#151726] font-mono-num font-bold text-[9px]">
@@ -410,7 +400,6 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
                         )}
                       </div>
 
-                      {/* Density Heatmap Visualization Bar */}
                       {showHeatmap && (
                         <div className="w-full h-1.5 rounded-full bg-white/10 my-2 overflow-hidden">
                           <div
@@ -422,26 +411,12 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
                         </div>
                       )}
 
-                      {/* Density Numbers */}
-                      <div className="mt-1">
-                        <div className="text-[10px] text-slate-400 font-mono-num font-semibold">Live Density</div>
-                        <div className={`font-mono-num font-bold text-sm ${
-                          isHighRisk ? 'text-[#FF3B5C]' : 'text-slate-100'
-                        }`}>
-                          {zone.density.toFixed(1)} <span className="text-[10px] font-normal text-slate-400">p/m²</span>
+                      <div className="mt-1 font-mono-num">
+                        <div className="text-[10px] text-slate-400 font-semibold">Live Density</div>
+                        <div className={`font-bold text-sm ${isHighRisk ? 'text-[#FF3B5C]' : 'text-slate-100'}`}>
+                          {(zone.density || 0).toFixed(1)} <span className="text-[10px] font-normal text-slate-400">p/m²</span>
                         </div>
                       </div>
-
-                      {/* Flow Vector Badge */}
-                      {showFlowVectors && (
-                        <div className="mt-2 text-[10px] font-mono-num text-slate-400 flex items-center justify-between border-t border-white/10 pt-1">
-                          <span className="flex items-center gap-1">
-                            <Navigation className="w-3 h-3 text-[#7C6CFF] transform rotate-45" />
-                            {zone.flowRate} p/min
-                          </span>
-                          <span className="text-[9px] uppercase font-bold text-[#2C7BE5]">{zone.gateStatus}</span>
-                        </div>
-                      )}
                     </button>
                   );
                 })}
@@ -463,7 +438,6 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
                   </span>
                 </div>
 
-                {/* Start & Target Node Selectors */}
                 <div className="flex items-center gap-2 text-xs">
                   <div className="flex items-center gap-1 bg-white/10 px-2 py-1 rounded-lg border border-white/10">
                     <span className="text-[10px] text-white/60 font-mono-num uppercase">Start:</span>
@@ -474,7 +448,7 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
                     >
                       {displayZones.map((z) => (
                         <option key={`start-${z.id}`} value={z.id} className="bg-[#151726] text-white">
-                          {z.name}
+                          {z.name || z.code}
                         </option>
                       ))}
                     </select>
@@ -491,7 +465,7 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
                     >
                       {displayZones.map((z) => (
                         <option key={`target-${z.id}`} value={z.id} className="bg-[#151726] text-white">
-                          {z.name}
+                          {z.name || z.code}
                         </option>
                       ))}
                     </select>
@@ -520,47 +494,8 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
                   </React.Fragment>
                 ))}
               </div>
-
-              {/* Path Metrics Summary */}
-              <div className="grid grid-cols-3 gap-2 text-center pt-1 border-t border-white/10">
-                <div className="bg-white/5 p-2 rounded-lg flex flex-col">
-                  <span className="text-[10px] text-white/60 uppercase font-mono-num">Density Cost Weight</span>
-                  <span className="text-xs font-bold font-mono-num text-[#22D3A6]">{aStarResult.cost} Weighted Units</span>
-                </div>
-                <div className="bg-white/5 p-2 rounded-lg flex flex-col">
-                  <span className="text-[10px] text-white/60 uppercase font-mono-num">Bypassed Surge Bottlenecks</span>
-                  <span className="text-xs font-bold font-mono-num text-[#38BDF8]">
-                    {aStarResult.avoidedSurgeCount} High Risk Zones Avoided
-                  </span>
-                </div>
-                <div className="bg-white/5 p-2 rounded-lg flex flex-col">
-                  <span className="text-[10px] text-white/60 uppercase font-mono-num">Evacuation Efficiency</span>
-                  <span className="text-xs font-bold font-mono-num text-[#059669]">98.4% Optimal Flow</span>
-                </div>
-              </div>
             </div>
           )}
-
-          {/* Simulation Footer Control */}
-          <div className="flex flex-wrap items-center justify-between z-10 text-xs text-slate-400 font-mono-num bg-[#151726] p-3 rounded-xl border border-white/10 mt-3">
-            <span className="font-semibold text-slate-100">Grid Spatial Mesh: 0.5m x 0.5m Cell Resolution</span>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-slate-100">Sim Speed:</span>
-              {(['1x', '2x', '5x'] as const).map((spd) => (
-                <button
-                  key={spd}
-                  onClick={() => setSimulationSpeed(spd)}
-                  className={`px-2.5 py-0.5 rounded text-[11px] font-bold cursor-pointer transition-colors ${
-                    simulationSpeed === spd
-                      ? 'bg-[#2C7BE5] text-white shadow-xs'
-                      : 'bg-[#0B0F19] border border-white/10 text-slate-400 hover:text-white'
-                  }`}
-                >
-                  {spd}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* Selected Zone Details & Parameters Control Panel */}
@@ -583,14 +518,14 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
               <div className="p-3.5 rounded-xl bg-[#151726] border border-white/10">
                 <div className="text-[11px] font-semibold text-slate-400">Live Density</div>
                 <div className="font-mono-num font-bold text-xl text-slate-100 mt-0.5">
-                  {selectedZone.density.toFixed(1)} <span className="text-xs text-slate-400">p/m²</span>
+                  {(selectedZone.density || 0).toFixed(1)} <span className="text-xs text-slate-400">p/m²</span>
                 </div>
               </div>
 
               <div className="p-3.5 rounded-xl bg-[#151726] border border-white/10">
                 <div className="text-[11px] font-semibold text-slate-400">Throughput Velocity</div>
                 <div className="font-mono-num font-bold text-xl text-[#2C7BE5] mt-0.5">
-                  {selectedZone.flowRate} <span className="text-xs text-slate-400">p/min</span>
+                  {selectedZone.flowRate || 0} <span className="text-xs text-slate-400">p/min</span>
                 </div>
               </div>
             </div>
@@ -600,14 +535,13 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
               <div className="flex items-center justify-between text-xs">
                 <span className="font-semibold text-slate-100">Structural Load</span>
                 <span className="font-mono-num font-bold text-[#FF3B5C]">
-                  {(selectedZone.currentHeadcount ?? 0).toLocaleString()} / {(selectedZone.maxCapacity ?? 0).toLocaleString()} (
-                  {Math.round(((selectedZone.currentHeadcount ?? 0) / (selectedZone.maxCapacity ?? 1)) * 100)}%)
+                  {(selectedZone.currentHeadcount ?? 0).toLocaleString()} / {(selectedZone.maxCapacity ?? 3500).toLocaleString()}
                 </span>
               </div>
               <div className="w-full h-3 bg-white/10 rounded-full overflow-hidden p-0.5">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-[#22D3A6] via-[#FFB627] to-[#FF3B5C] transition-all duration-300"
-                  style={{ width: `${Math.min(100, Math.round(((selectedZone.currentHeadcount ?? 0) / (selectedZone.maxCapacity ?? 1)) * 100))}%` }}
+                  style={{ width: `${Math.min(100, Math.round(((selectedZone.currentHeadcount ?? 0) / (selectedZone.maxCapacity || 1)) * 100))}%` }}
                 />
               </div>
             </div>
@@ -636,7 +570,7 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
                 ? 'bg-[#FF3B5C]/15 text-[#FF3B5C]'
                 : 'bg-[#FFB627]/20 text-[#D97706]'
             }`}>
-              {selectedZone.gateStatus}
+              {selectedZone.gateStatus || 'OPEN'}
             </span>
           </div>
         </div>
@@ -644,4 +578,3 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
     </div>
   );
 };
-

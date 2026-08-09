@@ -12,6 +12,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",  # Prevents crashes if extra unmapped variables exist in .env
     )
 
     # ─── Database ───
@@ -27,6 +28,14 @@ class Settings(BaseSettings):
     # ─── External API Keys ───
     GEMINI_API_KEY: str = ""
     BHASHINI_API_KEY: str = ""
+
+    # ─── Default Venue Configuration ───
+    DEFAULT_VENUE_ID: str = "v-1"
+    DEFAULT_VENUE_NAME: str = "Standard Venue"
+    DEFAULT_VENUE_LOCATION: str = "Global"
+    DEFAULT_VENUE_LAT: str = "0.0"
+    DEFAULT_VENUE_LNG: str = "0.0"
+    DEFAULT_VENUE_CAPACITY: str = "10000"
 
     @property
     def cors_origins_list(self) -> list[str]:
