@@ -8,10 +8,10 @@ BASE_URL = "http://localhost:8000/api/v1/telemetry"
 
 # Mock zones to simulate
 ZONES = [
-    {"zone_id": "z-1", "capacity_limit": 2500},
-    {"zone_id": "z-2", "capacity_limit": 1800},
-    {"zone_id": "z-3", "capacity_limit": 4000}, # West Exit, prone to surge
-    {"zone_id": "z-4", "capacity_limit": 3000}
+    {"zone_id": "zone_admin_block_rd", "capacity_limit": 500},
+    {"zone_id": "zone_library_roundabout", "capacity_limit": 400},
+    {"zone_id": "zone_sports_complex_rd", "capacity_limit": 500},
+    {"zone_id": "zone_e_block_lawn_rd", "capacity_limit": 500},
 ]
 
 def generate_normal_payload(zone):
@@ -63,7 +63,7 @@ def generate_crisis_payload(zone, step_time):
 
 def main():
     parser = argparse.ArgumentParser(description="Standalone Edge Telemetry Simulator")
-    parser.add_argument("--crisis", action="store_true", help="Enable crisis mode escalation for Zone 3")
+    parser.add_argument("--crisis", action="store_true", help="Enable crisis mode escalation for Central Library Roundabout")
     args = parser.parse_args()
 
     print(f"Starting Telemetry Simulator... Crisis Mode: {'ON' if args.crisis else 'OFF'}")
@@ -76,7 +76,7 @@ def main():
             print(f"--- Tick [{int(elapsed)}s] ---")
             
             for zone in ZONES:
-                if args.crisis and zone["zone_id"] == "z-3":
+                if args.crisis and zone["zone_id"] == "zone_library_roundabout":
                     payload = generate_crisis_payload(zone, elapsed)
                 else:
                     payload = generate_normal_payload(zone)
