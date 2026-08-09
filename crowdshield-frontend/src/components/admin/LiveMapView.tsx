@@ -1,15 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { VenueZone, CCTVFeed, VenueInfo } from '../../types';
 import { MapContainer, TileLayer, Polygon, Marker, Popup, Polyline, Tooltip, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { 
-  Video, 
-  Layers, 
-  Maximize2, 
-  ShieldAlert, 
-  CheckCircle2, 
+import {
+  Video,
+  Layers,
+  ShieldAlert,
+  CheckCircle2,
   AlertTriangle,
-  Eye,
   X,
   VideoOff,
   RefreshCw,
@@ -33,7 +31,7 @@ const LocateMeControl = ({ onLocate, onError }: { onLocate: (loc: [number, numbe
         (position) => {
           const loc: [number, number] = [position.coords.latitude, position.coords.longitude];
           onLocate(loc);
-          map.flyTo(loc, 16);
+          map.flyTo(loc, 17);
         },
         (err) => {
           onError('Geolocation permission denied or unavailable.');
@@ -46,7 +44,7 @@ const LocateMeControl = ({ onLocate, onError }: { onLocate: (loc: [number, numbe
 
   return (
     <div className="absolute top-4 right-4 z-[400]">
-      <button 
+      <button
         onClick={handleLocate}
         className="bg-white/95 backdrop-blur-md p-2 px-3 rounded-xl shadow-lg border border-[#E7E5DD] text-[#2C7BE5] hover:bg-[#2C7BE5] hover:text-white transition-colors flex items-center gap-2 font-bold text-sm cursor-pointer"
         title="My Location"
@@ -72,6 +70,8 @@ export const getRiskColor = (riskLevel: string): string => {
   }
 };
 
+const isLegacyPhantomZone = (id: string): boolean => /^z-0?\d$/i.test(id || '');
+
 interface LiveMapViewProps {
   selectedVenue: VenueInfo | null;
   zones: VenueZone[];
@@ -89,14 +89,23 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [localToast, setLocalToast] = useState<string | null>(null);
 
-  const centerCoords: [number, number] = selectedVenue?.centerCoords || [20.2496, 85.7988];
+  // FIXED: Adjusted fallback center coordinates to perfectly align with ITER Central Library
+  const centerCoords: [number, number] = selectedVenue?.centerCoords || [20.2494, 85.8000];
 
-  const physicalGates = [
-    { id: 'gate-1', name: 'North Main Entrance', lat: 20.2500, lng: 85.7988, status: 'OPEN' },
-    { id: 'gate-2', name: 'South Auxiliary Gate', lat: 20.2492, lng: 85.7988, status: 'LOCKED' },
-    { id: 'gate-3', name: 'East VIP Turnstile', lat: 20.2496, lng: 85.7995, status: 'OPEN' },
-    { id: 'gate-4', name: 'West Emergency Exit', lat: 20.2496, lng: 85.7981, status: 'OPEN' }
-  ];
+  const cleanZones = useMemo(
+    () => zones.filter((z) => !isLegacyPhantomZone(z.id)),
+    [zones]
+  );
+
+  const activeEvacuationRoute = useMemo(() => {
+    for (const zone of cleanZones) {
+      const route = (zone as any).evacuationRoute;
+      if (route?.status === 'SUCCESS' && Array.isArray(route.path_coords) && route.path_coords.length > 1) {
+        return route as { path_coords: [number, number][]; message?: string };
+      }
+    }
+    return null;
+  }, [cleanZones]);
 
   const showToastError = (msg: string) => {
     setLocalToast(msg);
@@ -113,17 +122,15 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
     setFailedFeeds((prev) => ({ ...prev, [feedId]: false }));
   };
 
-  // Extract port from stream URL (e.g. http://localhost:5001/video_feed -> 5001)
   const getPortFromUrl = (url: string, defaultPort: string = '5000') => {
     const match = url.match(/:(\d+)\//);
     return match ? match[1] : defaultPort;
   };
 
-  // Match feed with live telemetry zone data
   const findMatchedZone = (feed: CCTVFeed): VenueZone | null => {
-    if (!zones || zones.length === 0) return null;
+    if (!cleanZones || cleanZones.length === 0) return null;
     const camNum = feed.id.replace(/\D/g, '');
-    return zones.find((z) => {
+    return cleanZones.find((z) => {
       const zid = (z.id || '').toLowerCase();
       const zcode = (z.code || '').toLowerCase();
       const targetId = (feed.zoneId || '').toLowerCase();
@@ -138,7 +145,6 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
     }) || null;
   };
 
-  // Custom DivIcon generator for Leaflet markers
   const createZoneMarkerIcon = (code: string, density: number, riskLevel: string) => {
     let colorClass = 'bg-[#22D3A6] text-white';
     if (riskLevel === 'critical') colorClass = 'bg-[#FF3B5C] text-white animate-pulse';
@@ -160,7 +166,6 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
 
   return (
     <div className="flex flex-col h-[calc(100vh-57px)] relative font-body select-none">
-      {/* Top Map Control Bar */}
       <div className="bg-white border-b border-[#E7E5DD] px-4 py-2 flex items-center justify-between z-10">
         <div className="flex items-center gap-3">
           <h2 className="font-heading font-bold text-base text-[#151726]">
@@ -187,7 +192,6 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
         </div>
       </div>
 
-      {/* Main Leaflet Map View */}
       <div className="flex-1 w-full h-full relative z-0">
         {localToast && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[500] bg-[#FF3B5C] text-white px-4 py-2 rounded-lg shadow-xl font-body text-sm font-bold animate-fadeIn">
@@ -196,13 +200,13 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
         )}
         <MapContainer
           center={centerCoords}
-          zoom={16}
+          zoom={17}
           scrollWheelZoom={true}
           className="w-full h-full"
         >
           <MapUpdater center={centerCoords} />
           <LocateMeControl onLocate={setUserLocation} onError={showToastError} />
-          
+
           {userLocation && (
             <Marker
               position={userLocation}
@@ -224,27 +228,7 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
 
-          {/* Render Physical Gate Markers */}
-          {physicalGates.map(gate => (
-            <Marker key={gate.id} position={[gate.lat, gate.lng]}>
-              <Popup className="font-body text-[#151726]">
-                <div className="flex flex-col gap-2 p-1">
-                  <span className="font-bold text-sm">{gate.name}</span>
-                  <span className={`text-xs font-bold ${gate.status === 'OPEN' ? 'text-green-600' : 'text-[#FF3B5C]'}`}>
-                    STATUS: {gate.status}
-                  </span>
-                  <button 
-                    className="mt-2 px-3 py-1.5 bg-[#2C7BE5] text-white rounded-lg text-xs font-bold shadow-md hover:bg-[#2C7BE5]/80 transition-colors"
-                  >
-                    Toggle Gate Override
-                  </button>
-                </div>
-              </Popup>
-            </Marker>
-          ))}
-
-          {/* Render Zone Polygons */}
-          {zones.map((zone) => {
+          {cleanZones.map((zone) => {
             const polygonColor = getRiskColor(zone.riskLevel);
             return (
               <React.Fragment key={zone.id}>
@@ -314,31 +298,25 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
             );
           })}
 
-
-
-          {/* Citizen Evacuation Polyline Path avoiding red bottleneck zones */}
-          <Polyline
-            positions={[
-              [20.2516, 85.7968],
-              [20.2496, 85.7988],
-              [20.2476, 85.8008]
-            ]}
-            pathOptions={{
-              color: '#2C7BE5',
-              weight: 5,
-              dashArray: '8, 8',
-              opacity: 0.9
-            }}
-          >
-            <Popup>
-              <div className="p-1 text-xs font-heading font-bold text-[#2C7BE5]">
-                ✓ A* Safe Evacuation Route (Diverts around Gate 3 Surge)
-              </div>
-            </Popup>
-          </Polyline>
+          {activeEvacuationRoute && (
+            <Polyline
+              positions={activeEvacuationRoute.path_coords}
+              pathOptions={{
+                color: '#2C7BE5',
+                weight: 5,
+                dashArray: '8, 8',
+                opacity: 0.9
+              }}
+            >
+              <Popup>
+                <div className="p-1 text-xs font-heading font-bold text-[#2C7BE5]">
+                  ✓ A* Safe Evacuation Route{activeEvacuationRoute.message ? ` — ${activeEvacuationRoute.message}` : ''}
+                </div>
+              </Popup>
+            </Polyline>
+          )}
         </MapContainer>
 
-        {/* Floating Sector Status Overlay Card */}
         <div className="absolute top-4 left-4 z-[400] bg-white/95 backdrop-blur-md border border-[#E7E5DD] rounded-2xl p-4 shadow-xl max-w-xs w-full font-body">
           <div className="flex items-center justify-between border-b border-[#E7E5DD] pb-2 mb-3">
             <span className="font-heading font-bold text-xs text-[#151726] uppercase tracking-wider flex items-center gap-1.5">
@@ -348,18 +326,17 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
           </div>
 
           <div className="flex flex-col gap-2.5 text-xs">
-            {zones.length > 0 ? (
-              zones.map((z) => {
+            {cleanZones.length > 0 ? (
+              cleanZones.map((z) => {
                 const zColor = getRiskColor(z.riskLevel);
                 return (
-                  <div 
-                    key={z.id} 
-                    className={`flex items-center justify-between p-2 rounded-lg border ${
-                      z.riskLevel === 'critical' ? 'bg-[#FF3B5C]/10 border-[#FF3B5C]/30' :
-                      z.riskLevel === 'warning' ? 'bg-[#FF7A45]/10 border-[#FF7A45]/30' :
-                      z.riskLevel === 'caution' ? 'bg-[#FFB627]/10 border-[#FFB627]/30' :
-                      'bg-[#22D3A6]/10 border-[#22D3A6]/30'
-                    }`}
+                  <div
+                    key={z.id}
+                    className={`flex items-center justify-between p-2 rounded-lg border ${z.riskLevel === 'critical' ? 'bg-[#FF3B5C]/10 border-[#FF3B5C]/30' :
+                        z.riskLevel === 'warning' ? 'bg-[#FF7A45]/10 border-[#FF7A45]/30' :
+                          z.riskLevel === 'caution' ? 'bg-[#FFB627]/10 border-[#FFB627]/30' :
+                            'bg-[#22D3A6]/10 border-[#22D3A6]/30'
+                      }`}
                   >
                     <div className="flex items-center gap-2">
                       {z.riskLevel === 'critical' || z.riskLevel === 'warning' ? (
@@ -367,10 +344,10 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
                       ) : (
                         <CheckCircle2 className="w-4 h-4 text-[#22D3A6]" />
                       )}
-                      <span className="font-bold text-[#151726]">{z.name}</span>
+                      <span className="font-bold text-[#151726] truncate max-w-[120px]">{z.name}</span>
                     </div>
-                    <span className="font-mono-num font-bold uppercase text-[11px]" style={{ color: zColor }}>
-                      {z.currentHeadcount} p · {Number(z.density || 0).toFixed(2)} p/m² · Risk: {z.riskScore}%
+                    <span className="font-mono-num font-bold uppercase text-[11px] shrink-0" style={{ color: zColor }}>
+                      {z.currentHeadcount} p · {Number(z.density || 0).toFixed(2)} p/m²
                     </span>
                   </div>
                 );
@@ -388,7 +365,6 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
         </div>
       </div>
 
-      {/* Bottom Horizontal Camera Strip */}
       <div className="bg-[#151726] text-white p-3 z-[400] border-t border-white/10 flex flex-col gap-2">
         <div className="flex items-center justify-between px-2 text-xs">
           <span className="font-heading font-bold text-gray-300 flex items-center gap-2">
@@ -396,7 +372,7 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
             LIVE EDGE CCTV FEEDS (MULTI-PORT MJPEG)
           </span>
           <span className="text-gray-400 font-mono-num text-[11px]">
-            4 Active Feeds · 120 FPS Aggregate
+            {cctvFeeds.filter((f) => !failedFeeds[f.id]).length} / {cctvFeeds.length} Active Feeds
           </span>
         </div>
 
@@ -443,7 +419,6 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
                   />
                 )}
 
-                {/* YOLO11 Bounding Box Overlay */}
                 {!isOffline && (
                   <div className="absolute inset-0 pointer-events-none p-1">
                     {feed.yoloDetections.map((det) => (
@@ -455,13 +430,12 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
                           width: `${det.bbox.width}%`,
                           height: `${det.bbox.height}%`,
                         }}
-                        className={`absolute border ${
-                          det.type === 'backlog'
+                        className={`absolute border ${det.type === 'backlog'
                             ? 'border-[#FF3B5C] bg-[#FF3B5C]/20'
                             : det.type === 'velocity_anomaly'
-                            ? 'border-[#FFB627] bg-[#FFB627]/20'
-                            : 'border-[#22D3A6] bg-[#22D3A6]/10'
-                        }`}
+                              ? 'border-[#FFB627] bg-[#FFB627]/20'
+                              : 'border-[#22D3A6] bg-[#22D3A6]/10'
+                          }`}
                       >
                         <span className="absolute -top-3 left-0 bg-black/80 text-[9px] font-mono-num px-1 rounded text-white whitespace-nowrap">
                           {det.label}
@@ -471,15 +445,13 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
                   </div>
                 )}
 
-                {/* Top Tag */}
                 <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-xs px-2 py-0.5 rounded text-[10px] font-mono-num text-white flex items-center gap-1">
                   <span className={`w-1.5 h-1.5 rounded-full ${isOffline ? 'bg-[#FF3B5C]' : 'bg-[#22D3A6] animate-pulse'}`} />
-                  <span>{feed.name}</span>
+                  <span className="truncate max-w-[100px]">{feed.name}</span>
                 </div>
 
-                {/* Bottom Tag - Dynamic Telemetry */}
                 <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-0.5 rounded text-[10px] font-mono-num text-white">
-                  {headcount} headcount {matchedZone ? `· ${density.toFixed(1)} p/m²` : ''}
+                  {isOffline ? 'No live feed' : `${headcount} headcount ${matchedZone ? `· ${density.toFixed(1)} p/m²` : ''}`}
                 </div>
               </div>
             );
@@ -487,7 +459,6 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
         </div>
       </div>
 
-      {/* Camera Feed Modal */}
       {activeCameraModal && (
         <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/80 p-4 font-body animate-fadeIn">
           <div className="bg-[#151726] border border-white/20 rounded-2xl max-w-3xl w-full overflow-hidden flex flex-col text-white">
@@ -535,7 +506,6 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
                 />
               )}
 
-              {/* Bounding box overlays */}
               {!failedFeeds[activeCameraModal.id] && (
                 <div className="absolute inset-0 p-4 pointer-events-none">
                   {activeCameraModal.yoloDetections.map((det) => (
@@ -547,11 +517,10 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
                         width: `${det.bbox.width}%`,
                         height: `${det.bbox.height}%`,
                       }}
-                      className={`absolute border-2 ${
-                        det.type === 'backlog'
+                      className={`absolute border-2 ${det.type === 'backlog'
                           ? 'border-[#FF3B5C] bg-[#FF3B5C]/25'
                           : 'border-[#22D3A6] bg-[#22D3A6]/15'
-                      }`}
+                        }`}
                     >
                       <span className="absolute -top-5 left-0 bg-[#151726] text-[11px] font-mono-num px-1.5 py-0.5 rounded text-white">
                         {det.label}

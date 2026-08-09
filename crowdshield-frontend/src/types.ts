@@ -1,19 +1,19 @@
 export type ViewMode = 'auth' | 'admin' | 'citizen';
 
-export type AdminRoute = 
-  | 'dashboard' 
-  | 'map' 
-  | 'cameras' 
-  | 'alerts' 
-  | 'analytics' 
-  | 'twin' 
+export type AdminRoute =
+  | 'dashboard'
+  | 'map'
+  | 'cameras'
+  | 'alerts'
+  | 'analytics'
+  | 'twin'
   | 'settings';
 
-export type CitizenRoute = 
-  | 'home' 
-  | 'map' 
-  | 'alerts' 
-  | 'report' 
+export type CitizenRoute =
+  | 'home'
+  | 'map'
+  | 'alerts'
+  | 'report'
   | 'settings';
 
 export type RiskLevel = 'safe' | 'caution' | 'warning' | 'critical';
