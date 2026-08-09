@@ -1,21 +1,18 @@
 {
   "nodes": [
-    {"id": "Gate-1", "name": "Main North Gate", "max_capacity": 5000, "is_gate": true, "is_exit": true},
-    {"id": "Gate-2", "name": "East Gate", "max_capacity": 3000, "is_gate": true, "is_exit": true},
-    {"id": "Gate-3", "name": "South Gate", "max_capacity": 4000, "is_gate": true, "is_exit": true},
-    {"id": "Gate-4", "name": "Auxiliary West Gate", "max_capacity": 2000, "is_gate": true, "is_exit": true},
-    {"id": "Zone-A", "name": "Concourse A", "max_capacity": 10000, "is_gate": false, "is_exit": false},
-    {"id": "Zone-B", "name": "Concourse B", "max_capacity": 8000, "is_gate": false, "is_exit": false},
-    {"id": "Corr-1", "name": "North-East Corridor", "max_capacity": 1500, "is_gate": false, "is_exit": false},
-    {"id": "Corr-2", "name": "South-West Corridor", "max_capacity": 1500, "is_gate": false, "is_exit": false}
+    {"id": "gate_1", "name": "Main Gate", "max_capacity": 300, "is_gate": true, "is_exit": true},
+    {"id": "zone_admin_block_rd", "name": "Administrative Block Road + Gate Approach", "max_capacity": 500, "is_gate": false, "is_exit": false},
+    {"id": "zone_library_roundabout", "name": "Central Library Roundabout", "max_capacity": 400, "is_gate": false, "is_exit": false},
+    {"id": "zone_sports_complex_rd", "name": "Sports Complex / Physics Dept Road", "max_capacity": 500, "is_gate": false, "is_exit": false},
+    {"id": "gate_2", "name": "EV Charging / Food Court Junction", "max_capacity": 300, "is_gate": true, "is_exit": true},
+    {"id": "zone_e_block_lawn_rd", "name": "E Block Lawn / F Block Road", "max_capacity": 500, "is_gate": false, "is_exit": false}
   ],
   "edges": [
-    {"source": "Zone-A", "target": "Gate-1", "length_meters": 50.0, "max_flow_rate": 100},
-    {"source": "Zone-A", "target": "Corr-1", "length_meters": 20.0, "max_flow_rate": 50, "overlap_ratio": 0.15},
-    {"source": "Corr-1", "target": "Gate-2", "length_meters": 30.0, "max_flow_rate": 50},
-    {"source": "Zone-B", "target": "Gate-3", "length_meters": 45.0, "max_flow_rate": 80},
-    {"source": "Zone-B", "target": "Corr-2", "length_meters": 25.0, "max_flow_rate": 40, "overlap_ratio": 0.10},
-    {"source": "Corr-2", "target": "Gate-4", "length_meters": 35.0, "max_flow_rate": 40},
-    {"source": "Zone-A", "target": "Zone-B", "length_meters": 100.0, "max_flow_rate": 150, "overlap_ratio": 0.20}
+    {"source": "gate_1", "target": "zone_admin_block_rd", "length_meters": 80.0, "max_flow_rate": 100},
+    {"source": "zone_admin_block_rd", "target": "zone_library_roundabout", "length_meters": 150.0, "max_flow_rate": 120},
+    {"source": "zone_library_roundabout", "target": "zone_sports_complex_rd", "length_meters": 120.0, "max_flow_rate": 100, "overlap_ratio": 0.15},
+    {"source": "zone_sports_complex_rd", "target": "gate_2", "length_meters": 200.0, "max_flow_rate": 100},
+    {"source": "gate_2", "target": "zone_e_block_lawn_rd", "length_meters": 150.0, "max_flow_rate": 90},
+    {"source": "zone_e_block_lawn_rd", "target": "zone_library_roundabout", "length_meters": 180.0, "max_flow_rate": 90, "overlap_ratio": 0.10}
   ]
 }
