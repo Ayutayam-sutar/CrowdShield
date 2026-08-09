@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { CitizenReport, SupportedLanguage } from '../../types';
+import React, { useState, useRef, useEffect } from 'react';
+import { CitizenReport, SupportedLanguage, VenueZone, CrowdAlert } from '../../types';
 import { BHASHINI_TRANSLATIONS } from '../../data/mockData';
 import { EvacuationDrillMode } from './EvacuationDrillMode';
 import { CitizenEvacuationMap } from './CitizenEvacuationMap';
@@ -15,19 +15,15 @@ import {
   Video,
   Image as ImageIcon,
   X,
-  Upload,
   ThumbsUp,
   LogOut,
-  Play,
   Compass,
   Radio,
   Wifi
 } from 'lucide-react';
 import { speakAnnouncement } from '../../utils/speech';
-
 import { VolunteerTasksView } from './VolunteerTasksView';
 import { useAuth } from '../../context/AuthContext';
-import { CrowdAlert } from '../../types';
 import { checkGeofenceIntersections, GeofenceZone } from '../../utils/geofence';
 
 interface CitizenPortalViewProps {
@@ -36,6 +32,7 @@ interface CitizenPortalViewProps {
   isScenarioActive: boolean;
   onLogout?: () => void;
   alerts?: CrowdAlert[];
+  zones?: VenueZone[];
 }
 
 export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
@@ -44,20 +41,39 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
   isScenarioActive,
   onLogout,
   alerts,
+  zones = [],
 }) => {
   const { role } = useAuth();
   const [activeTab, setActiveTab] = useState<'feed' | 'drill'>('feed');
   const [selectedLang, setSelectedLang] = useState<SupportedLanguage>('en');
   const [reportCategory, setReportCategory] = useState<CitizenReport['category']>('Overcrowding');
+  
+  // Real ITER campus zones fallback list
+  const activeCampusZones = zones.length > 0 ? zones : [
+    { id: 'gate_1', name: 'Main Gate', center: [20.2515, 85.7980] },
+    { id: 'zone_admin_block_rd', name: 'Administrative Block Road', center: [20.2508, 85.7984] },
+    { id: 'zone_library_roundabout', name: 'Central Library Roundabout', center: [20.2496, 85.7988] },
+    { id: 'zone_sports_complex_rd', name: 'Sports Complex / Physics Dept Road', center: [20.2485, 85.7980] },
+    { id: 'gate_2', name: 'EV Charging / Food Court Junction', center: [20.2475, 85.7975] },
+    { id: 'zone_e_block_lawn_rd', name: 'E Block Lawn / F Block Road', center: [20.2488, 85.7995] }
+  ];
+
+  const [reportLocation, setReportLocation] = useState<string>(activeCampusZones[0].name);
   const [reportDesc, setReportDesc] = useState('');
-  const [reportLocation, setReportLocation] = useState('Gate 3 Exit Corridor');
   const [reportSubmitted, setReportSubmitted] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [geofenceWarning, setGeofenceWarning] = useState<string | null>(null);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
-  React.useEffect(() => {
+  // Determine highest risk zone dynamically from telemetry
+  const highestRiskZone = zones && zones.length > 0 
+    ? [...zones].sort((a, b) => (b.riskScore || 0) - (a.riskScore || 0))[0]
+    : null;
+
+  const currentZoneName = highestRiskZone?.name || activeCampusZones[1]?.name || 'ITER Campus';
+
+  useEffect(() => {
     if ('geolocation' in navigator) {
       const watchId = navigator.geolocation.watchPosition(
         (position) => {
@@ -65,21 +81,20 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
           setUserLocation({ lat: latitude, lng: longitude });
 
           if (isScenarioActive) {
-            const zones: GeofenceZone[] = [
-              {
-                id: 'z-3',
-                name: 'Gate 3',
-                centerLat: latitude + 0.0001, // Simulate being very close
-                centerLng: longitude + 0.0001,
-                radiusMeters: 20,
-                riskLevel: 'critical'
-              }
-            ];
+            // Build dynamic geofence zones from active campus topology
+            const gfZones: GeofenceZone[] = activeCampusZones.map((z: any) => ({
+              id: z.id,
+              name: z.name,
+              centerLat: z.center?.[0] || z.center_lat || 20.2496,
+              centerLng: z.center?.[1] || z.center_lng || 85.7988,
+              radiusMeters: 30,
+              riskLevel: z.riskLevel || (z.id === 'zone_library_roundabout' ? 'critical' : 'warning')
+            }));
 
-            const intersections = checkGeofenceIntersections(latitude, longitude, zones);
+            const intersections = checkGeofenceIntersections(latitude, longitude, gfZones);
             if (intersections.length > 0) {
               const zoneName = intersections[0].name;
-              setGeofenceWarning(`CRITICAL CONGESTION AHEAD: You are approaching ${zoneName}. Divert immediately to Auxiliary West Gate.`);
+              setGeofenceWarning(`CRITICAL CONGESTION AHEAD: You are approaching ${zoneName}. Divert immediately via Gate 2 (EV Charging Junction).`);
               
               if ('vibrate' in navigator) {
                 navigator.vibrate([500, 250, 500]);
@@ -97,9 +112,9 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
 
       return () => navigator.geolocation.clearWatch(watchId);
     }
-  }, [isScenarioActive]);
+  }, [isScenarioActive, zones]);
 
-  // Offline BLE Mesh Relay State (Tier-2 Network Resilience)
+  // Offline BLE Mesh Relay State
   const [bleMeshActive, setBleMeshActive] = useState(true);
 
   // Photo / Video Media Attachment State
@@ -110,27 +125,16 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
 
   const translation = BHASHINI_TRANSLATIONS[selectedLang] || BHASHINI_TRANSLATIONS.en;
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const isVideo = file.type.startsWith('video/');
-    const url = URL.createObjectURL(file);
-    setMediaUrl(url);
-    setMediaType(isVideo ? 'video' : 'image');
-    setMediaFileName(file.name);
-  };
-
   const handleSimulateSampleImage = () => {
     setMediaUrl('https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=80');
     setMediaType('image');
-    setMediaFileName('gate3_crowd_surge.jpg');
+    setMediaFileName('iter_roundabout_surge.jpg');
   };
 
   const handleSimulateSampleVideo = () => {
     setMediaUrl('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4');
     setMediaType('video');
-    setMediaFileName('stadium_exit_bottleneck.mp4');
+    setMediaFileName('admin_block_bottleneck.mp4');
   };
 
   const removeMedia = () => {
@@ -151,8 +155,8 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
       photoUrl: mediaType === 'image' ? (mediaUrl || undefined) : undefined,
       videoUrl: mediaType === 'video' ? (mediaUrl || undefined) : undefined,
       mediaType: mediaType || undefined,
-      latitude: userLocation?.lat || 20.2496, // Fallback to SOA Admin Map Center
-      longitude: userLocation?.lng || 85.7988 // Fallback to SOA Admin Map Center
+      latitude: userLocation?.lat || 20.2496,
+      longitude: userLocation?.lng || 85.7988
     } as any);
 
     setReportDesc('');
@@ -171,7 +175,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
   const playBhashiniTTS = () => {
     setIsPlayingAudio(true);
     speakAnnouncement(translation.announcementText, selectedLang);
-    // Estimated wait time based on length
     const estimatedMs = Math.max(translation.announcementText.length * 70, 3000);
     setTimeout(() => setIsPlayingAudio(false), estimatedMs);
   };
@@ -216,10 +219,10 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
             CS
           </div>
           <div className="min-w-0 flex flex-col">
-            <h1 className="font-heading font-bold text-xs sm:text-base tracking-tight truncate">CrowdShield Safety</h1>
+            <h1 className="font-heading font-bold text-xs sm:text-base tracking-tight truncate">CrowdShield Safety · ITER</h1>
             <span className="text-[10px] text-[#22D3A6] font-mono-num flex items-center gap-1 font-semibold truncate">
               <span className="w-1.5 h-1.5 rounded-full bg-[#22D3A6] animate-ping shrink-0" />
-              Live Safety Updates
+              SOA University Network Live
             </span>
           </div>
         </div>
@@ -241,7 +244,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
             </select>
           </div>
 
-          {/* Logout / Return to Portal */}
           {onLogout && (
             <button
               onClick={onLogout}
@@ -288,17 +290,14 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
           <EvacuationDrillMode />
         ) : (
           <>
-            {/* Grid Row 1: Urgent Broadcast Banner & Offline Safety Network */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5 sm:gap-4 items-stretch">
-              
-              {/* Volunteer Task Board (Only visible to VOLUNTEER role) */}
               {role === 'VOLUNTEER' && alerts && (
                 <div className="lg:col-span-3">
                   <VolunteerTasksView alerts={alerts} />
                 </div>
               )}
               
-              {/* Urgent Live Broadcast Banner (2 cols on lg) */}
+              {/* Urgent Live Broadcast Banner */}
               <div className={`p-4 rounded-2xl border flex flex-col justify-between gap-3 shadow-xs lg:col-span-2 transition-all ${
                 isScenarioActive
                   ? 'bg-[#FF3B5C]/10 border-[#FF3B5C]/40 text-[#151726]'
@@ -358,13 +357,11 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Toggle Switch */}
                   <button
                     onClick={() => setBleMeshActive(!bleMeshActive)}
                     className={`w-11 h-6 rounded-full p-0.5 transition-colors cursor-pointer flex items-center shrink-0 ${
                       bleMeshActive ? 'bg-[#22D3A6] justify-end' : 'bg-white/20 justify-start'
                     }`}
-                    title="Toggle Offline Network Relay"
                   >
                     <span className="w-5 h-5 rounded-full bg-white shadow-md transform transition-transform" />
                   </button>
@@ -381,7 +378,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
               </div>
             </div>
 
-            {/* Live Zone Congestion Status Indicator */}
+            {/* Dynamic Zone Congestion Status Indicator */}
             <div className="bg-white border border-[#E7E5DD] rounded-2xl p-3.5 sm:p-4 shadow-xs flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white shadow-xs shrink-0 ${
@@ -390,7 +387,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                   <MapPin className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-xs font-bold text-[#151726] truncate">You are near Gate 3</div>
+                  <div className="text-xs font-bold text-[#151726] truncate">You are near {currentZoneName}</div>
                   <div className="text-[11px] text-[#5B5F73] font-medium truncate">
                     Crowd Level: {isScenarioActive ? 'Very High' : 'Normal'}
                   </div>
@@ -407,10 +404,8 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
             {/* Safe Exit Navigation Guide Map */}
             <CitizenEvacuationMap isScenarioActive={isScenarioActive} />
 
-            {/* Responsive Grid Row for Incident Report & Community Feed */}
+            {/* Community Feed */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-start">
-              
-              {/* Live Submitted Reports Feed (Expanded to full width) */}
               <div className="lg:col-span-2 flex flex-col gap-3">
                 <h3 className="font-heading font-bold text-xs text-[#5B5F73] uppercase tracking-wider flex items-center justify-between">
                   <span>Nearby Safety Reports ({reports.length})</span>
@@ -432,7 +427,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                         <strong className="text-[#151726]">{rep.location}:</strong> {rep.description}
                       </div>
 
-                      {/* Render Media Preview if attached */}
                       {rep.photoUrl && (
                         <div className="rounded-xl overflow-hidden border border-[#E7E5DD] mt-1 max-h-40 bg-black">
                           <img src={rep.photoUrl} alt="Report attachment" className="w-full h-36 object-cover" />
@@ -457,13 +451,12 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                   ))}
                 </div>
               </div>
-
             </div>
           </>
         )}
       </main>
 
-      {/* Bottom Floating SOS Hotline Bar with Quick-Dial Buttons */}
+      {/* Bottom Floating SOS Hotline Bar */}
       <div className="fixed bottom-0 left-0 right-0 w-full max-w-5xl mx-auto p-3 sm:p-4 bg-[#151726] text-white border-t border-white/10 z-40 flex items-center justify-between shadow-2xl px-4 sm:px-6">
         <div className="flex items-center gap-2.5 min-w-0">
           <PhoneCall className="w-4 h-4 text-[#FF3B5C] animate-pulse shrink-0" />
@@ -538,14 +531,18 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-semibold text-[#5B5F73]">Where is it happening?</label>
-                  <input
-                    type="text"
+                  <label className="text-[11px] font-semibold text-[#5B5F73]">Target Campus Sector / Zone</label>
+                  <select
                     value={reportLocation}
                     onChange={(e) => setReportLocation(e.target.value)}
                     className="w-full mt-1 p-2.5 rounded-xl border border-[#E7E5DD] text-xs font-body text-[#151726] bg-[#FAFAF7] focus:outline-none focus:border-[#FF3B5C] focus:ring-2 focus:ring-[#FF3B5C]/20"
-                    required
-                  />
+                  >
+                    {activeCampusZones.map((z: any) => (
+                      <option key={z.id} value={z.name}>
+                        {z.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
@@ -585,14 +582,14 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                       <button
                         type="button"
                         onClick={handleSimulateSampleImage}
-                        className="flex-1 py-2 bg-[#FAFAF7] hover:bg-[#E7E5DD] border border-[#E7E5DD] text-[#5B5F73] hover:text-[#151726] rounded-xl font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors"
+                        className="flex-1 py-2 bg-[#FAFAF7] hover:bg-[#E7E5DD] border border-[#E7E5DD] text-[#5B5F73] hover:text-[#151726] rounded-xl font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                       >
                         <ImageIcon className="w-3.5 h-3.5"/> Attach Photo
                       </button>
                       <button
                         type="button"
                         onClick={handleSimulateSampleVideo}
-                        className="flex-1 py-2 bg-[#FAFAF7] hover:bg-[#E7E5DD] border border-[#E7E5DD] text-[#5B5F73] hover:text-[#151726] rounded-xl font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors"
+                        className="flex-1 py-2 bg-[#FAFAF7] hover:bg-[#E7E5DD] border border-[#E7E5DD] text-[#5B5F73] hover:text-[#151726] rounded-xl font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                       >
                         <Video className="w-3.5 h-3.5"/> Attach Video
                       </button>
