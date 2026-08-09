@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  ViewMode, 
-  AdminRoute, 
-  VenueInfo, 
-  NetworkMode, 
+import {
+  ViewMode,
+  AdminRoute,
+  VenueInfo,
+  NetworkMode,
   SupportedLanguage,
   VenueZone,
   CrowdAlert,
@@ -11,12 +11,12 @@ import {
   CitizenReport,
   ToastNotification
 } from './types';
-import { 
-  INITIAL_VENUES, 
-  INITIAL_ZONES, 
-  INITIAL_ALERTS, 
-  INITIAL_CCTV_FEEDS, 
-  INITIAL_CITIZEN_REPORTS 
+import {
+  INITIAL_VENUES,
+  INITIAL_ZONES,
+  INITIAL_ALERTS,
+  INITIAL_CCTV_FEEDS,
+  INITIAL_CITIZEN_REPORTS
 } from './data/mockData';
 
 // Layout & Modals
@@ -312,14 +312,14 @@ export default function App() {
             );
           }
         } else if (data.event === 'RESOLVED_BY_VOLUNTEER' && data.alert_id) {
-          setAlerts((prevAlerts) => 
-            prevAlerts.map(a => 
-              a.id === data.alert_id 
-                ? { ...a, status: 'resolved', resolvedBy: data.resolved_by } 
+          setAlerts((prevAlerts) =>
+            prevAlerts.map(a =>
+              a.id === data.alert_id
+                ? { ...a, status: 'resolved', resolvedBy: data.resolved_by }
                 : a
             )
           );
-          
+
           addToastNotification(
             `ALERT RESOLVED`,
             `Alert #${data.alert_id} was resolved by volunteer ${data.resolved_by || 'Unknown'}`,
@@ -344,7 +344,7 @@ export default function App() {
         setIsCloudSyncLost(false);
       }
     };
-    
+
     const handleVoiceCommandEvent = (e: Event) => {
       const customEvent = e as CustomEvent;
       addToastNotification(
@@ -376,7 +376,7 @@ export default function App() {
     window.addEventListener('network_status', handleNetworkStatus);
     window.addEventListener('voice_command_executed', handleVoiceCommandEvent);
     window.addEventListener('system_dispatch', handleSystemDispatchEvent);
-    
+
     return () => {
       window.removeEventListener('network_status', handleNetworkStatus);
       window.removeEventListener('voice_command_executed', handleVoiceCommandEvent);
@@ -390,12 +390,12 @@ export default function App() {
     setZones((prevZones) =>
       prevZones.map((z) => {
         const zid = (z.id || '').toLowerCase();
-        
+
         // Include CAM-04 (z-4 / z-04) alongside CAM-03 (z-3 / z-03)
         if (
-          zid.includes('z-3') || 
-          zid.includes('z-03') || 
-          zid.includes('z-4') || 
+          zid.includes('z-3') ||
+          zid.includes('z-03') ||
+          zid.includes('z-4') ||
           zid.includes('z-04')
         ) {
           return {
@@ -488,10 +488,10 @@ export default function App() {
   };
 
   const activeAlertCount = alerts.filter((a) => a.status === 'active').length;
-  
- // Safe filtering: Add optional chaining to prevent silent UI crashes if a zone name is missing
-  const displayedZones = zones.filter((z) => 
-    (z?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+
+  // Safe filtering: Add optional chaining to prevent silent UI crashes if a zone name is missing
+  const displayedZones = zones.filter((z) =>
+    (z?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
     (z?.code || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 

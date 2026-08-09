@@ -1,6 +1,7 @@
 """ML Telemetry Ingestion endpoint."""
 
 import uuid
+
 from app.core.websocket import ws_manager
 from app.db.session import get_db
 from app.models.alert import AlertSeverity, AlertStatus, CrowdAlert
@@ -11,11 +12,88 @@ from app.schemas.telemetry import TelemetryCreate, TelemetryResponse
 from app.services.pathfinding import pathfinder  # Dynamic A* Pathfinder Engine
 from app.services.predictive_engine import predict_density
 from app.services.risk_engine import risk_engine
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter()
+
+# ---------------------------------------------------------------------------
+# Single canonical venue: ITER, Siksha 'O' Anusandhan University.
+# Real campus coordinates (Khandagiri, Bhubaneswar) — replace the per-zone
+# lat/lng below with exact values pulled from Google Maps "What's here?" on
+# each real gate/block for full accuracy.
+# ---------------------------------------------------------------------------
+CANONICAL_VENUE_ID = "iter-soa-university"
+CANONICAL_VENUE = {
+    "id": CANONICAL_VENUE_ID,
+    "name": "Siksha 'O' Anusandhan University (ITER Campus)",
+    "location": "Khandagiri, Bhubaneswar, Odisha",
+    "gps_center_lat": 20.2590,
+    "gps_center_lng": 85.7918,
+    "total_capacity": 2500,
+}
+
+# Registry of the real zones for this venue, matching venue_graph.json.
+# Only zone_ids listed here may be auto-created on first telemetry — anything
+# else is rejected rather than silently invented.
+ZONE_REGISTRY = {
+    "gate_1": {
+        "name": "Main Gate",
+        "sector": "Main Gate",
+        "capacity_limit": 300,
+        "center_lat": 20.2596,
+        "center_lng": 85.7912,
+    },
+    "zone_admin_block_rd": {
+        "name": "Administrative Block Road + Gate Approach",
+        "sector": "Admin Block",
+        "capacity_limit": 500,
+        "center_lat": 20.2593,
+        "center_lng": 85.7916,
+    },
+    "zone_library_roundabout": {
+        "name": "Central Library Roundabout",
+        "sector": "Library",
+        "capacity_limit": 400,
+        "center_lat": 20.2588,
+        "center_lng": 85.7920,
+    },
+    "zone_sports_complex_rd": {
+        "name": "Sports Complex / Physics Dept Road",
+        "sector": "Sports Complex",
+        "capacity_limit": 500,
+        "center_lat": 20.2591,
+        "center_lng": 85.7925,
+    },
+    "gate_2": {
+        "name": "EV Charging / Food Court Junction",
+        "sector": "Food Court",
+        "capacity_limit": 300,
+        "center_lat": 20.2585,
+        "center_lng": 85.7928,
+    },
+    "zone_e_block_lawn_rd": {
+        "name": "E Block Lawn / F Block Road",
+        "sector": "E Block",
+        "capacity_limit": 500,
+        "center_lat": 20.2582,
+        "center_lng": 85.7921,
+    },
+}
+
+
+async def _get_or_create_canonical_venue(db: AsyncSession) -> Venue:
+    """Fetches the single canonical ITER/SOA venue, creating it once if absent."""
+    result = await db.execute(
+        select(Venue).where(Venue.id == CANONICAL_VENUE_ID)
+    )
+    venue = result.scalars().first()
+    if not venue:
+        venue = Venue(**CANONICAL_VENUE)
+        db.add(venue)
+        await db.flush()
+    return venue
 
 
 @router.post("/", response_model=TelemetryResponse)
@@ -27,91 +105,45 @@ async def create_telemetry(
   Calculates risk, updates zone, updates A* pathfinding weights, generates
   alerts, and broadcasts via WS.
   """
-  # 1. Get Zone (Auto-create if missing to avoid crashes)
+  # 1. Get Zone. Auto-create only if it's a known real zone for this venue;
+  #    reject anything else instead of inventing a mock "General Zone".
   result = await db.execute(select(Zone).where(Zone.id == telemetry.zone_id))
   zone = result.scalars().first()
 
   if not zone:
-    # Fetch an active venue from DB to satisfy the NOT NULL venue_id constraint
-    venue_result = await db.execute(select(Venue))
-    existing_venue = venue_result.scalars().first()
-    if not existing_venue:
-      existing_venue = Venue(
-          id="v-1",
-          name="Siksha 'O' Anusandhan University Campus",
-          location="Bhubaneswar, Odisha",
-          gps_center_lat=20.2496,
-          gps_center_lng=85.7988,
-          total_capacity=60000,
+    zone_def = ZONE_REGISTRY.get(telemetry.zone_id)
+    if not zone_def:
+      raise HTTPException(
+          status_code=400,
+          detail=(
+              f"Unknown zone_id '{telemetry.zone_id}'. Valid zones for this "
+              f"venue are: {', '.join(ZONE_REGISTRY.keys())}. Check your "
+              "edge camera config — it may still be posting a legacy zone_id."
+          ),
       )
-      db.add(existing_venue)
-      await db.flush()
 
-    assigned_venue_id = existing_venue.id
-
-    # Assign distinct Bhubaneswar GPS offsets per zone
-    zone_offsets = {
-        "z-1": (0.002, -0.002, "North Plaza Gate"),
-        "z-01": (0.002, -0.002, "North Plaza Gate"),
-        "z-2": (-0.002, -0.002, "South Concourse"),
-        "z-02": (-0.002, -0.002, "South Concourse"),
-        "z-3": (0.002, 0.002, "West Exit Corridor"),
-        "z-03": (0.002, 0.002, "West Exit Corridor"),
-        "z-4": (-0.002, 0.002, "East Stand Gate"),
-        "z-04": (-0.002, 0.002, "East Stand Gate"),
-    }
-    lat_off, lng_off, zone_label = zone_offsets.get(
-        telemetry.zone_id, (0.0, 0.0, "General Zone")
-    )
+    venue = await _get_or_create_canonical_venue(db)
 
     print(
-        f"[Auto-Setup] Creating missing zone '{telemetry.zone_id}' under venue"
-        f" '{assigned_venue_id}'..."
+        f"[Auto-Setup] Creating known zone '{telemetry.zone_id}' "
+        f"('{zone_def['name']}') under venue '{venue.id}'..."
     )
     zone = Zone(
         id=telemetry.zone_id,
-        venue_id=assigned_venue_id,
+        venue_id=venue.id,
         code=telemetry.zone_id,
-        name=f"{zone_label} ({telemetry.zone_id})",
-        sector="Sector Bravo",
-        capacity_limit=3500,
+        name=zone_def["name"],
+        sector=zone_def["sector"],
+        capacity_limit=zone_def["capacity_limit"],
         current_headcount=0,
         density=0.0,
         flow_rate=0.0,
         risk_score=0.0,
-        center_lat=20.2496 + lat_off,
-        center_lng=85.7988 + lng_off,
+        center_lat=zone_def["center_lat"],
+        center_lng=zone_def["center_lng"],
     )
     db.add(zone)
     await db.flush()
-
-  # Fix stale Delhi coordinates from prior seeding (auto-migrate to Bhubaneswar)
-  if zone and (
-      zone.center_lat == 0.0 or abs(zone.center_lat - 28.5833) < 0.01
-  ):
-    zone_offsets = {
-        "z-1": (0.002, -0.002),
-        "z-01": (0.002, -0.002),
-        "z-2": (-0.002, -0.002),
-        "z-02": (-0.002, -0.002),
-        "z-3": (0.002, 0.002),
-        "z-03": (0.002, 0.002),
-        "z-4": (-0.002, 0.002),
-        "z-04": (-0.002, 0.002),
-    }
-    lat_off, lng_off = zone_offsets.get(telemetry.zone_id, (0.0, 0.0))
-    zone.center_lat = 20.2496 + lat_off
-    zone.center_lng = 85.7988 + lng_off
-
-  # Also fix venue coordinates if still set to Delhi
-  if zone and zone.venue_id:
-    v_result = await db.execute(select(Venue).where(Venue.id == zone.venue_id))
-    v = v_result.scalars().first()
-    if v and abs(v.gps_center_lat - 28.5833) < 0.01:
-      v.name = "Siksha 'O' Anusandhan University Campus"
-      v.location = "Bhubaneswar, Odisha"
-      v.gps_center_lat = 20.2496
-      v.gps_center_lng = 85.7988
 
   # 2. Calculate Density & Capacity Ratio
   area_sqm = zone.capacity_limit / 5.0 if zone.capacity_limit else 100.0

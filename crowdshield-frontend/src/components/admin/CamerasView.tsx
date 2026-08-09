@@ -289,32 +289,40 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [] 
               </div>
 
               {/* CCTV Footer Stats - Real Telemetry */}
-              <div className="p-4 bg-[#151726] border-t border-white/10 flex items-center justify-between text-xs font-mono-num">
-                <div className="flex items-center gap-5">
-                  <div>
-                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Headcount</span>
-                    <span className="font-bold text-sm text-slate-100">
-                      {headcount}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Density</span>
-                    <span className="font-bold text-sm text-slate-100">
-                      {matchedZone ? `${density.toFixed(1)} p/m²` : '--'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[#5B5F73] block text-[10px] uppercase font-bold">Inference</span>
-                    <span className="font-bold text-[#22D3A6]">8.4 ms</span>
-                  </div>
-                </div>
+<div className="p-4 bg-[#151726] border-t border-white/10 flex items-center justify-between text-xs font-mono-num">
+  <div className="flex items-center gap-5">
+    <div>
+      <span className="text-slate-400 block text-[10px] uppercase font-bold">Headcount</span>
+      <span className={`font-bold text-sm ${isOffline ? 'text-slate-500' : 'text-slate-100'}`}>
+        {isOffline ? '--' : headcount}
+      </span>
+    </div>
+    <div>
+      <span className="text-slate-400 block text-[10px] uppercase font-bold">Density</span>
+      <span className={`font-bold text-sm ${isOffline ? 'text-slate-500' : 'text-slate-100'}`}>
+        {isOffline || !matchedZone ? '--' : `${density.toFixed(1)} p/m²`}
+      </span>
+    </div>
+    <div>
+      <span className="text-[#5B5F73] block text-[10px] uppercase font-bold">Inference</span>
+      <span className={`font-bold ${isOffline ? 'text-slate-500' : 'text-[#22D3A6]'}`}>
+        {isOffline ? '--' : '8.4 ms'}
+      </span>
+    </div>
+  </div>
 
-                <div className="flex items-center gap-2">
-                  <span className={`px-2.5 py-1 rounded-lg border font-bold uppercase text-[10px] ${getRiskBadge(riskLevel)}`}>
-                    {matchedZone ? `Zone ${matchedZone.code}: ${riskLevel}` : `Port ${port} Active`}
-                  </span>
-                </div>
-              </div>
+  <div className="flex items-center gap-2">
+    <span className={`px-2.5 py-1 rounded-lg border font-bold uppercase text-[10px] ${
+      isOffline ? 'bg-white/5 border-white/10 text-slate-500' : getRiskBadge(riskLevel)
+    }`}>
+      {isOffline
+        ? `Port ${port}: No Live Feed`
+        : matchedZone
+        ? `Zone ${matchedZone.code}: ${riskLevel}`
+        : `Port ${port} Active`}
+    </span>
+  </div>
+</div>
             </div>
           );
         })}

@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { VenueZone } from '../../types';
 import { ThreeDigitalTwinCanvas } from './ThreeDigitalTwinCanvas';
-import { 
-  Box, 
-  Play, 
-  Pause, 
-  AlertTriangle, 
-  Layers, 
-  Cpu, 
-  ShieldAlert, 
-  Navigation, 
-  ArrowUpRight, 
-  CheckCircle2, 
+import {
+  Box,
+  Play,
+  Pause,
+  AlertTriangle,
+  Layers,
+  Cpu,
+  ShieldAlert,
+  Navigation,
+  ArrowUpRight,
+  CheckCircle2,
   Zap,
   Route,
   Compass,
@@ -105,7 +105,7 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones }) => {
   const spatialNodes: GraphNode[] = useMemo(() => {
     if (!displayZones || displayZones.length === 0) return [];
     const cols = Math.min(4, Math.max(2, Math.ceil(Math.sqrt(displayZones.length))));
-    
+
     return displayZones.map((zone, index) => {
       const col = index % cols;
       const row = Math.floor(index / cols);
@@ -254,11 +254,10 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones }) => {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setIsSimulating(!isSimulating)}
-            className={`px-4 py-2 rounded-xl font-heading font-bold text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer ${
-              isSimulating
+            className={`px-4 py-2 rounded-xl font-heading font-bold text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer ${isSimulating
                 ? 'bg-[#FF7A45] text-white hover:bg-[#e86937]'
                 : 'bg-[#22D3A6] text-[#151726] hover:bg-[#1ebf95]'
-            }`}
+              }`}
           >
             {isSimulating ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
             <span>{isSimulating ? 'Pause Engine' : 'Run Live Simulation'}</span>
@@ -282,33 +281,30 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones }) => {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setIs3dBlockModelActive(!is3dBlockModelActive)}
-                className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
-                  is3dBlockModelActive
+                className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${is3dBlockModelActive
                     ? 'bg-[#7C6CFF] border-[#7C6CFF] text-white'
                     : 'bg-[#0B0F19] border-white/10 text-slate-400 hover:text-white'
-                }`}
+                  }`}
               >
                 <Box className="w-3.5 h-3.5" />
                 <span>3D Block Model</span>
               </button>
               <button
                 onClick={() => setShowPathFinding(!showPathFinding)}
-                className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
-                  showPathFinding
+                className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${showPathFinding
                     ? 'bg-[#22D3A6] border-[#22D3A6] text-[#151726]'
                     : 'bg-[#0B0F19] border-white/10 text-slate-400 hover:text-white'
-                }`}
+                  }`}
               >
                 <Route className="w-3.5 h-3.5" />
                 <span>A* Path Overlay</span>
               </button>
               <button
                 onClick={() => setShowHeatmap(!showHeatmap)}
-                className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
-                  showHeatmap
+                className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer ${showHeatmap
                     ? 'bg-[#2C7BE5] border-[#2C7BE5] text-white'
                     : 'bg-[#0B0F19] border-white/10 text-slate-400 hover:text-white'
-                }`}
+                  }`}
               >
                 Heatmap
               </button>
@@ -333,33 +329,33 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones }) => {
 
               {/* A* Dynamic Shortest Safe Route SVG Path */}
               {showPathFinding && aStarResult.path.length > 1 && (
-  <svg 
-    className="absolute inset-0 w-full h-full pointer-events-none z-20 overflow-visible"
-    viewBox="0 0 100 100"
-    preserveAspectRatio="none"
-  >
-    <defs>
-      <linearGradient id="aStarPathGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#2C7BE5" />
-        <stop offset="50%" stopColor="#38BDF8" />
-        <stop offset="100%" stopColor="#22D3A6" />
-      </linearGradient>
-    </defs>
+                <svg
+                  className="absolute inset-0 w-full h-full pointer-events-none z-20 overflow-visible"
+                  viewBox="0 0 100 100"
+                  preserveAspectRatio="none"
+                >
+                  <defs>
+                    <linearGradient id="aStarPathGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#2C7BE5" />
+                      <stop offset="50%" stopColor="#38BDF8" />
+                      <stop offset="100%" stopColor="#22D3A6" />
+                    </linearGradient>
+                  </defs>
 
-    <path
-      d={aStarResult.path.reduce((acc, curr, idx) => {
-        return idx === 0 ? `M ${curr.x} ${curr.y}` : `${acc} L ${curr.x} ${curr.y}`;
-      }, '')}
-      fill="none"
-      stroke="url(#aStarPathGradient)"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeDasharray="2 1"
-      className="animate-pulse"
-    />
-  </svg>
-)}
+                  <path
+                    d={aStarResult.path.reduce((acc, curr, idx) => {
+                      return idx === 0 ? `M ${curr.x} ${curr.y}` : `${acc} L ${curr.x} ${curr.y}`;
+                    }, '')}
+                    fill="none"
+                    stroke="url(#aStarPathGradient)"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeDasharray="2 1"
+                    className="animate-pulse"
+                  />
+                </svg>
+              )}
 
               {/* Spatial Zones Array */}
               <div className="grid grid-cols-4 gap-3 relative z-10 h-full">
@@ -373,15 +369,14 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones }) => {
                     <button
                       key={zone.id}
                       onClick={() => setSelectedZoneId(zone.id)}
-                      className={`p-3.5 rounded-xl border flex flex-col justify-between transition-all cursor-pointer text-left relative overflow-hidden ${
-                        isSelected
+                      className={`p-3.5 rounded-xl border flex flex-col justify-between transition-all cursor-pointer text-left relative overflow-hidden ${isSelected
                           ? 'border-[#2C7BE5] bg-[#2C7BE5]/20 ring-2 ring-[#2C7BE5]'
                           : isOnPath
-                          ? 'border-[#22D3A6] bg-[#151726] ring-2 ring-[#22D3A6]/50'
-                          : isHighRisk
-                          ? 'border-[#FF3B5C] bg-[#FF3B5C]/10'
-                          : 'border-white/10 bg-[#151726] hover:border-slate-600'
-                      }`}
+                            ? 'border-[#22D3A6] bg-[#151726] ring-2 ring-[#22D3A6]/50'
+                            : isHighRisk
+                              ? 'border-[#FF3B5C] bg-[#FF3B5C]/10'
+                              : 'border-white/10 bg-[#151726] hover:border-slate-600'
+                        }`}
                     >
                       <div className="flex items-center justify-between">
                         <span className="font-heading font-bold text-xs text-slate-100 truncate">
@@ -393,9 +388,8 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones }) => {
                           </span>
                         ) : (
                           <span
-                            className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-                              isHighRisk ? 'bg-[#FF3B5C] animate-ping' : 'bg-[#22D3A6]'
-                            }`}
+                            className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${isHighRisk ? 'bg-[#FF3B5C] animate-ping' : 'bg-[#22D3A6]'
+                              }`}
                           />
                         )}
                       </div>
@@ -403,9 +397,8 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones }) => {
                       {showHeatmap && (
                         <div className="w-full h-1.5 rounded-full bg-white/10 my-2 overflow-hidden">
                           <div
-                            className={`h-full transition-all duration-500 ${
-                              isHighRisk ? 'bg-[#FF3B5C]' : zone.density > 2.5 ? 'bg-[#FFB627]' : 'bg-[#22D3A6]'
-                            }`}
+                            className={`h-full transition-all duration-500 ${isHighRisk ? 'bg-[#FF3B5C]' : zone.density > 2.5 ? 'bg-[#FFB627]' : 'bg-[#22D3A6]'
+                              }`}
                             style={{ width: `${Math.min(100, (zone.density / 5) * 100)}%` }}
                           />
                         </div>
@@ -478,13 +471,12 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones }) => {
                 <span className="text-[11px] text-white/70 font-mono-num font-bold">A* Optimal Sequence:</span>
                 {aStarResult.path.map((node, i) => (
                   <React.Fragment key={`seq-${node.id}-${i}`}>
-                    <span className={`px-2.5 py-1 rounded-lg font-bold font-mono-num text-[11px] flex items-center gap-1 border ${
-                      i === 0
+                    <span className={`px-2.5 py-1 rounded-lg font-bold font-mono-num text-[11px] flex items-center gap-1 border ${i === 0
                         ? 'bg-[#2C7BE5]/20 text-[#2C7BE5] border-[#2C7BE5]/40'
                         : i === aStarResult.path.length - 1
-                        ? 'bg-[#22D3A6]/20 text-[#22D3A6] border-[#22D3A6]/40'
-                        : 'bg-white/10 text-white border-white/15'
-                    }`}>
+                          ? 'bg-[#22D3A6]/20 text-[#22D3A6] border-[#22D3A6]/40'
+                          : 'bg-white/10 text-white border-white/15'
+                      }`}>
                       <span className="w-1.5 h-1.5 rounded-full bg-current" />
                       {node.name} ({node.density} p/m²)
                     </span>
@@ -563,13 +555,12 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones }) => {
           {/* Gate Controls Footer */}
           <div className="pt-4 border-t border-white/10 flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-400">Gate Control Status:</span>
-            <span className={`font-bold text-xs uppercase tracking-wider px-3 py-1 rounded-full ${
-              selectedZone.gateStatus === 'open'
+            <span className={`font-bold text-xs uppercase tracking-wider px-3 py-1 rounded-full ${selectedZone.gateStatus === 'open'
                 ? 'bg-[#22D3A6]/20 text-[#059669]'
                 : selectedZone.gateStatus === 'restricted'
-                ? 'bg-[#FF3B5C]/15 text-[#FF3B5C]'
-                : 'bg-[#FFB627]/20 text-[#D97706]'
-            }`}>
+                  ? 'bg-[#FF3B5C]/15 text-[#FF3B5C]'
+                  : 'bg-[#FFB627]/20 text-[#D97706]'
+              }`}>
               {selectedZone.gateStatus || 'OPEN'}
             </span>
           </div>

@@ -34,61 +34,31 @@ async def seed_venue():
         else:
             print(f"Venue {venue.name} already exists. Updating...")
         
-        # Define Zones matching venue_graph.json EXACTLY, with realistic spatial offsets
+        # Define Zones with ACCURATE ITER Campus spatial offsets
         zones_data = [
             {
-                "id": "gate_1",
-                "code": "G-1",
-                "name": "Main Gate",
-                "sector": "gate",
-                "capacity_limit": 300,
-                "center_lat": 20.2515,
-                "center_lng": 85.7980
+                "id": "gate_1", "code": "G-1", "name": "Main Gate", "sector": "gate",
+                "capacity_limit": 300, "center_lat": 20.251200, "center_lng": 85.801800
             },
             {
-                "id": "zone_admin_block_rd",
-                "code": "Z-ADMIN",
-                "name": "Administrative Block Road + Gate Approach",
-                "sector": "pathway",
-                "capacity_limit": 500,
-                "center_lat": 20.2508,
-                "center_lng": 85.7984
+                "id": "zone_admin_block_rd", "code": "Z-ADMIN", "name": "Administrative Block Road + Gate Approach", "sector": "pathway",
+                "capacity_limit": 500, "center_lat": 20.250300, "center_lng": 85.800800
             },
             {
-                "id": "zone_library_roundabout",
-                "code": "Z-LIB",
-                "name": "Central Library Roundabout",
-                "sector": "junction",
-                "capacity_limit": 400,
-                "center_lat": 20.2496,
-                "center_lng": 85.7988
+                "id": "zone_library_roundabout", "code": "Z-LIB", "name": "Central Library Roundabout", "sector": "junction",
+                "capacity_limit": 400, "center_lat": 20.249400, "center_lng": 85.800000
             },
             {
-                "id": "zone_sports_complex_rd",
-                "code": "Z-SPORT",
-                "name": "Sports Complex / Physics Dept Road",
-                "sector": "pathway",
-                "capacity_limit": 500,
-                "center_lat": 20.2485,
-                "center_lng": 85.7980
+                "id": "zone_sports_complex_rd", "code": "Z-SPORT", "name": "Sports Complex / Physics Dept Road", "sector": "pathway",
+                "capacity_limit": 500, "center_lat": 20.248000, "center_lng": 85.799000
             },
             {
-                "id": "gate_2",
-                "code": "G-2",
-                "name": "EV Charging / Food Court Junction",
-                "sector": "gate",
-                "capacity_limit": 300,
-                "center_lat": 20.2475,
-                "center_lng": 85.7975
+                "id": "gate_2", "code": "G-2", "name": "EV Charging / Food Court Junction", "sector": "gate",
+                "capacity_limit": 300, "center_lat": 20.247200, "center_lng": 85.798300
             },
             {
-                "id": "zone_e_block_lawn_rd",
-                "code": "Z-EBLK",
-                "name": "E Block Lawn / F Block Road",
-                "sector": "pathway",
-                "capacity_limit": 500,
-                "center_lat": 20.2488,
-                "center_lng": 85.7995
+                "id": "zone_e_block_lawn_rd", "code": "Z-EBLK", "name": "E Block Lawn / F Block Road", "sector": "pathway",
+                "capacity_limit": 500, "center_lat": 20.248800, "center_lng": 85.800800
             }
         ]
         

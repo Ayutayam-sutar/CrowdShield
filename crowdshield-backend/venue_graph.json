@@ -1,11 +1,11 @@
 {
   "nodes": [
-    {"id": "gate_1", "name": "Main Gate", "max_capacity": 300, "is_gate": true, "is_exit": true},
-    {"id": "zone_admin_block_rd", "name": "Administrative Block Road + Gate Approach", "max_capacity": 500, "is_gate": false, "is_exit": false},
-    {"id": "zone_library_roundabout", "name": "Central Library Roundabout", "max_capacity": 400, "is_gate": false, "is_exit": false},
-    {"id": "zone_sports_complex_rd", "name": "Sports Complex / Physics Dept Road", "max_capacity": 500, "is_gate": false, "is_exit": false},
-    {"id": "gate_2", "name": "EV Charging / Food Court Junction", "max_capacity": 300, "is_gate": true, "is_exit": true},
-    {"id": "zone_e_block_lawn_rd", "name": "E Block Lawn / F Block Road", "max_capacity": 500, "is_gate": false, "is_exit": false}
+    {"id": "gate_1", "name": "Main Gate", "max_capacity": 300, "is_gate": true, "is_exit": true, "lat": 20.251200, "lng": 85.801800},
+    {"id": "zone_admin_block_rd", "name": "Administrative Block Road + Gate Approach", "max_capacity": 500, "is_gate": false, "is_exit": false, "lat": 20.250300, "lng": 85.800800},
+    {"id": "zone_library_roundabout", "name": "Central Library Roundabout", "max_capacity": 400, "is_gate": false, "is_exit": false, "lat": 20.249400, "lng": 85.800000},
+    {"id": "zone_sports_complex_rd", "name": "Sports Complex / Physics Dept Road", "max_capacity": 500, "is_gate": false, "is_exit": false, "lat": 20.248000, "lng": 85.799000},
+    {"id": "gate_2", "name": "EV Charging / Food Court Junction", "max_capacity": 300, "is_gate": true, "is_exit": true, "lat": 20.247200, "lng": 85.798300},
+    {"id": "zone_e_block_lawn_rd", "name": "E Block Lawn / F Block Road", "max_capacity": 500, "is_gate": false, "is_exit": false, "lat": 20.248800, "lng": 85.800800}
   ],
   "edges": [
     {"source": "gate_1", "target": "zone_admin_block_rd", "length_meters": 80.0, "max_flow_rate": 100},
