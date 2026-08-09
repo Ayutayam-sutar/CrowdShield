@@ -5,14 +5,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pydantic import BaseModel
-from typing import List, Dict, Any
+from typing import List, Optional
 
 from app.db.session import get_db
 from app.models.venue import Zone
 from app.services.pathfinding import pathfinder
-from app.api.deps import get_current_active_admin
-from app.services.venue_topology import venue_topology_engine
-from typing import Dict, Optional
 
 router = APIRouter()
 
@@ -27,6 +24,8 @@ class Waypoint(BaseModel):
     zone_name: str
 
 class RoutingResponse(BaseModel):
+    status: str
+    message: str
     total_distance_meters: float
     estimated_time_minutes: float
     avoided_surge_zones: List[str]
@@ -35,17 +34,18 @@ class RoutingResponse(BaseModel):
 @router.post("/evacuate", response_model=RoutingResponse)
 async def compute_evacuation_route(request: RoutingRequest, db: AsyncSession = Depends(get_db)):
     """
-    Computes the safest A* evacuation path considering density penalties.
+    Computes the safest A* evacuation path using physical JSON topology + DB telemetry penalties.
     """
     result = await db.execute(select(Zone).where(Zone.venue_id == request.venue_id))
     zones = result.scalars().all()
     
     if not zones:
-        raise HTTPException(status_code=404, detail="No zones found for venue")
+        raise HTTPException(status_code=404, detail="No live zones found for venue in database")
         
-    pathfinder.build_graph(zones)
+    # 1. Update the physical graph with live telemetry
+    pathfinder.update_live_telemetry(zones)
 
-    # Find the nearest zone to the user's current location
+    # 2. Find the nearest valid physical zone to the user's GPS coordinates
     start_zone = None
     min_dist = float('inf')
     for z in zones:
@@ -54,95 +54,60 @@ async def compute_evacuation_route(request: RoutingRequest, db: AsyncSession = D
             min_dist = dist
             start_zone = z
             
-    if not start_zone:
-        raise HTTPException(status_code=400, detail="Could not determine start zone")
+    if not start_zone or start_zone.id not in pathfinder.graph:
+        raise HTTPException(status_code=400, detail="Could not snap your location to a valid physical zone.")
 
-    # Find target safe exit (e.g. Gate 4, or just the safest outer zone)
-    # For now, let's just pick 'z-4' (Gate 4) if it exists, otherwise the last zone
-    end_zone_id = "z-4"
-    if not any(z.id == end_zone_id for z in zones):
-        end_zone_id = zones[-1].id
-
-    path_nodes = pathfinder.find_safest_path(start_zone.id, end_zone_id)
+    # 3. Calculate safest path to an exit
+    evac_result = pathfinder.compute_safest_evacuation(start_zone.id)
     
-    if not path_nodes:
-        # Fallback empty response
+    if evac_result["status"] != "SUCCESS":
         return RoutingResponse(
+            status="BLOCKED",
+            message=evac_result["message"],
             total_distance_meters=0.0,
             estimated_time_minutes=0.0,
             avoided_surge_zones=[],
             waypoints=[]
         )
 
-    # Construct waypoints
+    path_nodes = evac_result["path_nodes"]
+
+    # 4. Construct response metrics and waypoints
     waypoints = []
     avoided_zones = set()
     total_distance = 0.0
     
     prev_node = None
-    for i, node_id in enumerate(path_nodes):
+    for node_id in path_nodes:
         node_data = pathfinder.graph.nodes[node_id]
-        zone_obj = next((z for z in zones if z.id == node_id), None)
-        zone_name = zone_obj.name if zone_obj else f"Zone {node_id}"
         
         waypoints.append(Waypoint(
-            lat=node_data['lat'],
-            lng=node_data['lng'],
-            zone_name=zone_name
+            lat=node_data.get('lat', 0.0),
+            lng=node_data.get('lng', 0.0),
+            zone_name=node_data.get('name', f"Zone {node_id}")
         ))
         
         if prev_node:
-            # calculate distance (very rough approximation for meters)
-            lat_diff = node_data['lat'] - pathfinder.graph.nodes[prev_node]['lat']
-            lng_diff = node_data['lng'] - pathfinder.graph.nodes[prev_node]['lng']
-            dist_deg = (lat_diff**2 + lng_diff**2)**0.5
-            total_distance += dist_deg * 111000 # Approx meters per degree
+            # Reconstruct the base physical distance from the graph edges
+            edge_data = pathfinder.graph.get_edge_data(prev_node, node_id, {})
+            total_distance += edge_data.get('base_weight', 10.0)
             
         prev_node = node_id
 
-    # Check for avoided zones: Any zone not in path that is critical
+    # Find which critical zones the A* algorithm successfully bypassed
     critical_zones = [z for z in zones if z.risk_level.value == 'critical']
     for cz in critical_zones:
         if cz.id not in path_nodes:
             avoided_zones.add(cz.name)
 
-    # Assuming average walking speed of 1.2 m/s (72 m/min)
+    # Assume standard evacuation walking speed (1.2 m/s or 72 m/min)
     estimated_time = total_distance / 72.0
 
     return RoutingResponse(
+        status="SUCCESS",
+        message=evac_result["message"],
         total_distance_meters=round(total_distance, 1),
         estimated_time_minutes=round(estimated_time, 1),
         avoided_surge_zones=list(avoided_zones),
         waypoints=waypoints
     )
-
-class EvacuationRequest(BaseModel):
-    source_node: str
-    live_densities: Dict[str, float]
-
-class EvacuationResponse(BaseModel):
-    status: str
-    optimal_path: Optional[List[str]] = None
-    cost: Optional[float] = None
-    recommendation: Optional[str] = None
-    target_exit: Optional[str] = None
-    message: Optional[str] = None
-
-@router.post("/calculate-evacuation", response_model=EvacuationResponse)
-async def calculate_evacuation(request: EvacuationRequest):
-    result = venue_topology_engine.calculate_evacuation_path(
-        source_node_id=request.source_node,
-        live_densities=request.live_densities
-    )
-    if "error" in result:
-        return EvacuationResponse(status="ERROR", message=result["error"])
-        
-    return EvacuationResponse(
-        status=result.get("status"),
-        optimal_path=result.get("optimal_path"),
-        cost=result.get("cost"),
-        recommendation=result.get("recommendation"),
-        target_exit=result.get("target_exit"),
-        message=result.get("message")
-    )
-

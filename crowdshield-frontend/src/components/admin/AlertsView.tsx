@@ -132,10 +132,10 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-heading font-bold text-2xl text-[#151726] tracking-tight">
+          <h1 className="font-heading font-bold text-2xl text-white tracking-tight">
             Alerts & Response Console
           </h1>
-          <p className="text-xs text-[#5B5F73] mt-1">
+          <p className="text-xs text-slate-400 mt-1">
             Real-time incident queue integrated with Sentinel AI risk breakdown and Bhashini Multilingual PA.
           </p>
         </div>
@@ -152,9 +152,9 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
       {/* 3 Column Console Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left 3 Columns: Chronological Alerts Queue */}
-        <div className="lg:col-span-3 bg-white border border-[#E7E5DD] rounded-2xl p-4 shadow-[0_2px_12px_rgba(21,23,38,0.04)] flex flex-col gap-3 max-h-[750px] overflow-y-auto">
-          <div className="flex items-center justify-between pb-2 border-b border-[#E7E5DD]">
-            <span className="font-heading font-bold text-xs text-[#151726] uppercase tracking-wider">
+        <div className="lg:col-span-3 bg-[#111827] border border-slate-800/80 rounded-2xl p-4 shadow-xl flex flex-col gap-3 max-h-[750px] overflow-y-auto">
+          <div className="flex items-center justify-between pb-2 border-b border-white/10">
+            <span className="font-heading font-bold text-xs text-slate-100 uppercase tracking-wider">
               Active Alerts Queue ({alerts.length})
             </span>
             <span className={`w-2 h-2 rounded-full ${alerts.length > 0 ? 'bg-[#FF3B5C] animate-ping' : 'bg-[#22D3A6]'}`} />
@@ -189,24 +189,24 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
                     onClick={() => setSelectedAlertId(alert.id)}
                     className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col gap-1.5 ${borderClass} ${
                       isSelected
-                        ? 'bg-[#2C7BE5]/10 border-y-[#2C7BE5]/40 border-r-[#2C7BE5]/40 shadow-sm'
-                        : 'bg-[#FAFAF7] border-[#E7E5DD] hover:bg-[#FAFAF7]/80'
+                        ? 'bg-[#2C7BE5]/20 border-y-[#2C7BE5]/50 border-r-[#2C7BE5]/50 shadow-sm'
+                        : 'bg-[#151726] border-white/10 hover:bg-white/5 text-slate-100'
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-mono-num font-bold text-[11px] text-[#151726]">
+                      <span className="font-mono-num font-bold text-[11px] text-slate-100">
                         #{alert.id}
                       </span>
-                      <span className="text-[10px] text-[#5B5F73] font-mono-num">
+                      <span className="text-[10px] text-slate-400 font-mono-num">
                         {alert.timestamp || 'Just now'}
                       </span>
                     </div>
 
-                    <span className="font-heading font-bold text-xs text-[#151726] line-clamp-2 leading-snug">
+                    <span className="font-heading font-bold text-xs text-slate-100 line-clamp-2 leading-snug">
                       {alert.title}
                     </span>
 
-                    <span className="text-[10px] text-[#5B5F73] font-mono-num">
+                    <span className="text-[10px] text-slate-400 font-mono-num">
                       Location: {alert.zoneName}
                     </span>
 
@@ -231,15 +231,15 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
         </div>
 
         {alerts.length === 0 ? (
-          <div className="lg:col-span-9 bg-white border border-[#E7E5DD] rounded-2xl p-12 shadow-[0_2px_12px_rgba(21,23,38,0.04)] flex flex-col items-center justify-center text-center gap-4">
+          <div className="lg:col-span-9 bg-[#111827] border border-slate-800/80 rounded-2xl p-12 shadow-xl flex flex-col items-center justify-center text-center gap-4">
             <div className="w-16 h-16 rounded-full bg-[#22D3A6]/15 text-[#22D3A6] border border-[#22D3A6]/30 flex items-center justify-center">
               <CheckCircle2 className="w-8 h-8 text-[#22D3A6]" />
             </div>
             <div className="flex flex-col gap-1 max-w-md">
-              <h2 className="font-heading font-bold text-xl text-[#151726]">
+              <h2 className="font-heading font-bold text-xl text-slate-100">
                 System Optimal — No Active Incidents
               </h2>
-              <p className="text-xs text-[#5B5F73] leading-relaxed">
+              <p className="text-xs text-slate-400 leading-relaxed">
                 All venue sectors are operating within safe density thresholds. Sentinel AI is continuously monitoring live telemetry streams across all active edge nodes.
               </p>
             </div>
@@ -253,30 +253,30 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
         ) : (
           <>
             {/* Center 5 Columns: Active Alert Detail View */}
-            <div className="lg:col-span-5 bg-white border border-[#E7E5DD] rounded-2xl p-5 shadow-[0_2px_12px_rgba(21,23,38,0.04)] flex flex-col gap-5">
+            <div className="lg:col-span-5 bg-[#111827] border border-slate-800/80 rounded-2xl p-5 shadow-xl flex flex-col gap-5">
               {selectedAlert && (
                 <>
                   {/* Alert Title Bar */}
-                  <div className="flex flex-col gap-1 border-b border-[#E7E5DD] pb-3">
+                  <div className="flex flex-col gap-1 border-b border-white/10 pb-3">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-mono-num font-bold text-[#FF3B5C] uppercase tracking-wider flex items-center gap-1.5">
                         <AlertTriangle className="w-4 h-4" />
                         {selectedAlert.category} Incident
                       </span>
-                      <span className="text-xs font-mono-num text-[#5B5F73]">
+                      <span className="text-xs font-mono-num text-slate-400">
                         ID: #{selectedAlert.id}
                       </span>
                     </div>
-                    <h2 className="font-heading font-bold text-lg text-[#151726]">
+                    <h2 className="font-heading font-bold text-lg text-slate-100">
                       {selectedAlert.title}
                     </h2>
-                    <span className="text-xs text-[#5B5F73]">
+                    <span className="text-xs text-slate-400">
                       Location: {selectedAlert.zoneName}
                     </span>
                   </div>
 
                   {/* Live Camera Snapshot */}
-                  <div className="relative aspect-video rounded-xl overflow-hidden border border-[#E7E5DD] bg-black">
+                  <div className="relative aspect-video rounded-xl overflow-hidden border border-white/10 bg-black">
                     {selectedAlert ? (
                       <img
                         src={getStreamUrl(selectedAlert.zoneId)}
@@ -298,31 +298,31 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
 
                   {/* Metrics Grid */}
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-[#FAFAF7] border border-[#E7E5DD] p-3 rounded-xl font-mono-num">
-                      <span className="text-[11px] text-[#5B5F73] block uppercase font-bold">Current Density</span>
+                    <div className="bg-[#151726] border border-white/10 p-3 rounded-xl font-mono-num">
+                      <span className="text-[11px] text-slate-400 block uppercase font-bold">Current Density</span>
                       <span className="font-heading font-extrabold text-2xl text-[#FF3B5C]">
                         {Number(displayDensity).toFixed(2)} <span className="text-xs font-normal">p/m²</span>
                       </span>
                     </div>
 
-                    <div className="bg-[#FAFAF7] border border-[#E7E5DD] p-3 rounded-xl font-mono-num">
-                      <span className="text-[11px] text-[#5B5F73] block uppercase font-bold">Flow Egress Rate</span>
-                      <span className="font-heading font-extrabold text-2xl text-[#151726]">
+                    <div className="bg-[#151726] border border-white/10 p-3 rounded-xl font-mono-num">
+                      <span className="text-[11px] text-slate-400 block uppercase font-bold">Flow Egress Rate</span>
+                      <span className="font-heading font-extrabold text-2xl text-slate-100">
                         {displayFlowRate} <span className="text-xs font-normal">p/min</span>
                       </span>
                     </div>
                   </div>
 
                   {/* 60-Minute Density Trend Bar Chart */}
-                  <div className="bg-[#FAFAF7] border border-[#E7E5DD] p-4 rounded-xl flex flex-col gap-2">
-                    <span className="font-heading font-bold text-xs text-[#151726]">
+                  <div className="bg-[#151726] border border-white/10 p-4 rounded-xl flex flex-col gap-2">
+                    <span className="font-heading font-bold text-xs text-slate-100">
                       60-Minute Density Trend Progression (p/m²)
                     </span>
                     <div className="h-32 w-full mt-1">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={historyData}>
-                          <XAxis dataKey="time" stroke="#5B5F73" fontSize={10} tickLine={false} />
-                          <YAxis stroke="#5B5F73" fontSize={10} tickLine={false} />
+                          <XAxis dataKey="time" stroke="rgba(255,255,255,0.4)" fontSize={10} tickLine={false} />
+                          <YAxis stroke="rgba(255,255,255,0.4)" fontSize={10} tickLine={false} />
                           <Tooltip contentStyle={{ backgroundColor: '#151726', borderRadius: '8px', color: '#fff', fontSize: '11px' }} />
                           <Bar dataKey="density" fill="#FF3B5C" radius={[4, 4, 0, 0]} />
                         </BarChart>
@@ -334,7 +334,7 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
             </div>
 
             {/* Right 4 Columns: Sentinel AI Analysis & Bhashini Multilingual Player */}
-            <div className="lg:col-span-4 bg-white border-2 border-[#7C6CFF] rounded-2xl p-5 shadow-[0_4px_20px_rgba(124,108,255,0.12)] flex flex-col justify-between gap-5 relative">
+            <div className="lg:col-span-4 bg-[#111827] border border-slate-800/80 rounded-2xl p-5 shadow-xl flex flex-col justify-between gap-5 relative">
               {/* Top Badge */}
               <div className="flex items-center justify-between border-b border-[#7C6CFF]/20 pb-3">
                 <div className="flex items-center gap-2">
@@ -353,7 +353,7 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
               {selectedAlert && (
                 <div className="flex flex-col gap-4">
                   {/* Sentinel AI Natural Language Analysis */}
-                  <div className="bg-[#7C6CFF]/5 border border-[#7C6CFF]/20 p-3.5 rounded-xl text-xs text-[#151726] leading-relaxed">
+                  <div className="bg-[#7C6CFF]/5 border border-[#7C6CFF]/20 p-3.5 rounded-xl text-xs text-slate-300 leading-relaxed">
                     <span className="font-bold text-[#7C6CFF] block mb-1 font-heading text-xs">
                       Automated Risk Diagnostic:
                     </span>
@@ -396,12 +396,12 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
 
                   {/* Recommended Actions */}
                   <div className="flex flex-col gap-2">
-                    <span className="font-heading font-bold text-xs text-[#151726] uppercase tracking-wider">
+                    <span className="font-heading font-bold text-xs text-slate-100 uppercase tracking-wider">
                       Recommended Countermeasures:
                     </span>
 
                     {(selectedAlert.recommendedActions || []).length === 0 ? (
-                      <div className="p-3 bg-[#FAFAF7] border border-[#E7E5DD] rounded-xl text-xs text-[#5B5F73]">
+                      <div className="p-3 bg-[#151726] border border-white/10 rounded-xl text-xs text-slate-400">
                         No specific countermeasures required at this threshold.
                       </div>
                     ) : (
@@ -414,12 +414,12 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
                             key={actionKey}
                             className={`p-3 rounded-xl border flex flex-col gap-2 transition-all ${
                               isExecuted
-                                ? 'bg-[#22D3A6]/10 border-[#22D3A6]/40'
-                                : 'bg-[#FAFAF7] border-[#E7E5DD] hover:border-[#7C6CFF]/50'
+                                ? 'bg-[#22D3A6]/10 border-[#22D3A6]/40 text-slate-100'
+                                : 'bg-[#151726] border-white/10 hover:border-[#7C6CFF]/50 text-slate-100'
                             }`}
                           >
                             <div className="flex items-start justify-between gap-2">
-                              <span className="font-bold text-xs text-[#151726] leading-snug">
+                              <span className="font-bold text-xs text-slate-100 leading-snug">
                                 {action.actionText}
                               </span>
                               <span className="px-2 py-0.5 rounded bg-[#22D3A6]/15 text-[#059669] font-mono-num font-bold text-[10px] border border-[#22D3A6]/30 shrink-0">
@@ -427,7 +427,7 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
                               </span>
                             </div>
 
-                            <span className="text-[11px] text-[#5B5F73] font-mono-num">
+                            <span className="text-[11px] text-slate-400 font-mono-num">
                               Impact: {action.impact}
                             </span>
 
@@ -519,25 +519,25 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
       {/* 1-Tap Action Confirmation Modal */}
       {confirmationModalAction && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-body animate-fadeIn">
-          <div className="bg-white border-2 border-[#7C6CFF] rounded-2xl shadow-2xl max-w-md w-full overflow-hidden p-6 flex flex-col gap-4">
-            <div className="flex justify-between items-center border-b border-[#E7E5DD] pb-3">
+          <div className="bg-[#111827] border-2 border-[#7C6CFF] rounded-2xl shadow-2xl max-w-md w-full overflow-hidden p-6 flex flex-col gap-4">
+            <div className="flex justify-between items-center border-b border-white/10 pb-3">
               <span className="font-heading font-bold text-sm text-[#7C6CFF] flex items-center gap-2">
                 <Sparkles className="w-4 h-4" /> 1-Tap Countermeasure Confirmation
               </span>
               <button
                 onClick={() => setConfirmationModalAction(null)}
-                className="p-1 rounded-lg hover:bg-[#FAFAF7] text-[#5B5F73]"
+                className="p-1 rounded-lg hover:bg-white/10 text-slate-400"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="flex flex-col gap-2">
-              <span className="text-xs text-[#5B5F73]">Confirming target action payload:</span>
-              <div className="bg-[#FAFAF7] border border-[#E7E5DD] p-3 rounded-xl font-heading font-bold text-xs text-[#151726]">
+              <span className="text-xs text-slate-400">Confirming target action payload:</span>
+              <div className="bg-[#151726] border border-white/10 p-3 rounded-xl font-heading font-bold text-xs text-slate-100">
                 "{confirmationModalAction.actionText}"
               </div>
-              <span className="text-xs text-[#5B5F73] font-mono-num mt-1">
+              <span className="text-xs text-slate-400 font-mono-num mt-1">
                 Expected Impact: {confirmationModalAction.impact}
               </span>
             </div>
@@ -545,7 +545,7 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
             <div className="flex items-center gap-3 mt-2">
               <button
                 onClick={() => setConfirmationModalAction(null)}
-                className="flex-1 py-2 bg-[#FAFAF7] border border-[#E7E5DD] text-[#5B5F73] font-semibold text-xs rounded-xl hover:bg-[#E7E5DD] transition-colors cursor-pointer"
+                className="flex-1 py-2 bg-white/10 text-white border-transparent hover:bg-white/20 font-semibold text-xs rounded-xl transition-colors cursor-pointer"
               >
                 Cancel
               </button>

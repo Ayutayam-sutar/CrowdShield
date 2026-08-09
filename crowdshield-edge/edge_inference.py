@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import math
 import cv2
 import numpy as np
@@ -130,6 +131,9 @@ def generate_mjpeg_stream(source):
 
     try:
         while cap.isOpened():
+            # Throttle inference to ~30 FPS to prevent 100% CPU lockup
+            time.sleep(0.033)
+
             success, frame = cap.read()
             if not success:
                 # Loop video if reading from file
@@ -199,7 +203,8 @@ def generate_mjpeg_stream(source):
 
             # 2. Telemetry Aggregation & Async Backend Sync
             if frame_count % TELEMETRY_INTERVAL_FRAMES == 0:
-                density = people_in_zone / ZONE_AREA_SQM
+                ZONE_AREA_SQM = 50.0  # Real-world metric area represented
+                density = float(people_in_zone) / ZONE_AREA_SQM if people_in_zone > 0 else 0.0
                 avg_speed = float(np.mean(zone_speeds)) if zone_speeds else 0.0
 
                 reverse_flow_detected = bool(people_in_zone > 3 and (reverse_flow_count / people_in_zone) > 0.20)
@@ -234,7 +239,7 @@ def generate_mjpeg_stream(source):
                 payload = {
                     "zone_id": ZONE_ID,
                     "person_count": people_in_zone,
-                    "density": round(density, 3),
+                    "density": round(density, 2),
                     "avg_speed": round(avg_speed, 3),
                     "flow_conflict": bool(flow_conflict),
                     "surge_score": round(surge_score, 3),

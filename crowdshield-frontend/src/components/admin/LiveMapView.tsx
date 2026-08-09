@@ -89,7 +89,14 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [localToast, setLocalToast] = useState<string | null>(null);
 
-  const centerCoords: [number, number] = selectedVenue?.centerCoords || [28.5833, 77.2333];
+  const centerCoords: [number, number] = selectedVenue?.centerCoords || [20.2496, 85.7988];
+
+  const physicalGates = [
+    { id: 'gate-1', name: 'North Main Entrance', lat: 20.2500, lng: 85.7988, status: 'OPEN' },
+    { id: 'gate-2', name: 'South Auxiliary Gate', lat: 20.2492, lng: 85.7988, status: 'LOCKED' },
+    { id: 'gate-3', name: 'East VIP Turnstile', lat: 20.2496, lng: 85.7995, status: 'OPEN' },
+    { id: 'gate-4', name: 'West Emergency Exit', lat: 20.2496, lng: 85.7981, status: 'OPEN' }
+  ];
 
   const showToastError = (msg: string) => {
     setLocalToast(msg);
@@ -217,6 +224,25 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
 
+          {/* Render Physical Gate Markers */}
+          {physicalGates.map(gate => (
+            <Marker key={gate.id} position={[gate.lat, gate.lng]}>
+              <Popup className="font-body text-[#151726]">
+                <div className="flex flex-col gap-2 p-1">
+                  <span className="font-bold text-sm">{gate.name}</span>
+                  <span className={`text-xs font-bold ${gate.status === 'OPEN' ? 'text-green-600' : 'text-[#FF3B5C]'}`}>
+                    STATUS: {gate.status}
+                  </span>
+                  <button 
+                    className="mt-2 px-3 py-1.5 bg-[#2C7BE5] text-white rounded-lg text-xs font-bold shadow-md hover:bg-[#2C7BE5]/80 transition-colors"
+                  >
+                    Toggle Gate Override
+                  </button>
+                </div>
+              </Popup>
+            </Marker>
+          ))}
+
           {/* Render Zone Polygons */}
           {zones.map((zone) => {
             const polygonColor = getRiskColor(zone.riskLevel);
@@ -288,12 +314,14 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
             );
           })}
 
+
+
           {/* Citizen Evacuation Polyline Path avoiding red bottleneck zones */}
           <Polyline
             positions={[
-              [20.2961, 85.8245],
-              [20.2980, 85.8230],
-              [20.3010, 85.8270]
+              [20.2516, 85.7968],
+              [20.2496, 85.7988],
+              [20.2476, 85.8008]
             ]}
             pathOptions={{
               color: '#2C7BE5',

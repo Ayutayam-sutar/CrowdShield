@@ -39,10 +39,10 @@ const DRILL_STEPS: EvacuationStep[] = [
   },
   {
     stepNumber: 2,
-    title: 'Bypass Sector 7 Bottleneck',
-    instruction: 'Proceed along Sector 7 Ramp B. Keep right to allow emergency responders to pass.',
+    title: 'Bypass Block 7 Bottleneck',
+    instruction: 'Proceed along Academic Block 7 Ramp. Keep right to allow emergency responders to pass.',
     distanceMeter: 60,
-    landmark: 'Ramp B - North Stairwell',
+    landmark: 'Block 7 - North Stairwell',
     xPercent: 50,
     yPercent: 45,
   },
@@ -202,7 +202,7 @@ export const EvacuationDrillMode: React.FC = () => {
         <div className="flex items-center justify-between text-xs text-white/80 font-mono-num gap-2">
           <span className="flex items-center gap-1.5 font-bold text-[#22D3A6] truncate">
             <MapPin className="w-4 h-4 text-[#22D3A6] shrink-0" />
-            <span className="truncate">Stadium Sector 7G Safe Map</span>
+            <span className="truncate">SOA Campus Safe Route Map</span>
           </span>
           <span className="bg-white/10 px-2 sm:px-2.5 py-0.5 rounded-full text-[10px] text-white/90 shrink-0 border border-white/10">
             Live Route: Gate 3 → Gate 4
@@ -225,9 +225,9 @@ export const EvacuationDrillMode: React.FC = () => {
             {/* Outer perimeter */}
             <rect x="5" y="5" width="90" height="90" rx="10" strokeWidth="0.8" strokeDasharray="2 2" />
             
-            {/* Sector 7 Block */}
+            {/* Block 7 Block */}
             <rect x="15" y="60" width="25" height="25" rx="3" className="fill-white/5 stroke-white/15" />
-            <text x="27" y="74" fill="#A0A5BA" fontSize="3" textAnchor="middle" className="font-sans font-bold">SECTOR 7</text>
+            <text x="27" y="74" fill="#A0A5BA" fontSize="3" textAnchor="middle" className="font-sans font-bold">BLOCK 7</text>
 
             {/* Danger Zone (Gate 3 Area) */}
             <circle cx="20" cy="80" r="8" className="fill-[#FF3B5C]/20 stroke-[#FF3B5C] animate-pulse" strokeWidth="1" />
@@ -448,7 +448,7 @@ export const EvacuationDrillMode: React.FC = () => {
       <div className="bg-[#FAFAF7] border border-[#E7E5DD] rounded-xl p-3 flex items-start gap-2.5 text-xs text-[#5B5F73]">
         <Info className="w-4 h-4 text-[#2C7BE5] shrink-0 mt-0.5" />
         <div className="text-[11px] leading-relaxed">
-          <strong className="text-[#151726]">Pro Safety Tip:</strong> Practice this drill before stadium exit announcements. In real crowd emergencies, follow green exit light indicators and remain calm.
+          <strong className="text-[#151726]">Pro Safety Tip:</strong> Practice this drill before campus evacuation announcements. In real crowd emergencies, follow green exit light indicators and remain calm.
         </div>
       </div>
     </div>
