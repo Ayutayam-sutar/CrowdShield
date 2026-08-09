@@ -48,8 +48,16 @@ import { CitizenPortalView } from './components/citizen/CitizenPortalView';
 import api from './utils/api';
 
 export function mapBackendZoneToFrontend(raw: any): VenueZone {
-  const centerLat = raw.center_lat || (Array.isArray(raw.center) ? raw.center[0] : 28.5832);
-  const centerLng = raw.center_lng || (Array.isArray(raw.center) ? raw.center[1] : 77.2318);
+  // Bhubaneswar zone offsets so each zone gets distinct map placement
+  const ZONE_OFFSETS: Record<string, [number, number]> = {
+    'z-1': [20.2516, 85.7968], 'z-01': [20.2516, 85.7968],
+    'z-2': [20.2476, 85.7968], 'z-02': [20.2476, 85.7968],
+    'z-3': [20.2516, 85.8008], 'z-03': [20.2516, 85.8008],
+    'z-4': [20.2476, 85.8008], 'z-04': [20.2476, 85.8008],
+  };
+  const fallback = ZONE_OFFSETS[(raw.id || '').toLowerCase()] || [20.2496, 85.7988];
+  const centerLat = raw.center_lat || (Array.isArray(raw.center) ? raw.center[0] : fallback[0]);
+  const centerLng = raw.center_lng || (Array.isArray(raw.center) ? raw.center[1] : fallback[1]);
   return {
     id: raw.id,
     name: raw.name || raw.code || raw.id,
@@ -82,7 +90,7 @@ export function mapBackendVenueToFrontend(raw: any): VenueInfo {
     id: raw.id,
     name: raw.name,
     location: raw.location,
-    centerCoords: [raw.gps_center_lat || 28.5833, raw.gps_center_lng || 77.2333],
+    centerCoords: [raw.gps_center_lat || 20.2496, raw.gps_center_lng || 85.7988],
     totalCapacity: raw.total_capacity || 60000,
     currentTotalHeadcount: totalHeadcount,
     activeZonesCount: mappedZones.length,
@@ -112,6 +120,15 @@ export default function App() {
 
   // Toast Notifications State
   const [toasts, setToasts] = useState<ToastNotification[]>([]);
+
+  // Audit Logs State
+  const [recentLogs, setRecentLogs] = useState<{ timestamp: string; action: string; source: string; type: 'success' | 'warning' | 'info' }[]>([
+    { timestamp: new Date(Date.now() - 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), source: 'OPERATOR_01', action: 'INITIATED REMOTE UNLOCK: GATE B TURNSTILES', type: 'info' },
+    { timestamp: new Date(Date.now() - 120000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), source: 'SENTINEL_AI', action: 'ESCALATED RISK LEVEL TO CRITICAL FOR SECTOR 7G', type: 'warning' },
+    { timestamp: new Date(Date.now() - 180000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), source: 'OPERATOR_02', action: 'DISPATCHED BHASHINI MULTILINGUAL ANNOUNCEMENT (HINDI/ODIA)', type: 'info' },
+    { timestamp: new Date(Date.now() - 240000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), source: 'A_STAR_ROUTER', action: 'DYNAMIC REROUTE ACTIVE: DIVERTED 1,200 PAX TO AUX GATE 4', type: 'success' },
+    { timestamp: new Date(Date.now() - 300000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), source: 'SYSTEM_NODE', action: 'EDGE SQLITE DB SYNC OK · 0 LOSS PACKETS', type: 'info' },
+  ]);
 
   // Modals & Drawers
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -337,12 +354,33 @@ export default function App() {
       );
     };
 
+    const handleSystemDispatchEvent = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const { type, message } = customEvent.detail || {};
+      addToastNotification(
+        '🚨 Emergency System Dispatch',
+        message || 'Dispatched intervention payload to Edge Controller.',
+        type === 'warning' ? 'warning' : 'info'
+      );
+      setRecentLogs((prev) => [
+        {
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          source: 'DISPATCH_PANEL',
+          action: (message || 'DISPATCHED EMERGENCY INTERVENTION').toUpperCase(),
+          type: type || 'info'
+        },
+        ...prev
+      ]);
+    };
+
     window.addEventListener('network_status', handleNetworkStatus);
     window.addEventListener('voice_command_executed', handleVoiceCommandEvent);
+    window.addEventListener('system_dispatch', handleSystemDispatchEvent);
     
     return () => {
       window.removeEventListener('network_status', handleNetworkStatus);
       window.removeEventListener('voice_command_executed', handleVoiceCommandEvent);
+      window.removeEventListener('system_dispatch', handleSystemDispatchEvent);
     };
   }, []);
 
@@ -485,7 +523,7 @@ export default function App() {
   if (role !== 'ADMIN') return null; // Safety check
 
   return (
-    <div className="min-h-screen bg-[#FAFAF7] flex flex-col font-body text-[#151726]">
+    <div className="min-h-screen bg-[#0B0F19] flex flex-col font-body text-slate-100">
       {/* Toast Notifications */}
       <ToastContainer
         toasts={toasts}
@@ -543,6 +581,7 @@ export default function App() {
               onNavigateToMap={() => setAdminRoute('map')}
               onNavigateToAlerts={() => setAdminRoute('alerts')}
               onOpenEmergencyBroadcast={() => setIsEmergencyBroadcastOpen(true)}
+              recentLogs={recentLogs}
             />
           )}
 
@@ -569,7 +608,7 @@ export default function App() {
             />
           )}
 
-          {adminRoute === 'analytics' && <AnalyticsView />}
+          {adminRoute === 'analytics' && <AnalyticsView zones={displayedZones} />}
 
           {adminRoute === 'twin' && (
             <DigitalTwinView

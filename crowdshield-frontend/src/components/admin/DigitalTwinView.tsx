@@ -48,9 +48,18 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
   const [isSimulating, setIsSimulating] = useState(true);
 
   React.useEffect(() => {
-    if (isSimulating) {
-      setDisplayZones(zones);
-    }
+    let frameId: number;
+    const updateZones = () => {
+      if (isSimulating) {
+        setDisplayZones(zones);
+      }
+      // Throttle updates to ~15 FPS to drastically save CPU/Battery
+      setTimeout(() => { frameId = requestAnimationFrame(updateZones); }, 66);
+    };
+    frameId = requestAnimationFrame(updateZones);
+    return () => {
+      cancelAnimationFrame(frameId);
+    };
   }, [zones, isSimulating]);
 
   // Path Finding Visualizer States
@@ -217,11 +226,11 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
       {/* Top Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-heading font-bold text-2xl text-[#151726] tracking-tight flex items-center gap-2">
+          <h1 className="font-heading font-bold text-2xl text-slate-100 tracking-tight flex items-center gap-2">
             <Box className="w-6 h-6 text-[#7C6CFF]" />
             <span>3D Digital Twin Spatial Simulator</span>
           </h1>
-          <p className="text-xs text-[#5B5F73] mt-1">
+          <p className="text-xs text-slate-400 mt-1">
             Real-time microscopic spatial simulation, crowd fluid dynamics engine, and A* shortest safe path finding.
           </p>
         </div>
@@ -244,9 +253,9 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
       {/* Main 3D Canvas & Zone Details Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Improved Light 3D Canvas View */}
-        <div className="lg:col-span-2 bg-white border border-[#E7E5DD] text-[#151726] rounded-2xl p-6 shadow-[0_4px_20px_rgba(21,23,38,0.05)] relative overflow-hidden flex flex-col justify-between min-h-[500px]">
+        <div className="lg:col-span-2 bg-[#111827] border border-slate-800/80 text-slate-100 rounded-2xl p-6 shadow-xl relative overflow-hidden flex flex-col justify-between min-h-[500px]">
           {/* Overlay Control Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-2 z-10 bg-[#FAFAF7] p-3 rounded-xl border border-[#E7E5DD]">
+          <div className="flex flex-wrap items-center justify-between gap-2 z-10 bg-[#151726] p-3 rounded-xl border border-white/10">
             <div className="flex items-center gap-2">
               <Cpu className="w-4 h-4 text-[#059669] animate-pulse" />
               <span className="font-mono-num text-xs font-bold text-[#059669]">
@@ -260,7 +269,7 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
                 className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
                   is3dBlockModelActive
                     ? 'bg-[#7C6CFF] border-[#7C6CFF] text-white shadow-xs'
-                    : 'bg-white border-[#E7E5DD] text-[#5B5F73] hover:text-[#151726]'
+                    : 'bg-[#0B0F19] border-white/10 text-slate-400 hover:text-white'
                 }`}
               >
                 <Box className="w-3.5 h-3.5" />
@@ -271,7 +280,7 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
                 className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
                   showPathFinding
                     ? 'bg-[#22D3A6] border-[#22D3A6] text-[#151726] shadow-xs'
-                    : 'bg-white border-[#E7E5DD] text-[#5B5F73] hover:text-[#151726]'
+                    : 'bg-[#0B0F19] border-white/10 text-slate-400 hover:text-white'
                 }`}
               >
                 <Route className="w-3.5 h-3.5" />
@@ -282,7 +291,7 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
                 className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
                   showHeatmap
                     ? 'bg-[#2C7BE5] border-[#2C7BE5] text-white shadow-xs'
-                    : 'bg-white border-[#E7E5DD] text-[#5B5F73] hover:text-[#151726]'
+                    : 'bg-[#0B0F19] border-white/10 text-slate-400 hover:text-white'
                 }`}
               >
                 Heatmap
@@ -302,7 +311,7 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
               </div>
             )}
 
-            <div className="w-full max-w-xl mx-auto aspect-video rounded-2xl border border-[#E7E5DD] bg-[#FAFAF7] p-6 relative flex flex-col justify-between shadow-inner overflow-hidden">
+            <div className="w-full max-w-xl mx-auto aspect-video rounded-2xl border border-white/10 bg-[#0B0F19] p-6 relative flex flex-col justify-between shadow-inner overflow-hidden">
               {/* Subtle Spatial Grid Dots */}
               <div className="absolute inset-0 bg-[radial-gradient(#2C7BE5_1px,transparent_1px)] [background-size:20px_20px] opacity-15" />
 
@@ -362,7 +371,7 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
               )}
 
               {/* Spatial Zones Array */}
-              <div className="grid grid-cols-3 gap-3 relative z-10 h-full">
+              <div className="grid grid-cols-4 gap-3 relative z-10 h-full">
                 {displayZones.map((zone) => {
                   const isSelected = zone.id === selectedZone.id;
                   const isHighRisk = zone.riskLevel === 'critical' || zone.riskLevel === 'warning';
@@ -375,17 +384,17 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
                       onClick={() => setSelectedZoneId(zone.id)}
                       className={`p-3.5 rounded-xl border flex flex-col justify-between transition-all cursor-pointer text-left relative overflow-hidden ${
                         isSelected
-                          ? 'border-[#2C7BE5] bg-white ring-2 ring-[#2C7BE5] shadow-md'
+                          ? 'border-[#2C7BE5] bg-[#2C7BE5]/20 ring-2 ring-[#2C7BE5] shadow-md'
                           : isOnPath
-                          ? 'border-[#22D3A6] bg-white ring-2 ring-[#22D3A6]/50 shadow-md'
+                          ? 'border-[#22D3A6] bg-[#151726] ring-2 ring-[#22D3A6]/50 shadow-md'
                           : isHighRisk
                           ? 'border-[#FF3B5C] bg-[#FF3B5C]/10 hover:bg-[#FF3B5C]/20 shadow-xs'
-                          : 'border-[#E7E5DD] bg-white hover:border-[#2C7BE5]/40 shadow-xs'
+                          : 'border-white/10 bg-[#151726] hover:border-slate-600 shadow-xs'
                       }`}
                     >
                       {/* Top Row: Zone Name & Risk Indicator */}
                       <div className="flex items-center justify-between">
-                        <span className="font-heading font-bold text-xs text-[#151726] truncate">
+                        <span className="font-heading font-bold text-xs text-slate-100 truncate">
                           {zone.name}
                         </span>
                         {isOnPath ? (
@@ -403,7 +412,7 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
 
                       {/* Density Heatmap Visualization Bar */}
                       {showHeatmap && (
-                        <div className="w-full h-1.5 rounded-full bg-[#E7E5DD] my-2 overflow-hidden">
+                        <div className="w-full h-1.5 rounded-full bg-white/10 my-2 overflow-hidden">
                           <div
                             className={`h-full transition-all duration-500 ${
                               isHighRisk ? 'bg-[#FF3B5C]' : zone.density > 2.5 ? 'bg-[#FFB627]' : 'bg-[#22D3A6]'
@@ -415,17 +424,17 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
 
                       {/* Density Numbers */}
                       <div className="mt-1">
-                        <div className="text-[10px] text-[#5B5F73] font-mono-num font-semibold">Live Density</div>
+                        <div className="text-[10px] text-slate-400 font-mono-num font-semibold">Live Density</div>
                         <div className={`font-mono-num font-bold text-sm ${
-                          isHighRisk ? 'text-[#FF3B5C]' : 'text-[#2C7BE5]'
+                          isHighRisk ? 'text-[#FF3B5C]' : 'text-slate-100'
                         }`}>
-                          {zone.density.toFixed(1)} <span className="text-[10px] font-normal text-[#5B5F73]">p/m²</span>
+                          {zone.density.toFixed(1)} <span className="text-[10px] font-normal text-slate-400">p/m²</span>
                         </div>
                       </div>
 
                       {/* Flow Vector Badge */}
                       {showFlowVectors && (
-                        <div className="mt-2 text-[10px] font-mono-num text-[#5B5F73] flex items-center justify-between border-t border-[#E7E5DD] pt-1">
+                        <div className="mt-2 text-[10px] font-mono-num text-slate-400 flex items-center justify-between border-t border-white/10 pt-1">
                           <span className="flex items-center gap-1">
                             <Navigation className="w-3 h-3 text-[#7C6CFF] transform rotate-45" />
                             {zone.flowRate} p/min
@@ -533,10 +542,10 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
           )}
 
           {/* Simulation Footer Control */}
-          <div className="flex flex-wrap items-center justify-between z-10 text-xs text-[#5B5F73] font-mono-num bg-[#FAFAF7] p-3 rounded-xl border border-[#E7E5DD] mt-3">
-            <span className="font-semibold text-[#151726]">Grid Spatial Mesh: 0.5m x 0.5m Cell Resolution</span>
+          <div className="flex flex-wrap items-center justify-between z-10 text-xs text-slate-400 font-mono-num bg-[#151726] p-3 rounded-xl border border-white/10 mt-3">
+            <span className="font-semibold text-slate-100">Grid Spatial Mesh: 0.5m x 0.5m Cell Resolution</span>
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-[#151726]">Sim Speed:</span>
+              <span className="font-semibold text-slate-100">Sim Speed:</span>
               {(['1x', '2x', '5x'] as const).map((spd) => (
                 <button
                   key={spd}
@@ -544,7 +553,7 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
                   className={`px-2.5 py-0.5 rounded text-[11px] font-bold cursor-pointer transition-colors ${
                     simulationSpeed === spd
                       ? 'bg-[#2C7BE5] text-white shadow-xs'
-                      : 'bg-white border border-[#E7E5DD] text-[#5B5F73] hover:text-[#151726]'
+                      : 'bg-[#0B0F19] border border-white/10 text-slate-400 hover:text-white'
                   }`}
                 >
                   {spd}
@@ -555,14 +564,14 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
         </div>
 
         {/* Selected Zone Details & Parameters Control Panel */}
-        <div className="bg-white border border-[#E7E5DD] rounded-2xl p-6 shadow-[0_4px_20px_rgba(21,23,38,0.05)] flex flex-col justify-between gap-6">
+        <div className="bg-[#111827] border border-slate-800/80 rounded-2xl p-6 shadow-xl flex flex-col justify-between gap-6">
           <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between border-b border-[#E7E5DD] pb-3">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div>
-                <h3 className="font-heading font-bold text-base text-[#151726]">
+                <h3 className="font-heading font-bold text-base text-slate-100">
                   {selectedZone.name} Spatial Node
                 </h3>
-                <p className="text-xs text-[#5B5F73]">{selectedZone.sector}</p>
+                <p className="text-xs text-slate-400">{selectedZone.sector}</p>
               </div>
               <span className="font-mono-num text-xs font-bold text-[#2C7BE5] bg-[#2C7BE5]/10 px-2.5 py-1 rounded-full border border-[#2C7BE5]/20">
                 Code: {selectedZone.code}
@@ -571,17 +580,17 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
 
             {/* Metric Counters */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="p-3.5 rounded-xl bg-[#FAFAF7] border border-[#E7E5DD]">
-                <div className="text-[11px] font-semibold text-[#5B5F73]">Live Density</div>
-                <div className="font-mono-num font-bold text-xl text-[#151726] mt-0.5">
-                  {selectedZone.density.toFixed(1)} <span className="text-xs text-[#5B5F73]">p/m²</span>
+              <div className="p-3.5 rounded-xl bg-[#151726] border border-white/10">
+                <div className="text-[11px] font-semibold text-slate-400">Live Density</div>
+                <div className="font-mono-num font-bold text-xl text-slate-100 mt-0.5">
+                  {selectedZone.density.toFixed(1)} <span className="text-xs text-slate-400">p/m²</span>
                 </div>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-[#FAFAF7] border border-[#E7E5DD]">
-                <div className="text-[11px] font-semibold text-[#5B5F73]">Throughput Velocity</div>
+              <div className="p-3.5 rounded-xl bg-[#151726] border border-white/10">
+                <div className="text-[11px] font-semibold text-slate-400">Throughput Velocity</div>
                 <div className="font-mono-num font-bold text-xl text-[#2C7BE5] mt-0.5">
-                  {selectedZone.flowRate} <span className="text-xs text-[#5B5F73]">p/min</span>
+                  {selectedZone.flowRate} <span className="text-xs text-slate-400">p/min</span>
                 </div>
               </div>
             </div>
@@ -589,13 +598,13 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
             {/* Capacity Progress Bar */}
             <div className="flex flex-col gap-2 mt-1">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-[#151726]">Structural Load</span>
+                <span className="font-semibold text-slate-100">Structural Load</span>
                 <span className="font-mono-num font-bold text-[#FF3B5C]">
                   {(selectedZone.currentHeadcount ?? 0).toLocaleString()} / {(selectedZone.maxCapacity ?? 0).toLocaleString()} (
                   {Math.round(((selectedZone.currentHeadcount ?? 0) / (selectedZone.maxCapacity ?? 1)) * 100)}%)
                 </span>
               </div>
-              <div className="w-full h-3 bg-[#E7E5DD] rounded-full overflow-hidden p-0.5">
+              <div className="w-full h-3 bg-white/10 rounded-full overflow-hidden p-0.5">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-[#22D3A6] via-[#FFB627] to-[#FF3B5C] transition-all duration-300"
                   style={{ width: `${Math.min(100, Math.round(((selectedZone.currentHeadcount ?? 0) / (selectedZone.maxCapacity ?? 1)) * 100))}%` }}
@@ -604,12 +613,12 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
             </div>
 
             {/* Predictive Physics Box */}
-            <div className="bg-[#FAFAF7] border border-[#E7E5DD] p-4 rounded-xl flex flex-col gap-2">
-              <span className="text-xs font-bold text-[#151726] flex items-center gap-1.5">
+            <div className="bg-[#151726] border border-white/10 p-4 rounded-xl flex flex-col gap-2">
+              <span className="text-xs font-bold text-slate-100 flex items-center gap-1.5">
                 <Zap className="w-4 h-4 text-[#2C7BE5]" />
                 Predictive Physics Advisory
               </span>
-              <p className="text-xs text-[#5B5F73] leading-relaxed">
+              <p className="text-xs text-slate-300 leading-relaxed">
                 {selectedZone.riskLevel === 'critical' || selectedZone.riskLevel === 'warning'
                   ? 'CRITICAL BOTTLENECK SURGE: Pressure buildup at turnstile. Activate auxiliary diversion channels immediately to prevent laminar-to-turbulent flow transition.'
                   : 'Crowd movement in optimal laminar flow state. Vector velocity balanced across all exit corridors.'}
@@ -618,8 +627,8 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
           </div>
 
           {/* Gate Controls Footer */}
-          <div className="pt-4 border-t border-[#E7E5DD] flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#5B5F73]">Gate Control Status:</span>
+          <div className="pt-4 border-t border-white/10 flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-400">Gate Control Status:</span>
             <span className={`font-bold text-xs uppercase tracking-wider px-3 py-1 rounded-full ${
               selectedZone.gateStatus === 'open'
                 ? 'bg-[#22D3A6]/20 text-[#059669]'

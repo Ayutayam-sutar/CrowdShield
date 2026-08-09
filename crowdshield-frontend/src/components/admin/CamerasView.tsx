@@ -78,10 +78,10 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [] 
     <div className="p-6 flex flex-col gap-6 font-body">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-heading font-bold text-2xl text-[#151726] tracking-tight">
+          <h1 className="font-heading font-bold text-2xl text-white tracking-tight">
             YOLO11 Edge Camera Vision Matrix
           </h1>
-          <p className="text-xs text-[#5B5F73] mt-1">
+          <p className="text-xs text-slate-400 mt-1">
             Real-time optical sensors streaming multi-port MJPEG video with live telemetry counters & neural detection.
           </p>
         </div>
@@ -92,7 +92,7 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [] 
             className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer ${
               showDetections
                 ? 'bg-[#7C6CFF]/15 border-[#7C6CFF]/40 text-[#7C6CFF]'
-                : 'bg-white border-[#E7E5DD] text-[#5B5F73]'
+                : 'bg-white/5 border-white/10 text-slate-400'
             }`}
           >
             <Layers className="w-4 h-4" />
@@ -116,7 +116,7 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [] 
           return (
             <div
               key={feed.id}
-              className="bg-white border border-[#E7E5DD] rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(21,23,38,0.04)] flex flex-col"
+              className="bg-[#111827] border border-slate-800/80 rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(21,23,38,0.04)] flex flex-col"
             >
               {/* Feed Header */}
               <div className="p-3 bg-[#151726] text-white flex items-center justify-between border-b border-white/10">
@@ -209,17 +209,17 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [] 
               </div>
 
               {/* CCTV Footer Stats - Real Telemetry */}
-              <div className="p-4 bg-[#FAFAF7] border-t border-[#E7E5DD] flex items-center justify-between text-xs font-mono-num">
+              <div className="p-4 bg-[#151726] border-t border-white/10 flex items-center justify-between text-xs font-mono-num">
                 <div className="flex items-center gap-5">
                   <div>
-                    <span className="text-[#5B5F73] block text-[10px] uppercase font-bold">Headcount</span>
-                    <span className="font-bold text-sm text-[#151726]">
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Headcount</span>
+                    <span className="font-bold text-sm text-slate-100">
                       {headcount}
                     </span>
                   </div>
                   <div>
-                    <span className="text-[#5B5F73] block text-[10px] uppercase font-bold">Density</span>
-                    <span className="font-bold text-sm text-[#151726]">
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Density</span>
+                    <span className="font-bold text-sm text-slate-100">
                       {matchedZone ? `${density.toFixed(1)} p/m²` : '--'}
                     </span>
                   </div>

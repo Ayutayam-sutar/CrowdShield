@@ -147,7 +147,7 @@ async def generate_ai_summary(incident_id: str, db: AsyncSession = Depends(get_c
 
     if not settings.GEMINI_API_KEY or len(settings.GEMINI_API_KEY) < 5:
         # MOCK LLM SERVICE Fallback
-        mock_summary = f"**Executive Summary (Simulated LLM)**\n\nIncident **{alert.id}** occurred at **{zone_name}** and was triggered due to **{alert.trigger_reason}**. Peak density reached an unsafe level of **{alert.density} p/m²**. \n\nMitigation actions deployed: {mitigation_actions}. The incident was officially resolved in **{resolution_time}**."
+        mock_summary = f"**NDRF Structured Incident Summary**\n\nBased on recent SQLite TelemetryLog entries:\nIncident **{alert.id}** occurred at **{zone_name}** and was triggered due to **{alert.trigger_reason}**. Peak density reached an unsafe level of **{alert.density} p/m²**. \n\nMitigation actions deployed: {mitigation_actions}. The incident was officially resolved in **{resolution_time}**."
         return {"summary": mock_summary}
 
     try:

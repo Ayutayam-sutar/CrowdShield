@@ -85,30 +85,20 @@ export const ThreeDigitalTwinCanvas: React.FC<ThreeDigitalTwinCanvasProps> = ({
     // 7. Render 3D Zone Blocks
     const zoneMeshes: { mesh: THREE.Mesh; zoneId: string; initialY: number; isHighRisk: boolean; density: number; flowRate: number }[] = [];
 
-    // Layout coordinates for up to 6 zone boxes
-    const gridPositions = [
-      { x: -10, z: -10, w: 7, h: 4, d: 7 }, // Gate A
-      { x: 0, z: -10, w: 8, h: 6, d: 8 },   // West Exit Corridor
-      { x: 10, z: -10, w: 7, h: 4, d: 7 },  // Gate B
-      { x: -10, z: 8, w: 8, h: 5, d: 8 },   // Sector 7G
-      { x: 0, z: 8, w: 9, h: 4, d: 9 },    // Central Concourse
-      { x: 10, z: 8, w: 7, h: 5, d: 7 },    // Aux Exit Gate 4
-    ];
-
-    zones.slice(0, 6).forEach((zone, idx) => {
-      const pos = gridPositions[idx] || { x: (idx - 2) * 8, z: 0, w: 6, h: 4, d: 6 };
+    zones.slice(0, 4).forEach((zone, idx) => {
+      const posX = (idx - 1.5) * 3.5;
+      const blockHeight = Math.max(0.5, zone.density * 3);
       const isSelected = zone.id === selectedZoneId;
       const isHighRisk = zone.riskLevel === 'critical' || zone.riskLevel === 'warning';
 
-      // Determine color
-      let colorHex = 0x22D3A6; // Green safe
-      if (zone.riskLevel === 'critical') colorHex = 0xFF3B5C; // Red risk
-      else if (zone.riskLevel === 'warning') colorHex = 0xFF7A45; // Orange warning
-      else if (zone.riskLevel === 'caution') colorHex = 0xFFB627; // Yellow caution
-      else if (isSelected) colorHex = 0x2C7BE5; // Blue selected
+      // Determine color — Safe=Green, Caution=Yellow, Warning=Orange, Critical=Red
+      let colorHex = 0x22D3A6; // green safe
+      if (zone.riskLevel === 'critical') colorHex = 0xef4444; // red
+      else if (zone.riskLevel === 'warning') colorHex = 0xf97316; // orange
+      else if (zone.riskLevel === 'caution') colorHex = 0xFFB627; // yellow
+      else if (isSelected) colorHex = 0x2C7BE5; // selected
 
-      const dynamicHeight = pos.h + (zone.density * 1.5);
-      const boxGeo = new THREE.BoxGeometry(pos.w, dynamicHeight, pos.d);
+      const boxGeo = new THREE.BoxGeometry(1.5, blockHeight, 1.5);
       const boxMat = new THREE.MeshStandardMaterial({
         color: colorHex,
         roughness: 0.3,
@@ -118,7 +108,7 @@ export const ThreeDigitalTwinCanvas: React.FC<ThreeDigitalTwinCanvasProps> = ({
       });
 
       const mesh = new THREE.Mesh(boxGeo, boxMat);
-      mesh.position.set(pos.x, dynamicHeight / 2, pos.z);
+      mesh.position.set(posX, blockHeight / 2, 0);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
       mesh.userData = { zoneId: zone.id, zoneName: zone.name };
@@ -127,7 +117,7 @@ export const ThreeDigitalTwinCanvas: React.FC<ThreeDigitalTwinCanvasProps> = ({
       zoneMeshes.push({
         mesh,
         zoneId: zone.id,
-        initialY: dynamicHeight / 2,
+        initialY: blockHeight / 2,
         isHighRisk,
         density: zone.density,
         flowRate: zone.flowRate,
@@ -136,7 +126,7 @@ export const ThreeDigitalTwinCanvas: React.FC<ThreeDigitalTwinCanvasProps> = ({
       // Add small glowing beacon light above high risk blocks
       if (isHighRisk) {
         const beaconLight = new THREE.PointLight(0xFF3B5C, 3, 12);
-        beaconLight.position.set(pos.x, pos.h + 2, pos.z);
+        beaconLight.position.set(posX, blockHeight + 2, 0);
         scene.add(beaconLight);
       }
     });
@@ -196,24 +186,35 @@ export const ThreeDigitalTwinCanvas: React.FC<ThreeDigitalTwinCanvasProps> = ({
     let animationFrameId: number;
     let clock = new THREE.Clock();
 
-    const animate = () => {
+    let lastTime = 0;
+    const fpsLimit = 20;
+    const interval = 1000 / fpsLimit;
+
+    const animate = (time: number) => {
       animationFrameId = requestAnimationFrame(animate);
-      const elapsedTime = clock.getElapsedTime();
+      
+      const deltaTime = time - lastTime;
+      if (deltaTime > interval) {
+        lastTime = time - (deltaTime % interval);
 
-      // Pulsing effect based on live density and flow rate
-      zoneMeshes.forEach(({ mesh, isHighRisk, initialY, density, flowRate }) => {
-        if (isHighRisk || density > 1) {
-          const frequency = Math.max(1, (flowRate || 1) * 0.5);
-          const amplitude = Math.min(1.5, density * 0.1);
-          mesh.position.y = initialY + Math.sin(elapsedTime * frequency) * amplitude;
-        }
-      });
+        const elapsedTime = clock.getElapsedTime();
 
-      controls.update();
-      renderer.render(scene, camera);
+        // Pulsing effect based on live density and flow rate
+        zoneMeshes.forEach(({ mesh, isHighRisk, initialY, density, flowRate }) => {
+          if (isHighRisk || density > 1) {
+            const frequency = Math.max(1, (flowRate || 1) * 0.5);
+            const amplitude = Math.min(1.5, density * 0.1);
+            mesh.position.y = initialY + Math.sin(elapsedTime * frequency) * amplitude;
+          }
+        });
+
+        controls.update();
+        renderer.render(scene, camera);
+      }
     };
 
-    animate();
+    // Kick off the loop
+    requestAnimationFrame(animate);
 
     // 11. Cleanup
     return () => {

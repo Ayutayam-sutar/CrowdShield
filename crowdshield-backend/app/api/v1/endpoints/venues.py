@@ -29,10 +29,10 @@ async def read_venues(skip: int = 0, limit: int = 100, db: AsyncSession = Depend
         if zones:
             default_venue = Venue(
                 id="v-1",
-                name="Jawaharlal Nehru Stadium",
-                location="Main Arena",
-                gps_center_lat=28.5833,
-                gps_center_lng=77.2333,
+                name="Siksha 'O' Anusandhan University Campus",
+                location="Bhubaneswar, Odisha",
+                gps_center_lat=20.2496,
+                gps_center_lng=85.7988,
                 total_capacity=60000
             )
             db.add(default_venue)

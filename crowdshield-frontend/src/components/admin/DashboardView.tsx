@@ -21,6 +21,7 @@ interface DashboardViewProps {
   onNavigateToMap: () => void;
   onNavigateToAlerts: () => void;
   onOpenEmergencyBroadcast: () => void;
+  recentLogs?: { timestamp: string; action: string; source: string; type: 'success' | 'warning' | 'info' }[];
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -30,6 +31,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onNavigateToMap,
   onNavigateToAlerts,
   onOpenEmergencyBroadcast,
+  recentLogs,
 }) => {
   // Dynamic Trend Chart state listening to live `zones` updates
   const [trendData, setTrendData] = useState<{ time: string; density: number; predicted: number }[]>([]);
@@ -113,7 +115,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   };
 
   return (
-    <div className="p-6 flex flex-col gap-6 font-body text-white">
+    <div className="bg-[#0B0F19] min-h-screen text-slate-100 p-6 flex flex-col gap-6 font-body">
       {/* Page Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -146,16 +148,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Summary Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Metric 1: Affected Zones */}
-        <div className={`bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 shadow-2xl flex flex-col justify-between relative overflow-hidden transition-all ${affectedZonesCount > 0 ? 'animate-pulse border-[#f43f5e]/80 shadow-[0_0_15px_rgba(244,63,94,0.2)]' : ''}`}>
+        <div className={`bg-[#111827] border border-slate-800/80 rounded-xl p-5 shadow-xl flex flex-col justify-between relative overflow-hidden transition-all ${affectedZonesCount > 0 ? 'animate-pulse border-[#f43f5e]/80 shadow-[0_0_15px_rgba(244,63,94,0.2)]' : ''}`}>
           <div className="w-1.5 h-full bg-[#f43f5e] absolute left-0 top-0" />
           <div className="flex items-center justify-between pl-2">
-            <span className="text-xs font-semibold text-white/50">Affected Sectors</span>
+            <span className="text-slate-400 text-sm">Affected Sectors</span>
             <div className="p-2 bg-[#f43f5e]/10 text-[#f43f5e] rounded-xl">
               <AlertTriangle className="w-4 h-4" />
             </div>
           </div>
           <div className="pl-2 mt-3">
-            <div className="font-heading font-bold text-3xl font-mono-num">
+            <div className="text-3xl font-bold text-slate-100 font-mono-num">
               {affectedZonesCount} <span className="text-sm font-normal text-white/50">/ {zones.length} Total</span>
             </div>
             <p className="text-[11px] text-[#f43f5e] font-semibold mt-1 truncate">
@@ -167,15 +169,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Metric 2: Total Headcount */}
-        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 shadow-2xl flex flex-col justify-between">
+        <div className="bg-[#111827] border border-slate-800/80 rounded-xl p-5 shadow-xl flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-white/50">Total Headcount</span>
+            <span className="text-slate-400 text-sm">Total Headcount</span>
             <div className="p-2 bg-[#06b6d4]/10 text-[#06b6d4] rounded-xl">
               <Users className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-3">
-            <div className="font-heading font-bold text-3xl font-mono-num">
+            <div className="text-3xl font-bold text-slate-100 font-mono-num">
               {totalHeadcount.toLocaleString()}
             </div>
             <p className="text-[11px] text-[#22D3A6] font-semibold mt-1 flex items-center gap-1 font-mono-num">
@@ -187,16 +189,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Metric 3: Active Alerts */}
         <div 
           onClick={onNavigateToAlerts}
-          className={`bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 shadow-2xl flex flex-col justify-between cursor-pointer hover:border-[#f43f5e]/50 transition-colors ${alerts.length > 0 ? 'animate-pulse border-[#f43f5e]/80 shadow-[0_0_15px_rgba(244,63,94,0.2)]' : ''}`}
+          className={`bg-[#111827] border border-slate-800/80 rounded-xl p-5 shadow-xl flex flex-col justify-between cursor-pointer hover:border-[#f43f5e]/50 transition-colors ${alerts.length > 0 ? 'animate-pulse border-[#f43f5e]/80 shadow-[0_0_15px_rgba(244,63,94,0.2)]' : ''}`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-white/50">Active Crowd Alerts</span>
+            <span className="text-slate-400 text-sm">Active Crowd Alerts</span>
             <div className="p-2 bg-[#f43f5e]/10 text-[#f43f5e] rounded-xl">
               <ShieldAlert className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-3">
-            <div className="font-heading font-bold text-3xl font-mono-num">
+            <div className="text-3xl font-bold text-slate-100 font-mono-num">
               {alerts.length} <span className="text-xs font-normal text-white/50">Requires action</span>
             </div>
             <p className="text-[11px] text-[#f43f5e] font-semibold mt-1 font-mono-num">
@@ -206,15 +208,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Metric 4: Average Flow Velocity */}
-        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 shadow-2xl flex flex-col justify-between">
+        <div className="bg-[#111827] border border-slate-800/80 rounded-xl p-5 shadow-xl flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-white/50">Mean Flow Velocity</span>
+            <span className="text-slate-400 text-sm">Mean Flow Velocity</span>
             <div className="p-2 bg-[#7C6CFF]/10 text-[#7C6CFF] rounded-xl">
               <Activity className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-3">
-            <div className="font-heading font-bold text-3xl font-mono-num">
+            <div className="text-3xl font-bold text-slate-100 font-mono-num">
               {meanFlowVelocity} <span className="text-sm font-normal text-white/50">p/min</span>
             </div>
             <p className="text-[11px] text-[#06b6d4] font-semibold mt-1">
@@ -227,7 +229,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Signature Component — Risk Pulse Gauge & Predictive Trend Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left 1 Column: Circular Risk Pulse Gauge */}
-        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-2xl flex flex-col items-center justify-center text-center relative overflow-hidden">
+        <div className="bg-[#111827] border border-slate-800/80 rounded-xl p-5 shadow-xl flex flex-col items-center justify-center text-center relative overflow-hidden">
           <span className="text-xs font-bold text-white/50 uppercase tracking-wider mb-2">
             Venue Composite Risk Index
           </span>
@@ -280,10 +282,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Right 2 Columns: Recharts 10-Min Predictive Density Trend */}
-        <div className="lg:col-span-2 bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-2xl flex flex-col justify-between">
+        <div className="lg:col-span-2 bg-[#111827] border border-slate-800/80 rounded-xl p-5 shadow-xl flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <div>
-              <h3 className="font-heading font-bold text-base">
+              <h3 className="text-white font-semibold text-base">
                 10-Minute Predictive Density Trend
               </h3>
               <p className="text-xs text-white/50">
@@ -314,7 +316,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="time" stroke="rgba(255,255,255,0.3)" fontSize={11} tickLine={false} />
-                <YAxis stroke="rgba(255,255,255,0.3)" fontSize={11} domain={[0, 7]} tickLine={false} />
+                <YAxis stroke="rgba(255,255,255,0.3)" fontSize={11} domain={[0, (dataMax: number) => Math.max(5, dataMax + 1)]} tickLine={false} />
                 <Tooltip
                   contentStyle={{ backgroundColor: '#111827', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '12px' }}
                   itemStyle={{ color: '#fff' }}
@@ -329,10 +331,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
 
       {/* Top Risk Zones Table */}
-      <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-2xl flex flex-col gap-4">
+      <div className="bg-[#111827] border border-slate-800/80 rounded-xl p-5 shadow-xl flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-heading font-bold text-base">
+            <h3 className="text-white font-semibold text-base">
               Sector Risk & Density Matrix
             </h3>
             <p className="text-xs text-white/50">
@@ -446,25 +448,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Scrolling Terminal Window */}
-        <div className="bg-black/60 border border-white/10 rounded-xl p-3 h-36 overflow-y-auto space-y-1.5 text-[11px] text-emerald-400 font-mono">
-          <div className="text-white/70">
-            [18:45:12] - <span className="text-[#38BDF8]">OPERATOR_01</span> - INITIATED REMOTE UNLOCK: GATE B TURNSTILES
-          </div>
-          <div className="text-amber-300">
-            [18:44:50] - <span className="text-[#38BDF8]">SENTINEL_AI</span> - ESCALATED RISK LEVEL TO CRITICAL FOR SECTOR 7G
-          </div>
-          <div className="text-white/70">
-            [18:43:05] - <span className="text-[#38BDF8]">OPERATOR_02</span> - DISPATCHED BHASHINI MULTILINGUAL ANNOUNCEMENT (HINDI/ODIA)
-          </div>
-          <div className="text-[#22D3A6]">
-            [18:41:22] - <span className="text-[#38BDF8]">A_STAR_ROUTER</span> - DYNAMIC REROUTE ACTIVE: DIVERTED 1,200 PAX TO AUX GATE 4
-          </div>
-          <div className="text-white/70">
-            [18:38:00] - <span className="text-[#38BDF8]">SYSTEM_NODE</span> - EDGE SQLITE DB SYNC OK · 0 LOSS PACKETS
-          </div>
-          <div className="text-white/50">
-            [18:35:10] - <span className="text-[#38BDF8]">CELL_BROADCAST</span> - DISPATCHED EMERGENCY SMS ALERT TO SECTOR 7G CELL TOWER
-          </div>
+        <div className="bg-black/60 border border-white/10 rounded-xl p-3 h-36 overflow-y-auto space-y-1.5 text-[11px] font-mono">
+          {recentLogs && recentLogs.length > 0 ? (
+            recentLogs.map((log, i) => (
+              <div key={i} className={log.type === 'warning' ? 'text-amber-300' : log.type === 'success' ? 'text-[#22D3A6]' : 'text-white/70'}>
+                [{log.timestamp}] - <span className="text-[#38BDF8]">{log.source}</span> - {log.action}
+              </div>
+            ))
+          ) : (
+            <div className="text-white/40 animate-pulse">Waiting for system events...</div>
+          )}
         </div>
       </div>
     </div>

@@ -151,8 +151,8 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
       photoUrl: mediaType === 'image' ? (mediaUrl || undefined) : undefined,
       videoUrl: mediaType === 'video' ? (mediaUrl || undefined) : undefined,
       mediaType: mediaType || undefined,
-      latitude: userLocation?.lat,
-      longitude: userLocation?.lng
+      latitude: userLocation?.lat || 20.2496, // Fallback to SOA Admin Map Center
+      longitude: userLocation?.lng || 85.7988 // Fallback to SOA Admin Map Center
     } as any);
 
     setReportDesc('');
@@ -558,6 +558,46 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                     className="w-full mt-1 p-2.5 rounded-xl border border-[#E7E5DD] text-xs font-body text-[#151726] bg-[#FAFAF7] focus:outline-none focus:border-[#FF3B5C] focus:ring-2 focus:ring-[#FF3B5C]/20"
                     required
                   />
+                </div>
+
+                {/* Media Attachment Simulation UI */}
+                <div className="flex flex-col gap-2">
+                  {mediaUrl ? (
+                    <div className="relative rounded-xl overflow-hidden border border-[#E7E5DD] bg-black h-32">
+                      {mediaType === 'image' ? (
+                        <img src={mediaUrl} alt="Attached" className="w-full h-full object-cover opacity-80" />
+                      ) : (
+                        <video src={mediaUrl} className="w-full h-full object-cover opacity-80" />
+                      )}
+                      <button
+                        type="button"
+                        onClick={removeMedia}
+                        className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-[#FF3B5C] text-white rounded-lg transition-colors"
+                      >
+                        <X className="w-4 h-4"/>
+                      </button>
+                      <span className="absolute bottom-2 left-2 bg-black/80 text-white text-[10px] px-2 py-0.5 rounded font-mono-num">
+                        {mediaFileName}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleSimulateSampleImage}
+                        className="flex-1 py-2 bg-[#FAFAF7] hover:bg-[#E7E5DD] border border-[#E7E5DD] text-[#5B5F73] hover:text-[#151726] rounded-xl font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors"
+                      >
+                        <ImageIcon className="w-3.5 h-3.5"/> Attach Photo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSimulateSampleVideo}
+                        className="flex-1 py-2 bg-[#FAFAF7] hover:bg-[#E7E5DD] border border-[#E7E5DD] text-[#5B5F73] hover:text-[#151726] rounded-xl font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors"
+                      >
+                        <Video className="w-3.5 h-3.5"/> Attach Video
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <button

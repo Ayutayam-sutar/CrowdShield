@@ -148,7 +148,7 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
             >
               <MapPin className="w-4 h-4 text-[#06b6d4]" />
               <span className="truncate max-w-[180px] sm:max-w-[240px] font-heading">
-                {selectedVenue ? selectedVenue.name : (venues.length === 0 ? 'Select Venue' : 'Awaiting Edge Telemetry...')}
+                {selectedVenue ? selectedVenue.name : "Siksha 'O' Anusandhan Main Campus"}
               </span>
               <ChevronDown className="w-3.5 h-3.5 text-white/50" />
             </button>
@@ -159,9 +159,17 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
                   Active Command Venues
                 </div>
                 {venues.length === 0 ? (
-                  <div className="px-3 py-3 text-xs text-white/50 text-center italic">
-                    Awaiting Edge Telemetry...
-                  </div>
+                  <>
+                    <button onClick={() => setIsVenueDropdownOpen(false)} className="w-full text-left px-3 py-2 text-xs flex flex-col gap-0.5 hover:bg-white/5 transition-colors">
+                      <span className="text-white">Siksha 'O' Anusandhan Main Campus</span>
+                    </button>
+                    <button onClick={() => setIsVenueDropdownOpen(false)} className="w-full text-left px-3 py-2 text-xs flex flex-col gap-0.5 hover:bg-white/5 transition-colors">
+                      <span className="text-white">Kalinga Athletics Stadium</span>
+                    </button>
+                    <button onClick={() => setIsVenueDropdownOpen(false)} className="w-full text-left px-3 py-2 text-xs flex flex-col gap-0.5 hover:bg-white/5 transition-colors">
+                      <span className="text-white">Regional Event Center</span>
+                    </button>
+                  </>
                 ) : (
                   venues.map((venue) => (
                     <button

@@ -36,15 +36,17 @@ const createGreenExitIcon = () =>
 
 export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({ isScenarioActive }) => {
   // Mock current user location
-  const currentLat = 20.2961;
-  const currentLng = 85.8245;
+  const currentLat = 20.2516;
+  const currentLng = 85.7968;
 
   // Center of Map around venue coordinates
-  const centerLat = 20.2982;
-  const centerLng = 85.8248;
+  const centerLat = 20.2496;
+  const centerLng = 85.7988;
 
   const [pathCoordinates, setPathCoordinates] = useState<[number, number][]>([
-    [currentLat, currentLng]
+    [20.2516, 85.7968],
+    [20.2496, 85.7988],
+    [20.2476, 85.8008]
   ]);
   const [estimatedTime, setEstimatedTime] = useState<number>(3);
   const [directions, setDirections] = useState<string[]>([]);
@@ -53,7 +55,7 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({ isSc
     const fetchRoute = async () => {
       try {
         const response = await api.post('/api/v1/routing/evacuate', {
-          venue_id: 'jn_stadium', // Using jn_stadium from mockData
+          venue_id: 'soa_univ', // Using soa_univ from mockData
           current_lat: currentLat,
           current_lng: currentLng
         });
@@ -80,16 +82,16 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({ isSc
 
   // 1. Red High-Risk Surge Zone Polygon (Gate 3 Bottleneck)
   const surgeZonePolygon: [number, number][] = [
-    [20.2965, 85.8238],
-    [20.2978, 85.8255],
-    [20.2968, 85.8265],
-    [20.2958, 85.8248],
+    [20.2505, 85.7995],
+    [20.2495, 85.8005],
+    [20.2485, 85.7995],
+    [20.2495, 85.7985],
   ];
 
   // Midpoint coordinate for permanently visible Tooltip
   const midTooltipPoint: [number, number] = pathCoordinates.length > 2 
     ? pathCoordinates[Math.floor(pathCoordinates.length / 2)]
-    : [20.2985, 85.8228];
+    : [20.2496, 85.7988];
 
   return (
     <div className="bg-white border border-[#E7E5DD] rounded-2xl p-3.5 sm:p-5 shadow-xs flex flex-col gap-3 sm:gap-4 font-body text-[#151726] w-full max-w-full">

@@ -26,11 +26,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-heading font-bold text-2xl text-[#151726] tracking-tight flex items-center gap-2">
+          <h1 className="font-heading font-bold text-2xl text-slate-100 tracking-tight flex items-center gap-2">
             <Settings className="w-6 h-6 text-[#2C7BE5]" />
             <span>Edge Node Computing & System Settings</span>
           </h1>
-          <p className="text-xs text-[#5B5F73] mt-1">
+          <p className="text-xs text-slate-400 mt-1">
             Configure local AI processing nodes, offline queue synchronization daemon, and Bhashini API engines.
           </p>
         </div>
@@ -47,14 +47,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       </div>
 
       {/* Network Edge State Toggle Card */}
-      <div className="bg-white border border-[#E7E5DD] rounded-2xl p-6 shadow-[0_2px_12px_rgba(21,23,38,0.04)] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="bg-[#111827] border border-slate-800/80 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-[#151726] text-white flex items-center justify-center shrink-0 shadow-md">
+          <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 text-white flex items-center justify-center shrink-0 shadow-md">
             <Server className="w-6 h-6 text-[#22D3A6]" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-heading font-bold text-base text-[#151726]">
+              <h3 className="font-heading font-bold text-base text-slate-100">
                 Deployment Node Mode: <span className="uppercase text-[#2C7BE5]">{networkMode} NODE</span>
               </h3>
               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono-num uppercase ${
@@ -63,7 +63,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 {networkMode === 'edge' ? 'Zero Latency Active' : 'Cloud Hybrid'}
               </span>
             </div>
-            <p className="text-xs text-[#5B5F73] mt-1">
+            <p className="text-xs text-slate-400 mt-1">
               Switching to Edge Node processes computer vision YOLO models locally on raspberry pi / jetson edge hardware without cloud dependency.
             </p>
           </div>
@@ -74,7 +74,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           className={`px-5 py-2.5 rounded-xl font-heading font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-sm ${
             networkMode === 'edge'
               ? 'bg-[#22D3A6] text-[#151726] hover:bg-[#1ebf95]'
-              : 'bg-[#151726] text-white hover:bg-[#25283e]'
+              : 'bg-white/10 text-white hover:bg-white/20'
           }`}
         >
           <Wifi className="w-4 h-4" />
@@ -85,15 +85,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       {/* Grid of Settings Modules */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Computer Vision YOLO Model Settings */}
-        <div className="bg-white border border-[#E7E5DD] rounded-2xl p-6 shadow-[0_2px_12px_rgba(21,23,38,0.04)] flex flex-col gap-4">
-          <h3 className="font-heading font-bold text-base text-[#151726] flex items-center gap-2">
+        <div className="bg-[#111827] border border-slate-800/80 rounded-2xl p-6 shadow-xl flex flex-col gap-4">
+          <h3 className="font-heading font-bold text-base text-slate-100 flex items-center gap-2">
             <Cpu className="w-5 h-5 text-[#2C7BE5]" />
             <span>YOLO Vision Model Parameters</span>
           </h3>
 
           <div className="flex flex-col gap-3 mt-2">
             <div className="flex justify-between items-center text-xs">
-              <span className="font-semibold text-[#151726]">Person Detection Confidence Threshold</span>
+              <span className="font-semibold text-slate-100">Person Detection Confidence Threshold</span>
               <span className="font-mono-num font-bold text-[#2C7BE5]">{yoloConfidenceThreshold}%</span>
             </div>
             <input
@@ -104,30 +104,30 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               onChange={(e) => setYoloConfidenceThreshold(Number(e.target.value))}
               className="w-full accent-[#2C7BE5] cursor-pointer"
             />
-            <span className="text-[11px] text-[#5B5F73]">
+            <span className="text-[11px] text-slate-400">
               Higher threshold reduces false positives during dense festival crowd overlap.
             </span>
           </div>
 
-          <div className="pt-4 border-t border-[#E7E5DD] flex justify-between items-center text-xs">
-            <span className="font-semibold text-[#151726]">Hardware Acceleration</span>
+          <div className="pt-4 border-t border-white/10 flex justify-between items-center text-xs">
+            <span className="font-semibold text-slate-100">Hardware Acceleration</span>
             <span className="font-mono-num text-[#22D3A6] font-bold">NVIDIA CUDA Enabled</span>
           </div>
         </div>
 
         {/* Offline Sync Daemon */}
-        <div className="bg-white border border-[#E7E5DD] rounded-2xl p-6 shadow-[0_2px_12px_rgba(21,23,38,0.04)] flex flex-col gap-4">
-          <h3 className="font-heading font-bold text-base text-[#151726] flex items-center gap-2">
+        <div className="bg-[#111827] border border-slate-800/80 rounded-2xl p-6 shadow-xl flex flex-col gap-4">
+          <h3 className="font-heading font-bold text-base text-slate-100 flex items-center gap-2">
             <HardDrive className="w-5 h-5 text-[#7C6CFF]" />
             <span>Offline Sync & Buffer Manager</span>
           </h3>
 
           <div className="flex flex-col gap-2">
-            <label className="text-xs font-semibold text-[#151726]">Auto-Sync Buffer Frequency</label>
+            <label className="text-xs font-semibold text-slate-100">Auto-Sync Buffer Frequency</label>
             <select
               value={offlineSyncInterval}
               onChange={(e) => setOfflineSyncInterval(e.target.value)}
-              className="p-2.5 rounded-xl border border-[#E7E5DD] bg-[#FAFAF7] text-xs font-body text-[#151726] focus:outline-none focus:ring-2 focus:ring-[#2C7BE5]"
+              className="p-2.5 rounded-xl border border-white/10 bg-[#151726] text-xs font-body text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#2C7BE5]"
             >
               <option value="1s">1 second (Real-Time Ultra Latency)</option>
               <option value="5s">5 seconds (Recommended Balanced)</option>
@@ -135,9 +135,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </select>
           </div>
 
-          <div className="pt-4 border-t border-[#E7E5DD] flex justify-between items-center text-xs">
-            <span className="font-semibold text-[#151726]">IndexedDB Buffer Usage</span>
-            <span className="font-mono-num text-[#151726] font-bold">12.4 MB / 500 MB</span>
+          <div className="pt-4 border-t border-white/10 flex justify-between items-center text-xs">
+            <span className="font-semibold text-slate-100">IndexedDB Buffer Usage</span>
+            <span className="font-mono-num text-slate-100 font-bold">12.4 MB / 500 MB</span>
           </div>
         </div>
       </div>

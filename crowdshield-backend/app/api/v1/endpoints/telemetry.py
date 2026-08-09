@@ -34,10 +34,10 @@ async def create_telemetry(telemetry: TelemetryCreate, db: AsyncSession = Depend
         if not existing_venue:
             existing_venue = Venue(
                 id="v-1",
-                name="Jawaharlal Nehru Stadium",
-                location="Main Arena",
-                gps_center_lat=28.5833,
-                gps_center_lng=77.2333,
+                name="Siksha 'O' Anusandhan University Campus",
+                location="Bhubaneswar, Odisha",
+                gps_center_lat=20.2496,
+                gps_center_lng=85.7988,
                 total_capacity=60000
             )
             db.add(existing_venue)
@@ -45,22 +45,58 @@ async def create_telemetry(telemetry: TelemetryCreate, db: AsyncSession = Depend
 
         assigned_venue_id = existing_venue.id
 
+        # Assign distinct Bhubaneswar GPS offsets per zone
+        zone_offsets = {
+            'z-1': (0.002, -0.002, 'North Plaza Gate'),
+            'z-01': (0.002, -0.002, 'North Plaza Gate'),
+            'z-2': (-0.002, -0.002, 'South Concourse'),
+            'z-02': (-0.002, -0.002, 'South Concourse'),
+            'z-3': (0.002, 0.002, 'West Exit Corridor'),
+            'z-03': (0.002, 0.002, 'West Exit Corridor'),
+            'z-4': (-0.002, 0.002, 'East Stand Gate'),
+            'z-04': (-0.002, 0.002, 'East Stand Gate'),
+        }
+        lat_off, lng_off, zone_label = zone_offsets.get(telemetry.zone_id, (0.0, 0.0, 'General Zone'))
+
         print(f"[Auto-Setup] Creating missing zone '{telemetry.zone_id}' under venue '{assigned_venue_id}'...")
         zone = Zone(
             id=telemetry.zone_id,
             venue_id=assigned_venue_id,
             code=telemetry.zone_id,
-            name=f"West Exit Gate ({telemetry.zone_id})",
+            name=f"{zone_label} ({telemetry.zone_id})",
             sector="Sector Bravo",
             capacity_limit=3500,
             current_headcount=0,
             density=0.0,
             flow_rate=0.0,
-            risk_score=0.0
+            risk_score=0.0,
+            center_lat=20.2496 + lat_off,
+            center_lng=85.7988 + lng_off,
         )
         db.add(zone)
-        await db.flush() # Save to DB immediately so the rest of the script works
-        
+        await db.flush()
+    # Fix stale Delhi coordinates from prior seeding (auto-migrate to Bhubaneswar)
+    if zone and (zone.center_lat == 0.0 or abs(zone.center_lat - 28.5833) < 0.01):
+        zone_offsets = {
+            'z-1': (0.002, -0.002), 'z-01': (0.002, -0.002),
+            'z-2': (-0.002, -0.002), 'z-02': (-0.002, -0.002),
+            'z-3': (0.002, 0.002), 'z-03': (0.002, 0.002),
+            'z-4': (-0.002, 0.002), 'z-04': (-0.002, 0.002),
+        }
+        lat_off, lng_off = zone_offsets.get(telemetry.zone_id, (0.0, 0.0))
+        zone.center_lat = 20.2496 + lat_off
+        zone.center_lng = 85.7988 + lng_off
+
+    # Also fix venue coordinates if still set to Delhi
+    if zone and zone.venue_id:
+        v_result = await db.execute(select(Venue).where(Venue.id == zone.venue_id))
+        v = v_result.scalars().first()
+        if v and abs(v.gps_center_lat - 28.5833) < 0.01:
+            v.name = "Siksha 'O' Anusandhan University Campus"
+            v.location = "Bhubaneswar, Odisha"
+            v.gps_center_lat = 20.2496
+            v.gps_center_lng = 85.7988
+
     # 2. Calculate Density & Capacity Ratio
     area_sqm = zone.capacity_limit / 5.0 if zone.capacity_limit else 100.0
     density = telemetry.person_count / area_sqm
