@@ -28,6 +28,7 @@ import { speakAnnouncement } from '../../utils/speech';
 import { VolunteerTasksView } from './VolunteerTasksView';
 import { useAuth } from '../../context/AuthContext';
 import { CrowdAlert } from '../../types';
+import { checkGeofenceIntersections, GeofenceZone } from '../../utils/geofence';
 
 interface CitizenPortalViewProps {
   reports: CitizenReport[];
@@ -52,6 +53,51 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
   const [reportLocation, setReportLocation] = useState('Gate 3 Exit Corridor');
   const [reportSubmitted, setReportSubmitted] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [geofenceWarning, setGeofenceWarning] = useState<string | null>(null);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+  React.useEffect(() => {
+    if ('geolocation' in navigator) {
+      const watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setUserLocation({ lat: latitude, lng: longitude });
+
+          if (isScenarioActive) {
+            const zones: GeofenceZone[] = [
+              {
+                id: 'z-3',
+                name: 'Gate 3',
+                centerLat: latitude + 0.0001, // Simulate being very close
+                centerLng: longitude + 0.0001,
+                radiusMeters: 20,
+                riskLevel: 'critical'
+              }
+            ];
+
+            const intersections = checkGeofenceIntersections(latitude, longitude, zones);
+            if (intersections.length > 0) {
+              const zoneName = intersections[0].name;
+              setGeofenceWarning(`CRITICAL CONGESTION AHEAD: You are approaching ${zoneName}. Divert immediately to Auxiliary West Gate.`);
+              
+              if ('vibrate' in navigator) {
+                navigator.vibrate([500, 250, 500]);
+              }
+            } else {
+              setGeofenceWarning(null);
+            }
+          } else {
+            setGeofenceWarning(null);
+          }
+        },
+        (error) => console.error("Error watching position", error),
+        { enableHighAccuracy: true, maximumAge: 0 }
+      );
+
+      return () => navigator.geolocation.clearWatch(watchId);
+    }
+  }, [isScenarioActive]);
 
   // Offline BLE Mesh Relay State (Tier-2 Network Resilience)
   const [bleMeshActive, setBleMeshActive] = useState(true);
@@ -105,7 +151,9 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
       photoUrl: mediaType === 'image' ? (mediaUrl || undefined) : undefined,
       videoUrl: mediaType === 'video' ? (mediaUrl || undefined) : undefined,
       mediaType: mediaType || undefined,
-    });
+      latitude: userLocation?.lat,
+      longitude: userLocation?.lng
+    } as any);
 
     setReportDesc('');
     setMediaUrl(null);
@@ -114,7 +162,10 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
     if (fileInputRef.current) fileInputRef.current.value = '';
 
     setReportSubmitted(true);
-    setTimeout(() => setReportSubmitted(false), 4000);
+    setTimeout(() => {
+      setReportSubmitted(false);
+      setIsReportModalOpen(false);
+    }, 2000);
   };
 
   const playBhashiniTTS = () => {
@@ -127,6 +178,36 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
 
   return (
     <div className="w-full max-w-5xl mx-auto min-h-screen bg-[#F4F3EF] flex flex-col font-body shadow-2xl border-x border-[#E7E5DD] relative selection:bg-[#2C7BE5]/20">
+      
+      {/* Geofence Warning Modal */}
+      {geofenceWarning && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#151726] rounded-3xl p-6 max-w-sm w-full border border-[#FF3B5C]/30 shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="w-16 h-16 rounded-2xl bg-[#FF3B5C]/20 flex items-center justify-center mb-4 border border-[#FF3B5C]/40 animate-pulse">
+              <ShieldAlert className="w-8 h-8 text-[#FF3B5C]" />
+            </div>
+            
+            <h2 className="text-xl font-heading font-black text-white mb-2 tracking-tight">
+              PROXIMITY WARNING
+            </h2>
+            
+            <p className="text-sm text-white/80 font-medium mb-6 leading-relaxed">
+              {geofenceWarning}
+            </p>
+            
+            <button
+              onClick={() => {
+                setGeofenceWarning(null);
+                setActiveTab('drill');
+              }}
+              className="w-full py-3.5 bg-[#FF3B5C] hover:bg-[#e02e4d] text-white rounded-xl font-heading font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-[#FF3B5C]/20 active:scale-95"
+            >
+              <Compass className="w-4 h-4" />
+              <span>Show Safe Route</span>
+            </button>
+          </div>
+        </div>
+      )}
       
       {/* Mobile Top Header */}
       <header className="bg-[#151726] text-white p-3 sm:p-4 shadow-md flex items-center justify-between px-3.5 sm:px-6">
@@ -329,149 +410,8 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
             {/* Responsive Grid Row for Incident Report & Community Feed */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-start">
               
-              {/* Incident Citizen Report Form */}
-              <div className="bg-white border border-[#E7E5DD] rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col gap-3">
-                <h3 className="font-heading font-bold text-sm text-[#151726] flex items-center gap-2">
-                  <ShieldAlert className="w-4 h-4 text-[#FF7A45] shrink-0" />
-                  <span>Report a Problem</span>
-                </h3>
-
-                {reportSubmitted ? (
-                  <div className="bg-[#22D3A6]/15 border border-[#22D3A6]/40 p-4 rounded-xl flex items-center gap-3 text-xs text-[#151726] font-bold animate-fadeIn">
-                    <CheckCircle2 className="w-5 h-5 text-[#059669] shrink-0" />
-                    <span>Emergency Report sent! Security team notified.</span>
-                  </div>
-                ) : (
-                  <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-                    <div>
-                      <label className="text-[11px] font-semibold text-[#5B5F73]">What's happening?</label>
-                      <select
-                        value={reportCategory}
-                        onChange={(e) => setReportCategory(e.target.value as CitizenReport['category'])}
-                        className="w-full mt-1 p-2.5 rounded-xl border border-[#E7E5DD] text-xs font-body text-[#151726] bg-[#FAFAF7] focus:outline-none focus:border-[#2C7BE5] focus:ring-2 focus:ring-[#2C7BE5]/20"
-                      >
-                        <option value="Overcrowding">Too Crowded / Pushing</option>
-                        <option value="Medical Emergency">Medical Emergency</option>
-                        <option value="Hazard">Blocked Exit / Fallen Barrier</option>
-                        <option value="Panic / Commotion">Panic / Sudden Rush</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="text-[11px] font-semibold text-[#5B5F73]">Where is it happening?</label>
-                      <input
-                        type="text"
-                        value={reportLocation}
-                        onChange={(e) => setReportLocation(e.target.value)}
-                        className="w-full mt-1 p-2.5 rounded-xl border border-[#E7E5DD] text-xs font-body text-[#151726] bg-[#FAFAF7] focus:outline-none focus:border-[#2C7BE5] focus:ring-2 focus:ring-[#2C7BE5]/20"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[11px] font-semibold text-[#5B5F73]">What happened?</label>
-                      <textarea
-                        rows={2}
-                        value={reportDesc}
-                        onChange={(e) => setReportDesc(e.target.value)}
-                        placeholder="Describe situation (e.g. Barricade push near Gate 3)..."
-                        className="w-full mt-1 p-2.5 rounded-xl border border-[#E7E5DD] text-xs font-body text-[#151726] bg-[#FAFAF7] focus:outline-none focus:border-[#2C7BE5] focus:ring-2 focus:ring-[#2C7BE5]/20"
-                        required
-                      />
-                    </div>
-
-                    {/* Photo & Video Upload Attachment Area */}
-                    <div className="flex flex-col gap-2 pt-1 border-t border-[#E7E5DD]">
-                      <label className="text-[11px] font-semibold text-[#5B5F73] flex items-center justify-between">
-                        <span>Add Photo or Video</span>
-                        <span className="text-[10px] text-[#2C7BE5] font-mono-num font-bold">Optional</span>
-                      </label>
-
-                      {/* Hidden File Input */}
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        accept="image/*,video/*"
-                        onChange={handleFileUpload}
-                        className="hidden"
-                      />
-
-                      {/* Media Preview Box */}
-                      {mediaUrl ? (
-                        <div className="relative rounded-xl border border-[#2C7BE5]/40 bg-[#151726] overflow-hidden p-2 flex items-center gap-3">
-                          {mediaType === 'image' ? (
-                            <img src={mediaUrl} alt="Report Preview" className="w-14 h-14 object-cover rounded-lg border border-white/20 shrink-0" />
-                          ) : (
-                            <div className="w-14 h-14 bg-black rounded-lg border border-white/20 flex items-center justify-center relative overflow-hidden shrink-0">
-                              <video src={mediaUrl} className="w-full h-full object-cover" />
-                              <Play className="w-4 h-4 text-white absolute" />
-                            </div>
-                          )}
-
-                          <div className="flex flex-col min-w-0 flex-1 text-white">
-                            <span className="text-xs font-bold truncate">{mediaFileName || 'Attached Media'}</span>
-                            <span className="text-[10px] text-[#22D3A6] font-mono-num uppercase flex items-center gap-1 font-semibold">
-                              {mediaType === 'image' ? <ImageIcon className="w-3 h-3" /> : <Video className="w-3 h-3" />}
-                              {mediaType === 'image' ? 'Photo Evidence' : 'Video Recording'}
-                            </span>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={removeMedia}
-                            className="p-1.5 bg-white/10 hover:bg-[#FF3B5C] rounded-lg text-white transition-colors cursor-pointer shrink-0"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col gap-2">
-                          <button
-                            type="button"
-                            onClick={() => fileInputRef.current?.click()}
-                            className="w-full py-2.5 px-4 border-2 border-dashed border-[#E7E5DD] hover:border-[#2C7BE5] rounded-xl bg-[#FAFAF7] hover:bg-[#2C7BE5]/5 transition-all flex items-center justify-center gap-2 text-xs text-[#5B5F73] font-semibold cursor-pointer"
-                          >
-                            <Upload className="w-4 h-4 text-[#2C7BE5]" />
-                            <span>Upload Photo or Video</span>
-                          </button>
-
-                          {/* Quick Simulation Options */}
-                          <div className="flex items-center justify-between text-[11px] text-[#5B5F73] pt-0.5">
-                            <span>Or attach sample media:</span>
-                            <div className="flex gap-1.5">
-                              <button
-                                type="button"
-                                onClick={handleSimulateSampleImage}
-                                className="px-2 py-1 bg-white border border-[#E7E5DD] hover:border-[#2C7BE5] rounded-lg text-[10px] text-[#2C7BE5] font-bold cursor-pointer active:scale-95 transition-all"
-                              >
-                                + Photo
-                              </button>
-                              <button
-                                type="button"
-                                onClick={handleSimulateSampleVideo}
-                                className="px-2 py-1 bg-white border border-[#E7E5DD] hover:border-[#7C6CFF] rounded-lg text-[10px] text-[#7C6CFF] font-bold cursor-pointer active:scale-95 transition-all"
-                              >
-                                + Video Clip
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="w-full mt-1 py-3 bg-[#151726] hover:bg-[#25283e] text-white rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm active:scale-[0.99]"
-                    >
-                      <Send className="w-3.5 h-3.5 text-[#22D3A6]" />
-                      <span>Send Emergency Report</span>
-                    </button>
-                  </form>
-                )}
-              </div>
-
-              {/* Live Submitted Reports Feed */}
-              <div className="flex flex-col gap-3">
+              {/* Live Submitted Reports Feed (Expanded to full width) */}
+              <div className="lg:col-span-2 flex flex-col gap-3">
                 <h3 className="font-heading font-bold text-xs text-[#5B5F73] uppercase tracking-wider flex items-center justify-between">
                   <span>Nearby Safety Reports ({reports.length})</span>
                   <span className="text-[10px] text-[#059669] font-mono-num font-bold bg-[#22D3A6]/15 px-2 py-0.5 rounded-full">Live</span>
@@ -549,6 +489,89 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
           </a>
         </div>
       </div>
+
+      {/* Floating Action Button for Report */}
+      <button
+        onClick={() => setIsReportModalOpen(true)}
+        className="fixed bottom-24 right-4 sm:right-6 w-14 h-14 bg-[#FF3B5C] hover:bg-[#e02e4d] text-white rounded-full shadow-2xl flex items-center justify-center cursor-pointer transition-transform hover:scale-110 z-40 group"
+      >
+        <ShieldAlert className="w-6 h-6 group-hover:animate-bounce" />
+        <span className="absolute -top-10 bg-[#151726] text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+          Report Hazard
+        </span>
+      </button>
+
+      {/* Citizen Report Modal */}
+      {isReportModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-body animate-fadeIn">
+          <div className="bg-white border-2 border-[#FF3B5C]/30 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden p-6 flex flex-col gap-4 relative">
+            <div className="flex justify-between items-center border-b border-[#E7E5DD] pb-3">
+              <span className="font-heading font-bold text-sm text-[#FF3B5C] flex items-center gap-2">
+                <ShieldAlert className="w-5 h-5" /> Report Hazard
+              </span>
+              <button
+                onClick={() => setIsReportModalOpen(false)}
+                className="p-1 rounded-lg hover:bg-[#FAFAF7] text-[#5B5F73]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {reportSubmitted ? (
+              <div className="bg-[#22D3A6]/15 border border-[#22D3A6]/40 p-4 rounded-xl flex flex-col items-center gap-3 text-center text-sm text-[#151726] font-bold animate-fadeIn py-8">
+                <CheckCircle2 className="w-12 h-12 text-[#059669]" />
+                <span>Report successfully submitted.<br/>Security team has been notified.</span>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+                <div>
+                  <label className="text-[11px] font-semibold text-[#5B5F73]">What's happening?</label>
+                  <select
+                    value={reportCategory}
+                    onChange={(e) => setReportCategory(e.target.value as CitizenReport['category'])}
+                    className="w-full mt-1 p-2.5 rounded-xl border border-[#E7E5DD] text-xs font-body text-[#151726] bg-[#FAFAF7] focus:outline-none focus:border-[#FF3B5C] focus:ring-2 focus:ring-[#FF3B5C]/20"
+                  >
+                    <option value="Blocked Exit">Blocked Exit</option>
+                    <option value="Medical Emergency">Medical Emergency</option>
+                    <option value="Overcrowding">Overcrowding</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-[#5B5F73]">Where is it happening?</label>
+                  <input
+                    type="text"
+                    value={reportLocation}
+                    onChange={(e) => setReportLocation(e.target.value)}
+                    className="w-full mt-1 p-2.5 rounded-xl border border-[#E7E5DD] text-xs font-body text-[#151726] bg-[#FAFAF7] focus:outline-none focus:border-[#FF3B5C] focus:ring-2 focus:ring-[#FF3B5C]/20"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-[#5B5F73]">What happened?</label>
+                  <textarea
+                    rows={2}
+                    value={reportDesc}
+                    onChange={(e) => setReportDesc(e.target.value)}
+                    placeholder="Describe situation..."
+                    className="w-full mt-1 p-2.5 rounded-xl border border-[#E7E5DD] text-xs font-body text-[#151726] bg-[#FAFAF7] focus:outline-none focus:border-[#FF3B5C] focus:ring-2 focus:ring-[#FF3B5C]/20"
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full mt-2 py-3 bg-[#FF3B5C] hover:bg-[#e02e4d] text-white rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md"
+                >
+                  <Send className="w-4 h-4" />
+                  <span>Send Report</span>
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
     </div>
   );

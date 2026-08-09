@@ -42,9 +42,23 @@ FPS = 30.0
 TELEMETRY_INTERVAL_FRAMES = int(FPS * 2)  # Process and send every 2 seconds
 
 # Mock Polygon for testing (x, y) - adjust to actual camera FOV
-ZONE_POLYGON = np.array([[100, 100], [1180, 100], [1180, 620], [100, 620]], np.int32)
-ZONE_AREA_SQM = 50.0       # Real-world area represented by the polygon
-PIXELS_PER_METER = 35.0    # Approximate scale factor for velocity
+ZONE_POLYGON = np.array([[100, 100], [1180, 100], [1180, 620], [100, 620]], np.float32)
+ZONE_POLYGON_INT = ZONE_POLYGON.astype(np.int32)
+
+# Top-down metric rectangle (destination points) - 10m x 10m real-world grid
+REAL_WORLD_WIDTH_M = 10.0
+REAL_WORLD_HEIGHT_M = 10.0
+METRIC_POLYGON = np.array([
+    [0.0, 0.0],
+    [REAL_WORLD_WIDTH_M, 0.0],
+    [REAL_WORLD_WIDTH_M, REAL_WORLD_HEIGHT_M],
+    [0.0, REAL_WORLD_HEIGHT_M]
+], np.float32)
+
+# Calculate Homography Matrix H
+HOMOGRAPHY_MATRIX = cv2.getPerspectiveTransform(ZONE_POLYGON, METRIC_POLYGON)
+ZONE_AREA_SQM = REAL_WORLD_WIDTH_M * REAL_WORLD_HEIGHT_M
+
 EXIT_VECTOR = np.array([0, 1])
 
 # ---------------------------------------------------------
@@ -148,22 +162,30 @@ def generate_mjpeg_stream(source):
                     cv2.putText(frame, f"ID: {track_id}", (pt1[0], pt1[1] - 10),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-                    if cv2.pointPolygonTest(ZONE_POLYGON, (cx, cy), False) >= 0:
+                    if cv2.pointPolygonTest(ZONE_POLYGON_INT, (int(cx), int(cy)), False) >= 0:
                         people_in_zone += 1
+                        
+                        # 1. Metric Coordinate Transformation (IPM)
+                        # Use bottom-center of bounding box for feet on ground plane
+                        foot_x, foot_y = float(cx), float(cy + h/2)
+                        pts = np.array([[[foot_x, foot_y]]], dtype=np.float32)
+                        metric_pts = cv2.perspectiveTransform(pts, HOMOGRAPHY_MATRIX)
+                        mx, my = metric_pts[0][0]
+
                         history = track_history[track_id]
-                        history.append((cx, cy))
+                        history.append((mx, my))
 
                         if len(history) >= 2:
                             start_pt = history[0]
                             end_pt = history[-1]
                             dx = end_pt[0] - start_pt[0]
                             dy = end_pt[1] - start_pt[1]
-                            dist_pixels = math.hypot(dx, dy)
+                            dist_meters = math.hypot(dx, dy)
                             frames_passed = len(history) - 1
                             time_seconds = frames_passed / FPS
 
                             if time_seconds > 0:
-                                speed_mps = (dist_pixels / PIXELS_PER_METER) / time_seconds
+                                speed_mps = dist_meters / time_seconds
                                 zone_speeds.append(speed_mps)
 
                             move_vec = np.array([dx, dy])
@@ -222,7 +244,7 @@ def generate_mjpeg_stream(source):
                 threading.Thread(target=send_telemetry_async, args=(payload, NODE_TOKEN, BACKEND_URL), daemon=True).start()
 
             # 3. Draw Polygon & Risk Overlay Text
-            cv2.polylines(frame, [ZONE_POLYGON], True, (0, 255, 255), 2)
+            cv2.polylines(frame, [ZONE_POLYGON_INT], True, (0, 255, 255), 2)
             overlay_text = f"Surge Score: {latest_surge_score:.2f} | Density: {latest_density:.2f}"
             cv2.putText(frame, overlay_text, (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0,
                         (0, 0, 255) if latest_surge_score > 0.7 else (0, 255, 0), 3)

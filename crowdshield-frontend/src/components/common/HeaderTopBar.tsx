@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { VenueInfo, NetworkMode, SupportedLanguage } from '../../types';
+import { parseVoiceCommand } from '../../utils/nlpCommandParser';
+import api from '../../utils/api';
 import { 
   MapPin, 
   Search, 
@@ -52,6 +54,62 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [isVenueDropdownOpen, setIsVenueDropdownOpen] = useState(false);
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  useEffect(() => {
+    // Initialize Web Speech API
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = () => {
+        setIsListening(true);
+      };
+
+      recognition.onresult = async (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        console.log('Voice Command Heard:', transcript);
+        const parsed = parseVoiceCommand(transcript);
+        
+        if (parsed) {
+          // Execute the action automatically
+          try {
+            await api.post('/interventions/execute', {
+              actionId: parsed.action,
+              zoneId: parsed.target
+            });
+            // Dispatch custom event for Toast in App.tsx
+            window.dispatchEvent(new CustomEvent('voice_command_executed', { detail: parsed.message }));
+          } catch (err) {
+            console.error('Failed to execute voice command intervention', err);
+          }
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        console.error('Speech recognition error', event.error);
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = recognition;
+    }
+  }, []);
+
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+    } else {
+      recognitionRef.current?.start();
+    }
+  };
 
   const languages: { code: SupportedLanguage; label: string; name: string }[] = [
     { code: 'en', label: 'EN', name: 'English' },
@@ -67,7 +125,7 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
   };
 
   return (
-    <header className="bg-[#FFFFFF] border-b border-[#E7E5DD] px-3 sm:px-4 py-2.5 sticky top-0 z-30 shadow-[0_2px_12px_rgba(21,23,38,0.04)] font-body">
+    <header className="bg-[#0B0F19] border-b border-white/10 px-3 sm:px-4 py-2.5 sticky top-0 z-30 shadow-lg font-body">
       <div className="flex flex-wrap items-center justify-between gap-3">
         {/* Left: Mobile Drawer Button, Venue Selector & Search */}
         <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-[240px]">
@@ -75,7 +133,7 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
           {onToggleMobileMenu && (
             <button
               onClick={onToggleMobileMenu}
-              className="lg:hidden p-2 rounded-lg bg-[#FAFAF7] hover:bg-[#E7E5DD] border border-[#E7E5DD] text-[#151726] transition-colors cursor-pointer"
+              className="lg:hidden p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white transition-colors cursor-pointer"
               title="Toggle Command Menu"
             >
               <Menu className="w-4 h-4" />
@@ -86,22 +144,22 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
           <div className="relative">
             <button
               onClick={() => setIsVenueDropdownOpen(!isVenueDropdownOpen)}
-              className="flex items-center gap-2 bg-[#FAFAF7] hover:bg-[#E7E5DD]/50 border border-[#E7E5DD] px-3 py-1.5 rounded-lg text-xs font-semibold text-[#151726] transition-colors cursor-pointer"
+              className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-colors cursor-pointer"
             >
-              <MapPin className="w-4 h-4 text-[#2C7BE5]" />
+              <MapPin className="w-4 h-4 text-[#06b6d4]" />
               <span className="truncate max-w-[180px] sm:max-w-[240px] font-heading">
                 {selectedVenue ? selectedVenue.name : (venues.length === 0 ? 'Select Venue' : 'Awaiting Edge Telemetry...')}
               </span>
-              <ChevronDown className="w-3.5 h-3.5 text-[#5B5F73]" />
+              <ChevronDown className="w-3.5 h-3.5 text-white/50" />
             </button>
 
             {isVenueDropdownOpen && (
-              <div className="absolute top-full left-0 mt-1 w-72 bg-white border border-[#E7E5DD] rounded-xl shadow-xl z-50 py-1">
-                <div className="px-3 py-1.5 text-[11px] font-bold text-[#5B5F73] uppercase tracking-wider border-b border-[#E7E5DD]">
+              <div className="absolute top-full left-0 mt-1 w-72 bg-[#111827] border border-white/10 rounded-xl shadow-2xl z-50 py-1">
+                <div className="px-3 py-1.5 text-[11px] font-bold text-white/50 uppercase tracking-wider border-b border-white/10">
                   Active Command Venues
                 </div>
                 {venues.length === 0 ? (
-                  <div className="px-3 py-3 text-xs text-[#5B5F73] text-center italic">
+                  <div className="px-3 py-3 text-xs text-white/50 text-center italic">
                     Awaiting Edge Telemetry...
                   </div>
                 ) : (
@@ -112,12 +170,12 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
                         onSelectVenue(venue);
                         setIsVenueDropdownOpen(false);
                       }}
-                      className={`w-full text-left px-3 py-2 text-xs flex flex-col gap-0.5 hover:bg-[#FAFAF7] transition-colors ${
-                        selectedVenue && venue.id === selectedVenue.id ? 'bg-[#2C7BE5]/10 font-bold border-l-4 border-[#2C7BE5]' : ''
+                      className={`w-full text-left px-3 py-2 text-xs flex flex-col gap-0.5 hover:bg-white/5 transition-colors ${
+                        selectedVenue && venue.id === selectedVenue.id ? 'bg-[#06b6d4]/10 font-bold border-l-4 border-[#06b6d4]' : ''
                       }`}
                     >
-                      <span className="text-[#151726]">{venue.name}</span>
-                      <span className="text-[11px] text-[#5B5F73] font-mono-num">
+                      <span className="text-white">{venue.name}</span>
+                      <span className="text-[11px] text-white/50 font-mono-num">
                         {venue.location} · {(venue.currentTotalHeadcount ?? 0).toLocaleString()} active
                       </span>
                     </button>
@@ -129,13 +187,13 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
 
           {/* Global Search Bar */}
           <div className="relative flex-1 max-w-md hidden md:block">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#5B5F73]" />
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/50" />
             <input
               type="text"
               value={searchQuery}
               onChange={handleSearchChange}
               placeholder="Search zones, CCTV cameras, alerts, staff ID..."
-              className="w-full bg-[#FAFAF7] border border-[#E7E5DD] rounded-lg pl-9 pr-3 py-1.5 text-xs text-[#151726] placeholder-[#5B5F73] focus:outline-none focus:border-[#2C7BE5] focus:ring-1 focus:ring-[#2C7BE5]"
+              className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-3 py-1.5 text-xs text-white placeholder-white/50 focus:outline-none focus:border-[#06b6d4] focus:ring-1 focus:ring-[#06b6d4]"
             />
           </div>
         </div>
@@ -180,7 +238,7 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
           {isScenarioActive ? (
             <button
               onClick={onResetScenario}
-              className="flex items-center gap-1.5 bg-[#FAFAF7] hover:bg-[#E7E5DD] text-[#FF3B5C] border border-[#FF3B5C]/40 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm cursor-pointer"
+              className="flex items-center gap-1.5 bg-white/5 hover:bg-white/10 text-[#f43f5e] border border-[#f43f5e]/40 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm cursor-pointer"
             >
               <RefreshCw className="w-3.5 h-3.5 animate-spin" />
               <span>Reset Stampede Scenario</span>
@@ -188,7 +246,7 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
           ) : (
             <button
               onClick={onTriggerScenario}
-              className="flex items-center gap-1.5 bg-[#FF3B5C] hover:bg-[#e02e4d] text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-[0_2px_8px_rgba(255,59,92,0.3)] animate-pulse cursor-pointer"
+              className="flex items-center gap-1.5 bg-[#f43f5e] hover:bg-[#e02e4d] text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-[0_2px_8px_rgba(244,63,94,0.3)] animate-pulse cursor-pointer"
             >
               <Zap className="w-3.5 h-3.5 fill-current" />
               <span className="font-heading tracking-wide">⚡ Trigger Stampede Scenario</span>
@@ -197,26 +255,30 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
 
           {/* Bhashini Voice Mic Assistant Button */}
           <button
-            onClick={onOpenVoiceModal}
-            className="flex items-center gap-1.5 bg-[#7C6CFF]/10 hover:bg-[#7C6CFF]/20 text-[#7C6CFF] border border-[#7C6CFF]/30 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+            onClick={toggleListening}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer border ${
+              isListening 
+                ? 'bg-[#FF3B5C]/20 text-[#FF3B5C] border-[#FF3B5C] animate-pulse shadow-[0_0_10px_rgba(255,59,92,0.5)]' 
+                : 'bg-[#7C6CFF]/10 hover:bg-[#7C6CFF]/20 text-[#7C6CFF] border-[#7C6CFF]/30'
+            }`}
             title="Open Bhashini Voice Command Assistant"
           >
-            <Mic className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Bhashini Voice</span>
+            <Mic className={`w-3.5 h-3.5 ${isListening ? 'animate-bounce' : ''}`} />
+            <span className="hidden sm:inline">{isListening ? 'Listening...' : 'Bhashini Voice'}</span>
           </button>
 
           {/* Language Selector Dropdown */}
           <div className="relative">
             <button
               onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
-              className="flex items-center gap-1 bg-[#FAFAF7] hover:bg-[#E7E5DD]/50 border border-[#E7E5DD] px-2.5 py-1.5 rounded-lg text-xs font-mono-num font-semibold text-[#151726] transition-colors cursor-pointer"
+              className="flex items-center gap-1 bg-white/5 hover:bg-white/10 border border-white/10 px-2.5 py-1.5 rounded-lg text-xs font-mono-num font-semibold text-white transition-colors cursor-pointer"
             >
-              <Globe2 className="w-3.5 h-3.5 text-[#5B5F73]" />
+              <Globe2 className="w-3.5 h-3.5 text-white/50" />
               <span>{language.toUpperCase()}</span>
             </button>
 
             {isLangDropdownOpen && (
-              <div className="absolute top-full right-0 mt-1 w-44 bg-white border border-[#E7E5DD] rounded-xl shadow-xl z-50 py-1">
+              <div className="absolute top-full right-0 mt-1 w-44 bg-[#111827] border border-white/10 rounded-xl shadow-xl z-50 py-1">
                 {languages.map((lang) => (
                   <button
                     key={lang.code}
@@ -224,12 +286,12 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
                       onChangeLanguage(lang.code);
                       setIsLangDropdownOpen(false);
                     }}
-                    className={`w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-[#FAFAF7] ${
-                      language === lang.code ? 'bg-[#2C7BE5]/10 font-bold text-[#2C7BE5]' : 'text-[#151726]'
+                    className={`w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-white/5 ${
+                      language === lang.code ? 'bg-[#06b6d4]/10 font-bold text-[#06b6d4]' : 'text-white'
                     }`}
                   >
                     <span>{lang.name}</span>
-                    <span className="font-mono text-[10px] text-gray-400">{lang.label}</span>
+                    <span className="font-mono text-[10px] text-white/50">{lang.label}</span>
                   </button>
                 ))}
               </div>
@@ -238,10 +300,10 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
 
           {/* Alert Notification Bell */}
           <div className="relative">
-            <button className="p-1.5 bg-[#FAFAF7] border border-[#E7E5DD] rounded-lg text-[#5B5F73] hover:text-[#151726] transition-colors">
+            <button className="p-1.5 bg-white/5 border border-white/10 rounded-lg text-white/50 hover:text-white transition-colors">
               <Bell className="w-4 h-4" />
               {activeAlertCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#FF3B5C] text-white text-[10px] font-bold flex items-center justify-center font-mono-num">
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#f43f5e] text-white text-[10px] font-bold flex items-center justify-center font-mono-num">
                   {activeAlertCount}
                 </span>
               )}
@@ -249,17 +311,17 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
           </div>
 
           {/* Profile Avatar & Logout */}
-          <div className="flex items-center gap-2 pl-2 border-l border-[#E7E5DD]">
-            <div className="w-7 h-7 rounded-full bg-[#2C7BE5] text-white font-bold text-xs flex items-center justify-center font-heading">
+          <div className="flex items-center gap-2 pl-2 border-l border-white/10">
+            <div className="w-7 h-7 rounded-full bg-[#06b6d4] text-[#0B0F19] font-bold text-xs flex items-center justify-center font-heading">
               OP
             </div>
             <div className="hidden lg:flex flex-col text-[11px] mr-2">
-              <span className="font-bold text-[#151726] leading-none">operator_01</span>
-              <span className="text-[#5B5F73] text-[10px] leading-tight">Chief Controller</span>
+              <span className="font-bold text-white leading-none">operator_01</span>
+              <span className="text-white/50 text-[10px] leading-tight">Chief Controller</span>
             </div>
             <button 
               onClick={() => window.dispatchEvent(new Event('unauthorized'))}
-              className="p-1.5 rounded bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition-colors"
+              className="p-1.5 rounded bg-red-500/10 text-[#f43f5e] hover:bg-red-500/20 transition-colors"
               title="Logout"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-log-out"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" x2="9" y1="12" y2="12"></line></svg>

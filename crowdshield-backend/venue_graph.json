@@ -1,0 +1,21 @@
+{
+  "nodes": [
+    {"id": "Gate-1", "name": "Main North Gate", "max_capacity": 5000, "is_gate": true, "is_exit": true},
+    {"id": "Gate-2", "name": "East Gate", "max_capacity": 3000, "is_gate": true, "is_exit": true},
+    {"id": "Gate-3", "name": "South Gate", "max_capacity": 4000, "is_gate": true, "is_exit": true},
+    {"id": "Gate-4", "name": "Auxiliary West Gate", "max_capacity": 2000, "is_gate": true, "is_exit": true},
+    {"id": "Zone-A", "name": "Concourse A", "max_capacity": 10000, "is_gate": false, "is_exit": false},
+    {"id": "Zone-B", "name": "Concourse B", "max_capacity": 8000, "is_gate": false, "is_exit": false},
+    {"id": "Corr-1", "name": "North-East Corridor", "max_capacity": 1500, "is_gate": false, "is_exit": false},
+    {"id": "Corr-2", "name": "South-West Corridor", "max_capacity": 1500, "is_gate": false, "is_exit": false}
+  ],
+  "edges": [
+    {"source": "Zone-A", "target": "Gate-1", "length_meters": 50.0, "max_flow_rate": 100},
+    {"source": "Zone-A", "target": "Corr-1", "length_meters": 20.0, "max_flow_rate": 50, "overlap_ratio": 0.15},
+    {"source": "Corr-1", "target": "Gate-2", "length_meters": 30.0, "max_flow_rate": 50},
+    {"source": "Zone-B", "target": "Gate-3", "length_meters": 45.0, "max_flow_rate": 80},
+    {"source": "Zone-B", "target": "Corr-2", "length_meters": 25.0, "max_flow_rate": 40, "overlap_ratio": 0.10},
+    {"source": "Corr-2", "target": "Gate-4", "length_meters": 35.0, "max_flow_rate": 40},
+    {"source": "Zone-A", "target": "Zone-B", "length_meters": 100.0, "max_flow_rate": 150, "overlap_ratio": 0.20}
+  ]
+}

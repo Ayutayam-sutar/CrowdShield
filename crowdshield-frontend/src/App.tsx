@@ -40,7 +40,7 @@ import { CamerasView } from './components/admin/CamerasView';
 import { AlertsView } from './components/admin/AlertsView';
 import { AnalyticsView } from './components/admin/AnalyticsView';
 import { DigitalTwinView } from './components/admin/DigitalTwinView';
-import { SettingsView } from './components/admin/SettingsView';
+import { EdgeSettingsView } from './components/admin/EdgeSettingsView';
 
 // Citizen View
 import { CitizenPortalView } from './components/citizen/CitizenPortalView';
@@ -102,6 +102,7 @@ export default function App() {
   const [language, setLanguage] = useState<SupportedLanguage>('en');
   const [isScenarioActive, setIsScenarioActive] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isCloudSyncLost, setIsCloudSyncLost] = useState<boolean>(false);
 
   // Core Data Collections State
   const [zones, setZones] = useState<VenueZone[]>([]);
@@ -317,6 +318,34 @@ export default function App() {
     }
   }, [isAuthenticated]);
 
+  useEffect(() => {
+    const handleNetworkStatus = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail.status === 'offline') {
+        setIsCloudSyncLost(true);
+      } else {
+        setIsCloudSyncLost(false);
+      }
+    };
+    
+    const handleVoiceCommandEvent = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      addToastNotification(
+        '🎙️ Voice Command Recognized',
+        customEvent.detail,
+        'info'
+      );
+    };
+
+    window.addEventListener('network_status', handleNetworkStatus);
+    window.addEventListener('voice_command_executed', handleVoiceCommandEvent);
+    
+    return () => {
+      window.removeEventListener('network_status', handleNetworkStatus);
+      window.removeEventListener('voice_command_executed', handleVoiceCommandEvent);
+    };
+  }, []);
+
   // Handlers
   const handleTriggerScenario = () => {
     setIsScenarioActive(true);
@@ -347,17 +376,57 @@ export default function App() {
     setNetworkMode((prev) => (prev === 'cloud' ? 'edge' : 'cloud'));
   };
 
-  const handleAddCitizenReport = (
+  const handleAddCitizenReport = async (
     report: Omit<CitizenReport, 'id' | 'timestamp' | 'status' | 'upvotes'>
   ) => {
-    const newReport: CitizenReport = {
-      ...report,
-      id: `rep-${Date.now()}`,
-      timestamp: 'Just now',
-      status: 'pending',
-      upvotes: 1,
-    };
-    setCitizenReports((prev) => [newReport, ...prev]);
+    try {
+      const res = await api.post('/citizen-reports/', {
+        category: report.category,
+        description: report.description,
+        location_name: report.location,
+        latitude: report.latitude || 28.5832,
+        longitude: report.longitude || 77.2318,
+        media_url: report.photoUrl || report.videoUrl,
+        media_type: report.mediaType,
+      });
+
+      const newReport: CitizenReport = {
+        ...report,
+        id: res.data.id || `rep-${Date.now()}`,
+        timestamp: 'Just now',
+        status: 'pending',
+        upvotes: 1,
+      };
+      setCitizenReports((prev) => [newReport, ...prev]);
+
+      // Inject into Alerts queue
+      const newAlert: CrowdAlert = {
+        id: `alert-citizen-${Date.now()}`,
+        title: `CITIZEN REPORT: ${report.category}`,
+        zoneId: 'z-general',
+        zoneName: report.location,
+        riskLevel: 'warning',
+        density: 0,
+        flowRate: 0,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        category: '👤 Citizen Sourced Alert',
+        status: 'active',
+        sentinelAnalysis: `Citizen reported: ${report.description}`,
+        recommendedActions: []
+      };
+      setAlerts((prev) => [newAlert, ...prev]);
+    } catch (err) {
+      console.error('Failed to submit citizen report:', err);
+      // Fallback local update
+      const newReport: CitizenReport = {
+        ...report,
+        id: `rep-${Date.now()}`,
+        timestamp: 'Just now',
+        status: 'pending',
+        upvotes: 1,
+      };
+      setCitizenReports((prev) => [newReport, ...prev]);
+    }
   };
 
   const handleVoiceCommand = (command: string) => {
@@ -423,6 +492,14 @@ export default function App() {
         onDismiss={handleDismissToast}
         onInspectAlert={(zoneId) => setAdminRoute('alerts')}
       />
+
+      {/* Cloud Sync Lost Amber Banner */}
+      {isCloudSyncLost && (
+        <div className="w-full bg-amber-500 text-amber-950 px-4 py-2 text-center text-sm font-bold font-heading shadow-md z-40 relative flex items-center justify-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+          Cloud Sync Lost. Operating on Local Edge Cache.
+        </div>
+      )}
 
       {/* Top Header Bar */}
       <HeaderTopBar
@@ -501,7 +578,7 @@ export default function App() {
           )}
 
           {adminRoute === 'settings' && (
-            <SettingsView
+            <EdgeSettingsView
               networkMode={networkMode}
               onToggleNetworkMode={handleToggleNetworkMode}
             />

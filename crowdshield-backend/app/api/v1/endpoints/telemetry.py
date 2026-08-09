@@ -13,6 +13,7 @@ from app.models.venue import Zone, Venue, RiskLevel
 from app.models.alert import CrowdAlert, AlertSeverity, AlertStatus
 from app.services.risk_engine import risk_engine
 from app.core.websocket import ws_manager
+from app.services.predictive_engine import predict_density
 
 router = APIRouter()
 
@@ -166,6 +167,9 @@ async def create_telemetry(telemetry: TelemetryCreate, db: AsyncSession = Depend
             }
 
     # 6. WebSocket Broadcast to Dashboard
+    prediction = await predict_density(zone.id, db)
+    predictive_10m_curve = prediction.get("projected", []) if isinstance(prediction, dict) and "projected" in prediction else []
+
     payload = {
         "event": "TELEMETRY_UPDATE",
         "zone": {
@@ -182,7 +186,8 @@ async def create_telemetry(telemetry: TelemetryCreate, db: AsyncSession = Depend
             "trend": zone.trend.value if hasattr(zone.trend, 'value') else str(zone.trend),
             "gateStatus": zone.gate_status.value if hasattr(zone.gate_status, 'value') else str(zone.gate_status),
             "center_lat": zone.center_lat,
-            "center_lng": zone.center_lng
+            "center_lng": zone.center_lng,
+            "predictive_10m_curve": predictive_10m_curve
         }
     }
     if new_alert_dict:

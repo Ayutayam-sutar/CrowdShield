@@ -70,7 +70,7 @@ export interface CrowdAlert {
   density: number;
   flowRate: number;
   timestamp: string;
-  category: 'Overcrowding' | 'Gate Bottleneck' | 'Sudden Surge' | 'Sensor Anomaly' | 'Medical Distress';
+  category: 'Overcrowding' | 'Gate Bottleneck' | 'Sudden Surge' | 'Sensor Anomaly' | 'Medical Distress' | '👤 Citizen Sourced Alert';
   status: 'active' | 'investigating' | 'dispatched' | 'resolved';
   sentinelAnalysis: string;
   recommendedActions: {
@@ -101,6 +101,8 @@ export interface CitizenReport {
   timestamp: string;
   status: 'pending' | 'dispatched' | 'resolved';
   upvotes: number;
+  latitude?: number;
+  longitude?: number;
 }
 
 export type NetworkMode = 'cloud' | 'edge';
