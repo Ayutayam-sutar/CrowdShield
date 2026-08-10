@@ -14,11 +14,33 @@ import {
   Navigation
 } from 'lucide-react';
 
-const MapUpdater: React.FC<{ center: [number, number] }> = ({ center }) => {
+const MapUpdater: React.FC<{ center: [number, number]; resizeTrigger?: unknown }> = ({ center, resizeTrigger }) => {
   const map = useMap();
+
   React.useEffect(() => {
     map.setView(center, map.getZoom());
   }, [center, map]);
+
+  // Leaflet calculates its render size once on mount. If the container's
+  // real size isn't settled yet (fonts still loading, flex layout still
+  // resolving), it renders at a stale size - this is the "pop in late"
+  // effect. Forcing invalidateSize() on mount and whenever layout-affecting
+  // things change (CCTV panel expand/collapse, window resize) fixes it.
+  React.useEffect(() => {
+    const t1 = setTimeout(() => map.invalidateSize(), 100);
+    const t2 = setTimeout(() => map.invalidateSize(), 500);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [map, resizeTrigger]);
+
+  React.useEffect(() => {
+    const handleResize = () => map.invalidateSize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [map]);
+
   return null;
 };
 
@@ -202,13 +224,21 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
             {localToast}
           </div>
         )}
+        {cleanZones.length === 0 && (
+          <div className="absolute inset-0 z-[450] bg-white/70 backdrop-blur-sm flex items-center justify-center pointer-events-none">
+            <div className="bg-white shadow-xl rounded-2xl px-5 py-3 flex items-center gap-3 border border-[#E7E5DD]">
+              <span className="w-4 h-4 rounded-full border-2 border-[#2C7BE5] border-t-transparent animate-spin" />
+              <span className="text-sm font-bold text-[#151726]">Loading zone telemetry…</span>
+            </div>
+          </div>
+        )}
         <MapContainer
           center={centerCoords}
           zoom={17}
           scrollWheelZoom={true}
           className="w-full h-full"
         >
-          <MapUpdater center={centerCoords} />
+          <MapUpdater center={centerCoords} resizeTrigger={isCctvExpanded} />
           <LocateMeControl onLocate={setUserLocation} onError={showToastError} />
 
           {userLocation && (

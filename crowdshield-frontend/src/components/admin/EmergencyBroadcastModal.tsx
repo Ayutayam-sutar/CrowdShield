@@ -40,20 +40,19 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
   const currentTranslation = BHASHINI_TRANSLATIONS[activeLang] || BHASHINI_TRANSLATIONS['en'];
   const supportedLanguages = Object.keys(BHASHINI_TRANSLATIONS) as SupportedLanguage[];
 
-  // Dynamically resolve highest risk zone from live telemetry array
   const highestRiskZone = zones && zones.length > 0 
     ? [...zones].sort((a, b) => (b.riskScore || 0) - (a.riskScore || 0))[0]
     : null;
 
-  const targetZoneName = highestRiskZone?.name || highestRiskZone?.code || 'Venue Wide';
-  const targetZoneId = highestRiskZone?.id || 'all';
+  const targetZoneName = highestRiskZone?.name || highestRiskZone?.code || 'Central Library Roundabout';
+  const targetZoneId = highestRiskZone?.id || 'zone_library_roundabout';
   const targetHeadcount = highestRiskZone?.currentHeadcount || 0;
   const formattedHeadcount = targetHeadcount.toLocaleString();
 
   const getDynamicScript = () => {
     if (!highestRiskZone) return currentTranslation.announcementText;
     if (activeLang === 'en') {
-      return `Attention visitors in ${targetZoneName}. Please move calmly towards the designated safe exits.`;
+      return `Attention visitors near ${targetZoneName}. The area is currently congested. Please move calmly towards Gate 2 (EV Charging Junction) for a safe exit.`;
     }
     return currentTranslation.announcementText.replace(/West Exit|Sector/gi, targetZoneName);
   };
@@ -67,7 +66,9 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
       await api.post('/interventions/dispatch', { 
         actionText: `🔊 Multilingual PA Broadcast (${currentTranslation.langName})`,
         zoneId: targetZoneId,
-        impact: `PA instruction broadcasted to ${targetZoneName}`
+        impact: `PA instruction broadcasted to ${targetZoneName}`,
+        language: activeLang,
+        announcementText: script
       });
 
       const message = `Bhashini PA Broadcast (${currentTranslation.langName}) dispatched to ${targetZoneName}.`;
@@ -84,15 +85,18 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
   };
 
   const handleSendSMS = async () => {
+    const script = getDynamicScript();
     try {
       await api.post('/interventions/dispatch', { 
         actionText: `📱 Emergency SMS Cell Broadcast`,
         zoneId: targetZoneId,
-        impact: `Cell broadcast alert pushed to ${formattedHeadcount} devices in ${targetZoneName}`
+        impact: `Cell broadcast alert pushed to mobile devices near ${targetZoneName}`,
+        language: activeLang,
+        announcementText: `[EMERGENCY ALERT] ${script}`
       });
 
       setIsCellBroadcastSent(true);
-      const message = `Emergency Cell Broadcast SMS sent to ${formattedHeadcount} mobile devices in ${targetZoneName}.`;
+      const message = `Emergency Cell Broadcast SMS sent to mobile devices in ${targetZoneName}.`;
       window.dispatchEvent(new CustomEvent('system_dispatch', { detail: { type: 'success', message } }));
       setDispatchLog((prev) => [`[${new Date().toLocaleTimeString()}] ${message}`, ...prev]);
     } catch (error) {
@@ -106,7 +110,8 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
       await api.post('/interventions/dispatch', { 
         actionText: `🔓 Remote Gate Override`,
         zoneId: targetZoneId,
-        impact: `Remotely unlocked all auxiliary gates for ${targetZoneName}`
+        impact: `Remotely unlocked all auxiliary gates for ${targetZoneName}`,
+        announcementText: `EMERGENCY NOTICE: Auxiliary Exit Gates near ${targetZoneName} have been unlocked remotely. Proceed calmly.`
       });
 
       setIsGateUnlocked(true);
@@ -124,7 +129,8 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
       await api.post('/interventions/dispatch', { 
         actionText: `👮 Dispatch Response Security Squad`,
         zoneId: targetZoneId,
-        impact: `Dispatched security response team to bottleneck in ${targetZoneName}`
+        impact: `Dispatched security response team to bottleneck in ${targetZoneName}`,
+        announcementText: `NOTICE: Security response teams are en route to ${targetZoneName} to assist crowd movement.`
       });
 
       setIsGuardsDispatched(true);
@@ -225,7 +231,7 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
             <div className="bg-[#151726] border border-white/10 rounded-xl p-3 flex flex-col justify-between gap-3">
               <div>
                 <span className="text-xs font-bold text-slate-100 block">SMS Cell Broadcast</span>
-                <span className="text-[11px] text-slate-400">Push alert to {formattedHeadcount} devices</span>
+                <span className="text-[11px] text-slate-400">Push alert to mobile devices</span>
               </div>
               <button
                 onClick={handleSendSMS}
