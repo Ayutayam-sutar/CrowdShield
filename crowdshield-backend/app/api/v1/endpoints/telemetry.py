@@ -318,6 +318,7 @@ async def create_telemetry(
           "center_lng": zone.center_lng,
           "predictive_10m_curve": predictive_10m_curve,
           "evacuationRoute": evacuation_route,  # Dynamic A* Route
+          "inference_ms": getattr(telemetry, "inference_ms", 0.0),
       },
   }
   if new_alert_dict:

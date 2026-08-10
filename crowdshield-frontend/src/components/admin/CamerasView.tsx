@@ -306,7 +306,7 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [] 
     <div>
       <span className="text-[#5B5F73] block text-[10px] uppercase font-bold">Inference</span>
       <span className={`font-bold ${isOffline ? 'text-slate-500' : 'text-[#22D3A6]'}`}>
-        {isOffline ? '--' : '8.4 ms'}
+        {isOffline || !matchedZone || !matchedZone.inferenceMs ? '--' : `${matchedZone.inferenceMs.toFixed(1)} ms`}
       </span>
     </div>
   </div>
