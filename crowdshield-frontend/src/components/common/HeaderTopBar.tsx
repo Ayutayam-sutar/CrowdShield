@@ -33,6 +33,7 @@ interface HeaderTopBarProps {
   onSearch: (query: string) => void;
   activeAlertCount: number;
   onToggleMobileMenu?: () => void;
+  isCloudSyncLost: boolean; // real connection state, from App.tsx's network_status event
 }
 
 export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
@@ -50,6 +51,7 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
   onSearch,
   activeAlertCount,
   onToggleMobileMenu,
+  isCloudSyncLost,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isVenueDropdownOpen, setIsVenueDropdownOpen] = useState(false);
@@ -149,7 +151,7 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
             >
               <MapPin className="w-4 h-4 text-[#06b6d4]" />
               <span className="truncate max-w-[180px] sm:max-w-[240px] font-heading">
-                {selectedVenue ? selectedVenue.name : "Siksha 'O' Anusandhan Main Campus"}
+                {selectedVenue ? selectedVenue.name : 'Loading venue...'}
               </span>
               <ChevronDown className="w-3.5 h-3.5 text-white/50" />
             </button>
@@ -160,17 +162,11 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
                   Active Command Venues
                 </div>
                 {venues.length === 0 ? (
-                  <>
-                    <button onClick={() => setIsVenueDropdownOpen(false)} className="w-full text-left px-3 py-2 text-xs flex flex-col gap-0.5 hover:bg-white/5 transition-colors">
-                      <span className="text-white">Siksha 'O' Anusandhan Main Campus</span>
-                    </button>
-                    <button onClick={() => setIsVenueDropdownOpen(false)} className="w-full text-left px-3 py-2 text-xs flex flex-col gap-0.5 hover:bg-white/5 transition-colors">
-                      <span className="text-white">Kalinga Athletics Stadium</span>
-                    </button>
-                    <button onClick={() => setIsVenueDropdownOpen(false)} className="w-full text-left px-3 py-2 text-xs flex flex-col gap-0.5 hover:bg-white/5 transition-colors">
-                      <span className="text-white">Regional Event Center</span>
-                    </button>
-                  </>
+                  <div className="px-3 py-4 text-xs text-white/40 flex flex-col items-center gap-1.5 text-center">
+                    <AlertTriangle className="w-4 h-4 text-amber-500" />
+                    <span>No venues loaded from backend yet.</span>
+                    <span className="text-[10px]">Check API connectivity or backend seed data.</span>
+                  </div>
                 ) : (
                   venues.map((venue) => (
                     <button
@@ -325,10 +321,18 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
 
       {/* Row 2: Operator Session Info & Logout */}
       <div className="flex items-center justify-between text-xs text-white/50 px-1 border-t border-white/5 pt-1.5 mt-0.5 w-full">
-        {/* Left Side: Session status */}
+        {/* Left Side: Session status — reflects real connection state instead
+            of a hardcoded "Connected to Neon DB" claim regardless of mode. */}
         <div className="flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#059669] animate-pulse" />
-          <span>Active Command Session · Connected to Neon DB</span>
+          <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isCloudSyncLost ? 'bg-amber-500' : 'bg-[#059669]'}`} />
+          <span>
+            Active Command Session ·{' '}
+            {isCloudSyncLost
+              ? 'Cloud Sync Lost — Local Edge Cache Only'
+              : networkMode === 'cloud'
+              ? 'Connected to Cloud DB'
+              : 'Local Edge Session (SQLite)'}
+          </span>
         </div>
         
         {/* Right Side: Operator profile & logout button */}

@@ -79,6 +79,7 @@ export function mapBackendZoneToFrontend(raw: any): VenueZone {
     center: [centerLat, centerLng],
     gateStatus: (raw.gate_status ?? raw.gateStatus ?? 'open').toLowerCase() as any,
     inferenceMs: raw.inference_ms ?? 0,
+    evacuationRoute: raw.evacuationRoute ?? raw.evacuation_route ?? undefined,
   };
 }
 
@@ -584,6 +585,7 @@ export default function App() {
         venues={venues}
         selectedVenue={selectedVenue}
         onSelectVenue={(v) => handleSelectVenue(v)}
+        isCloudSyncLost={isCloudSyncLost}
         networkMode={networkMode}
         onToggleNetworkMode={handleToggleNetworkMode}
         language={language}
