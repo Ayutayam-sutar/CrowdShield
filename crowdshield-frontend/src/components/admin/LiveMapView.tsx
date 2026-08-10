@@ -76,12 +76,16 @@ interface LiveMapViewProps {
   selectedVenue: VenueInfo | null;
   zones: VenueZone[];
   cctvFeeds: CCTVFeed[];
+  isCctvExpanded: boolean;
+  onToggleCctvExpanded: () => void;
 }
 
 export const LiveMapView: React.FC<LiveMapViewProps> = ({
   selectedVenue,
   zones = [],
   cctvFeeds = [],
+  isCctvExpanded,
+  onToggleCctvExpanded,
 }) => {
   const [activeCameraModal, setActiveCameraModal] = useState<CCTVFeed | null>(null);
   const [failedFeeds, setFailedFeeds] = useState<Record<string, boolean>>({});
@@ -165,7 +169,7 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-57px)] relative font-body select-none">
+    <div className="flex flex-col h-full w-full relative font-body select-none">
       <div className="bg-white border-b border-[#E7E5DD] px-4 py-2 flex items-center justify-between z-10">
         <div className="flex items-center gap-3">
           <h2 className="font-heading font-bold text-base text-[#151726]">
@@ -192,7 +196,7 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 w-full h-full relative z-0">
+      <div className="flex-1 w-full min-h-0 relative z-0">
         {localToast && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[500] bg-[#FF3B5C] text-white px-4 py-2 rounded-lg shadow-xl font-body text-sm font-bold animate-fadeIn">
             {localToast}
@@ -365,98 +369,116 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
         </div>
       </div>
 
-      <div className="bg-[#151726] text-white p-3 z-[400] border-t border-white/10 flex flex-col gap-2">
-        <div className="flex items-center justify-between px-2 text-xs">
+      <div className={`bg-[#151726] text-white z-[400] border-t border-white/10 flex flex-col transition-all duration-300 ease-in-out ${isCctvExpanded ? 'p-3 gap-2' : 'p-2'}`}>
+        <div 
+          className="flex items-center justify-between px-2 text-xs cursor-pointer select-none hover:bg-white/5 p-1 rounded transition-colors"
+          onClick={onToggleCctvExpanded}
+          title="Click to toggle camera feed panel size"
+        >
           <span className="font-heading font-bold text-gray-300 flex items-center gap-2">
+            <span className="p-0.5 hover:bg-white/10 rounded transition-colors flex items-center justify-center text-[#2C7BE5]">
+              {isCctvExpanded ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-down"><path d="m6 9 6 6 6-6"/></svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-up"><path d="m18 15-6-6-6 6"/></svg>
+              )}
+            </span>
             <Video className="w-4 h-4 text-[#2C7BE5]" />
             LIVE EDGE CCTV FEEDS (MULTI-PORT MJPEG)
+            <span className="text-[10px] bg-[#2C7BE5]/20 text-[#2C7BE5] px-1.5 py-0.5 rounded font-mono font-bold ml-1">
+              {isCctvExpanded ? 'Active' : 'Collapsed'}
+            </span>
           </span>
-          <span className="text-gray-400 font-mono-num text-[11px]">
-            {cctvFeeds.filter((f) => !failedFeeds[f.id]).length} / {cctvFeeds.length} Active Feeds
-          </span>
+          <div className="flex items-center gap-3 pr-24 sm:pr-32">
+            <span className="text-gray-400 font-mono-num text-[11px] hidden sm:inline">
+              {cctvFeeds.filter((f) => !failedFeeds[f.id]).length} / {cctvFeeds.length} Active Feeds
+            </span>
+          </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {cctvFeeds.map((feed) => {
-            const port = getPortFromUrl(feed.imageUrl);
-            const matchedZone = findMatchedZone(feed);
-            const isOffline = failedFeeds[feed.id];
-            const cacheBuster = streamCacheBusters[feed.id];
-            const streamUrl = cacheBuster ? `${feed.imageUrl}?t=${cacheBuster}` : feed.imageUrl;
+        {isCctvExpanded && (
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 animate-fadeIn">
+            {cctvFeeds.map((feed) => {
+              const port = getPortFromUrl(feed.imageUrl);
+              const matchedZone = findMatchedZone(feed);
+              const isOffline = failedFeeds[feed.id];
+              const cacheBuster = streamCacheBusters[feed.id];
+              const streamUrl = cacheBuster ? `${feed.imageUrl}?t=${cacheBuster}` : feed.imageUrl;
 
-            const headcount = matchedZone ? matchedZone.currentHeadcount : (feed.personCount || 0);
-            const density = matchedZone ? matchedZone.density : 0;
+              const headcount = matchedZone ? matchedZone.currentHeadcount : (feed.personCount || 0);
+              const density = matchedZone ? matchedZone.density : 0;
 
-            return (
-              <div
-                key={feed.id}
-                onClick={() => setActiveCameraModal(feed)}
-                className="relative rounded-xl overflow-hidden border border-white/15 bg-black cursor-pointer group aspect-video"
-              >
-                {isOffline ? (
-                  <div className="w-full h-full bg-[#151726] flex flex-col items-center justify-center gap-1.5 text-white p-2 text-center">
-                    <VideoOff className="w-5 h-5 text-[#FF3B5C] animate-pulse" />
-                    <span className="font-heading font-bold text-[11px] text-white">
-                      Camera Offline - Awaiting Edge Feed
-                    </span>
-                    <span className="px-1.5 py-0.5 rounded bg-[#FF3B5C]/20 border border-[#FF3B5C]/30 text-[#FF3B5C] font-mono-num font-bold text-[9px]">
-                      Port {port}
-                    </span>
-                    <button
-                      onClick={(e) => handleRetryFeed(feed.id, e)}
-                      className="mt-1 px-2.5 py-0.5 bg-[#2C7BE5] hover:bg-[#2C7BE5]/80 rounded text-[10px] font-bold text-white flex items-center gap-1 transition-colors"
-                    >
-                      <RefreshCw className="w-3 h-3" />
-                      <span>Retry Stream</span>
-                    </button>
-                  </div>
-                ) : (
-                  <img
-                    src={streamUrl}
-                    alt={feed.name}
-                    onError={() => handleImageError(feed.id)}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                )}
-
-                {!isOffline && (
-                  <div className="absolute inset-0 pointer-events-none p-1">
-                    {feed.yoloDetections.map((det) => (
-                      <div
-                        key={det.id}
-                        style={{
-                          left: `${det.bbox.x}%`,
-                          top: `${det.bbox.y}%`,
-                          width: `${det.bbox.width}%`,
-                          height: `${det.bbox.height}%`,
-                        }}
-                        className={`absolute border ${det.type === 'backlog'
-                            ? 'border-[#FF3B5C] bg-[#FF3B5C]/20'
-                            : det.type === 'velocity_anomaly'
-                              ? 'border-[#FFB627] bg-[#FFB627]/20'
-                              : 'border-[#22D3A6] bg-[#22D3A6]/10'
-                          }`}
+              return (
+                <div
+                  key={feed.id}
+                  onClick={() => setActiveCameraModal(feed)}
+                  className="relative rounded-xl overflow-hidden border border-white/15 bg-black cursor-pointer group aspect-video"
+                >
+                  {isOffline ? (
+                    <div className="w-full h-full bg-[#151726] flex flex-col items-center justify-center gap-1.5 text-white p-2 text-center">
+                      <VideoOff className="w-5 h-5 text-[#FF3B5C] animate-pulse" />
+                      <span className="font-heading font-bold text-[11px] text-white">
+                        Camera Offline - Awaiting Edge Feed
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-[#FF3B5C]/20 border border-[#FF3B5C]/30 text-[#FF3B5C] font-mono-num font-bold text-[9px]">
+                        Port {port}
+                      </span>
+                      <button
+                        onClick={(e) => handleRetryFeed(feed.id, e)}
+                        className="mt-1 px-2.5 py-0.5 bg-[#2C7BE5] hover:bg-[#2C7BE5]/80 rounded text-[10px] font-bold text-white flex items-center gap-1 transition-colors"
                       >
-                        <span className="absolute -top-3 left-0 bg-black/80 text-[9px] font-mono-num px-1 rounded text-white whitespace-nowrap">
-                          {det.label}
-                        </span>
-                      </div>
-                    ))}
+                        <RefreshCw className="w-3 h-3" />
+                        <span>Retry Stream</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <img
+                      src={streamUrl}
+                      alt={feed.name}
+                      onError={() => handleImageError(feed.id)}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  )}
+
+                  {!isOffline && (
+                    <div className="absolute inset-0 pointer-events-none p-1">
+                      {feed.yoloDetections.map((det) => (
+                        <div
+                          key={det.id}
+                          style={{
+                            left: `${det.bbox.x}%`,
+                            top: `${det.bbox.y}%`,
+                            width: `${det.bbox.width}%`,
+                            height: `${det.bbox.height}%`,
+                          }}
+                          className={`absolute border ${det.type === 'backlog'
+                              ? 'border-[#FF3B5C] bg-[#FF3B5C]/20'
+                              : det.type === 'velocity_anomaly'
+                                ? 'border-[#FFB627] bg-[#FFB627]/20'
+                                : 'border-[#22D3A6] bg-[#22D3A6]/10'
+                            }`}
+                        >
+                          <span className="absolute -top-3 left-0 bg-black/80 text-[9px] font-mono-num px-1 rounded text-white whitespace-nowrap">
+                            {det.label}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-xs px-2 py-0.5 rounded text-[10px] font-mono-num text-white flex items-center gap-1">
+                    <span className={`w-1.5 h-1.5 rounded-full ${isOffline ? 'bg-[#FF3B5C]' : 'bg-[#22D3A6] animate-pulse'}`} />
+                    <span className="truncate max-w-[100px]">{feed.name}</span>
                   </div>
-                )}
 
-                <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-xs px-2 py-0.5 rounded text-[10px] font-mono-num text-white flex items-center gap-1">
-                  <span className={`w-1.5 h-1.5 rounded-full ${isOffline ? 'bg-[#FF3B5C]' : 'bg-[#22D3A6] animate-pulse'}`} />
-                  <span className="truncate max-w-[100px]">{feed.name}</span>
+                  <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-0.5 rounded text-[10px] font-mono-num text-white">
+                    {isOffline ? 'No live feed' : `${headcount} headcount ${matchedZone ? `· ${density.toFixed(1)} p/m²` : ''}`}
+                  </div>
                 </div>
-
-                <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-0.5 rounded text-[10px] font-mono-num text-white">
-                  {isOffline ? 'No live feed' : `${headcount} headcount ${matchedZone ? `· ${density.toFixed(1)} p/m²` : ''}`}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {activeCameraModal && (

@@ -111,6 +111,7 @@ export default function App() {
   const [isScenarioActive, setIsScenarioActive] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isCloudSyncLost, setIsCloudSyncLost] = useState<boolean>(false);
+  const [isCctvExpanded, setIsCctvExpanded] = useState<boolean>(true);
 
   // Core Data Collections State
   const [zones, setZones] = useState<VenueZone[]>([]);
@@ -387,36 +388,16 @@ export default function App() {
   // Handlers
   const handleTriggerScenario = () => {
     setIsScenarioActive(true);
-    setZones((prevZones) =>
-      prevZones.map((z) => {
-        const zid = (z.id || '').toLowerCase();
-
-        // Include CAM-04 (z-4 / z-04) alongside CAM-03 (z-3 / z-03)
-        if (
-          zid.includes('z-3') ||
-          zid.includes('z-03') ||
-          zid.includes('z-4') ||
-          zid.includes('z-04')
-        ) {
-          return {
-            ...z,
-            riskScore: 95,
-            riskLevel: 'critical',
-            density: 4.8,
-            currentHeadcount: 3840,
-            maxCapacity: 4000,
-            flowRate: 12,
-            gateStatus: 'restricted',
-          };
-        }
-        return z;
-      })
-    );
   };
 
   const handleResetScenario = () => {
     setIsScenarioActive(false);
-    setZones(INITIAL_ZONES);
+    api.get('/zones').then((res) => {
+      const rawZones = Array.isArray(res.data) ? res.data : [];
+      setZones(rawZones.map(mapBackendZoneToFrontend));
+    }).catch((err) => {
+      console.error('[API] Failed to reload zones after reset:', err);
+    });
   };
 
   const handleToggleNetworkMode = () => {
@@ -533,7 +514,7 @@ export default function App() {
   if (role !== 'ADMIN') return null; // Safety check
 
   return (
-    <div className="min-h-screen bg-[#0B0F19] flex flex-col font-body text-slate-100">
+    <div className={`min-h-screen bg-[#0B0F19] flex flex-col font-body text-slate-100 ${adminRoute === 'map' ? 'h-screen overflow-hidden' : ''}`}>
       {/* Toast Notifications */}
       <ToastContainer
         toasts={toasts}
@@ -567,7 +548,7 @@ export default function App() {
         onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
       />
 
-      <div className="flex flex-1 relative">
+      <div className={`flex flex-1 relative ${adminRoute === 'map' ? 'min-h-0 overflow-hidden' : ''}`}>
         {/* Left Sticky Sidebar / Mobile Drawer */}
         <LeftSidebar
           currentRoute={adminRoute}
@@ -582,7 +563,7 @@ export default function App() {
         />
 
         {/* Dynamic Route Content Area */}
-        <main className="flex-1 min-w-0 pb-28 sm:pb-32">
+        <main className={`flex-1 min-w-0 ${adminRoute === 'map' ? 'h-full overflow-hidden flex flex-col' : 'pb-28 sm:pb-32'}`}>
           {adminRoute === 'dashboard' && (
             <DashboardView
               zones={displayedZones}
@@ -600,6 +581,8 @@ export default function App() {
               selectedVenue={selectedVenue}
               zones={displayedZones}
               cctvFeeds={cctvFeeds}
+              isCctvExpanded={isCctvExpanded}
+              onToggleCctvExpanded={() => setIsCctvExpanded(!isCctvExpanded)}
             />
           )}
 
@@ -644,6 +627,13 @@ export default function App() {
         onSwitchView={(mode) => setViewMode(mode)}
         isScenarioActive={isScenarioActive}
         onResetScenario={handleResetScenario}
+        style={
+          adminRoute === 'map'
+            ? {
+                bottom: isCctvExpanded ? '410px' : '80px'
+              }
+            : undefined
+        }
       />
 
       {/* Global Modals */}

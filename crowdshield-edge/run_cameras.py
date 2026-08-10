@@ -4,12 +4,14 @@ import subprocess
 import sys
 import time
 
-# Define your 4 camera inputs, their target zones, and streaming ports
+# Define your 6 camera inputs, their target zones, and streaming ports
 cameras = [
-    {"video": "video.mp4", "zone": "z-01", "port": 5000},
-    {"video": "video2.mp4", "zone": "z-02", "port": 5001},
-    {"video": "video3.mp4", "zone": "z-03", "port": 5002},
-    {"video": "video4.mp4", "zone": "z-04", "port": 5003},
+    {"video": "video.mp4",  "zone": "gate_1", "port": 5000},
+    {"video": "video2.mp4", "zone": "zone_library_roundabout", "port": 5001},
+    {"video": "video3.mp4", "zone": "zone_sports_complex_rd", "port": 5002},
+    {"video": "video4.mp4", "zone": "zone_e_block_lawn_rd", "port": 5003},
+    {"video": "video.mp4",  "zone": "zone_admin_block_rd", "port": 5004},
+    {"video": "video2.mp4", "zone": "gate_2", "port": 5005},
 ]
 
 processes = []

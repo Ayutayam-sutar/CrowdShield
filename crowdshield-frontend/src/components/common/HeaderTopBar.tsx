@@ -125,10 +125,11 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
   };
 
   return (
-    <header className="bg-[#0B0F19] border-b border-white/10 px-3 sm:px-4 py-2.5 sticky top-0 z-30 shadow-lg font-body">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <header className="bg-[#0B0F19] border-b border-white/10 px-3 sm:px-4 py-2 sticky top-0 z-30 shadow-lg font-body flex flex-col gap-2">
+      {/* Row 1: Main Control Row */}
+      <div className="flex items-center justify-between gap-3 w-full">
         {/* Left: Mobile Drawer Button, Venue Selector & Search */}
-        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-[240px]">
+        <div className="flex items-center gap-2 sm:gap-3 flex-1">
           {/* Mobile Menu Toggle */}
           {onToggleMobileMenu && (
             <button
@@ -206,13 +207,13 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
           </div>
         </div>
 
-        {/* Right Controls: Mode Toggle, Crisis Trigger, Voice, Language, Avatar */}
-        <div className="flex items-center gap-2 flex-wrap">
+        {/* Right Controls: Mode Toggle, Crisis Trigger, Voice, Language */}
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           {/* Network Resilience Toggle */}
           <div className="flex items-center gap-1.5">
             <button
               onClick={onToggleNetworkMode}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
                 networkMode === 'edge'
                   ? 'bg-amber-500/10 border-amber-500/40 text-amber-800'
                   : 'bg-[#2C7BE5]/10 border-[#2C7BE5]/30 text-[#2C7BE5]'
@@ -235,9 +236,10 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
             </button>
 
             {networkMode === 'edge' && (
-              <span className="hidden lg:inline-flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-mono-num px-2.5 py-1 rounded-md">
+              <span className="hidden md:inline-flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-mono-num px-2.5 py-1 rounded-md">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
-                Running on Local Edge Laptop (SQLite + Redis Active)
+                <span className="hidden xl:inline">Running on Local Edge Laptop (SQLite + Redis Active)</span>
+                <span className="inline xl:hidden">Local Edge Active</span>
               </span>
             )}
           </div>
@@ -318,23 +320,33 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
             </button>
           </div>
 
-          {/* Profile Avatar & Logout */}
-          <div className="flex items-center gap-2 pl-2 border-l border-white/10">
-            <div className="w-7 h-7 rounded-full bg-[#06b6d4] text-[#0B0F19] font-bold text-xs flex items-center justify-center font-heading">
+        </div>
+      </div>
+
+      {/* Row 2: Operator Session Info & Logout */}
+      <div className="flex items-center justify-between text-xs text-white/50 px-1 border-t border-white/5 pt-1.5 mt-0.5 w-full">
+        {/* Left Side: Session status */}
+        <div className="flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#059669] animate-pulse" />
+          <span>Active Command Session · Connected to Neon DB</span>
+        </div>
+        
+        {/* Right Side: Operator profile & logout button */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 rounded-full bg-[#06b6d4] text-[#0B0F19] font-bold text-[10px] flex items-center justify-center font-heading">
               OP
             </div>
-            <div className="hidden lg:flex flex-col text-[11px] mr-2">
-              <span className="font-bold text-white leading-none">operator_01</span>
-              <span className="text-white/50 text-[10px] leading-tight">Chief Controller</span>
-            </div>
-            <button 
-              onClick={() => window.dispatchEvent(new Event('unauthorized'))}
-              className="p-1.5 rounded bg-red-500/10 text-[#f43f5e] hover:bg-red-500/20 transition-colors"
-              title="Logout"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-log-out"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" x2="9" y1="12" y2="12"></line></svg>
-            </button>
+            <span className="font-bold text-white/95">operator_01</span>
+            <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-white/70">Chief Controller</span>
           </div>
+          <button 
+            onClick={() => window.dispatchEvent(new Event('unauthorized'))}
+            className="p-1 rounded hover:bg-red-500/20 text-[#f43f5e] transition-colors cursor-pointer bg-transparent border-none flex items-center justify-center"
+            title="Logout"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-log-out"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" x2="9" y1="12" y2="12"></line></svg>
+          </button>
         </div>
       </div>
     </header>
