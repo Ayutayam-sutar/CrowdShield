@@ -17,6 +17,13 @@ import {
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { speakAnnouncement } from '../../utils/speech';
 
+interface InterventionResult {
+  status: string;
+  message: string;
+  resolved_alerts_count: number;
+}
+interface BroadcastResult { original_text: string; translated_text: string; language: string; status: string; }
+
 interface AlertsViewProps {
   alerts: CrowdAlert[];
   cctvFeeds: CCTVFeed[];
@@ -36,14 +43,15 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
 }) => {
   const [selectedAlertId, setSelectedAlertId] = useState<string>('');
   const [activeLang, setActiveLang] = useState<SupportedLanguage>(selectedLanguage);
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [confirmationModalAction, setConfirmationModalAction] = useState<{
     actionText: string;
     impact: string;
     targetGateOrZone: string;
   } | null>(null);
   const [executedActionIds, setExecutedActionIds] = useState<string[]>([]);
-  const [isExecutingAction, setIsExecutingAction] = useState(false);
+  const [dispatchState, setDispatchState] = useState<{ loading: boolean; error: string | null }>({ loading: false, error: null });
+  const [announcementText, setAnnouncementText] = useState('');
+  const [broadcastState, setBroadcastState] = useState<{ loading: boolean; error: string | null; result: BroadcastResult | null }>({ loading: false, error: null, result: null });
   const [historyData, setHistoryData] = useState<{ time: string; density: number }[]>([]);
 
   const selectedAlert = alerts.find((a) => a.id === selectedAlertId) || alerts[0] || null;
@@ -79,6 +87,15 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
   };
 
   useEffect(() => {
+    if (selectedAlert) {
+      setAnnouncementText(
+        `Attention visitors near ${selectedAlert.zoneName}. This area is congested. Please move calmly towards the nearest emergency exit.`
+      );
+      setBroadcastState({ loading: false, error: null, result: null });
+    }
+  }, [selectedAlert?.id]);
+
+  useEffect(() => {
     if (!selectedAlert) return;
 
     const fetchHistory = async () => {
@@ -108,58 +125,54 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
   const currentTranslation = BHASHINI_TRANSLATIONS[activeLang] || BHASHINI_TRANSLATIONS['en'];
 
   const handleExecuteAction = async () => {
-    if (!confirmationModalAction) return;
-
-    setIsExecutingAction(true);
-    const actionText = confirmationModalAction.actionText;
+    if (!confirmationModalAction || !selectedAlert) return;
+    setDispatchState({ loading: true, error: null });
 
     try {
-      // Attempt backend intervention post
-      await api.post('/interventions/execute', {
-        actionText: actionText,
-        zoneId: selectedAlert?.zoneId || 'z-01',
-        impact: confirmationModalAction.impact
-      }).catch(() => {
-        // Fallback endpoint if specific route differs
-        return api.post(`/alerts/${selectedAlert?.id}/resolve`, { actionText });
+      const res = await api.post<InterventionResult>('/interventions/execute', {
+        actionId: (confirmationModalAction as any).id,
+        actionText: confirmationModalAction.actionText,
+        zoneId: selectedAlert.zoneId,
+        impact: confirmationModalAction.impact,
       });
 
-      setExecutedActionIds((prev) => [...prev, actionText]);
-
-      // Dispatch global system event to update the terminal log on Dashboard
-      window.dispatchEvent(
-        new CustomEvent('system_dispatch', {
-          detail: {
-            type: 'success',
-            message: `DISPATCHED: ${actionText} (${confirmationModalAction.impact})`
-          }
-        })
-      );
-    } catch (err) {
-      console.warn('Intervention logged locally:', err);
-      setExecutedActionIds((prev) => [...prev, actionText]);
-
-      window.dispatchEvent(
-        new CustomEvent('system_dispatch', {
-          detail: {
-            type: 'warning',
-            message: `INTERVENTION DEPLOYED: ${actionText}`
-          }
-        })
-      );
-    } finally {
-      setIsExecutingAction(false);
+      // Real confirmation, not an assumed one — and it may have closed more
+      // than just this one alert, since the backend resolves by zone.
+      setExecutedActionIds((prev) => [...prev, confirmationModalAction.actionText]);
+      setDispatchState({ loading: false, error: null });
       setConfirmationModalAction(null);
+      // Actual alert-queue update arrives via the INTERVENTION_DISPATCHED WS event
+      // handled in App.tsx — no local fabrication needed here.
+    } catch (err: any) {
+      // Never mark an action executed on failure — surface it plainly instead.
+      const detail =
+        err?.response?.data?.detail ||
+        (err?.request ? 'No response from server — check network/edge connectivity.' : 'Dispatch failed.');
+      setDispatchState({ loading: false, error: detail });
     }
   };
 
-  const handlePlayAudio = () => {
-    setIsPlayingAudio(true);
-    speakAnnouncement(currentTranslation.announcementText, activeLang);
-    const estimatedMs = Math.max(currentTranslation.announcementText.length * 70, 3000);
-    setTimeout(() => {
-      setIsPlayingAudio(false);
-    }, estimatedMs);
+  const handleBroadcast = async () => {
+    if (!selectedAlert || !announcementText.trim()) return;
+    setBroadcastState({ loading: true, error: null, result: null });
+    try {
+      const res = await api.post<BroadcastResult>('/broadcast/', {
+        text: announcementText,
+        target_language: activeLang,
+        zone_id: selectedAlert.zoneId,
+      });
+      setBroadcastState({ loading: false, error: null, result: res.data });
+      // Speak the real translated text via the local TTS fallback —
+      // the backend logs/simulates the actual PA/SMS dispatch server-side.
+      speakAnnouncement(res.data.translated_text, activeLang);
+    } catch (err: any) {
+      setBroadcastState({
+        loading: false, result: null,
+        error: err?.response?.status === 401 || err?.response?.status === 403
+          ? 'Admin authentication required to broadcast.'
+          : err?.response?.data?.detail || 'Broadcast failed — Bhashini service unreachable.',
+      });
+    }
   };
 
   return (
@@ -489,49 +502,48 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
                   <div className="bg-[#151726] text-white p-4 rounded-xl flex flex-col gap-3 shadow-md">
                     <div className="flex items-center justify-between">
                       <span className="font-heading font-bold text-xs text-[#7C6CFF] flex items-center gap-1.5">
-                        <Volume2 className="w-4 h-4" />
-                        Bhashini Multilingual PA Player
+                        <Volume2 className="w-4 h-4" /> Bhashini Multilingual PA Player
                       </span>
                       <div className="flex items-center gap-1">
                         {(['en', 'hi', 'od', 'bn', 'ta'] as SupportedLanguage[]).map((l) => (
-                          <button
-                            key={l}
-                            onClick={() => {
-                              setActiveLang(l);
-                              onChangeLanguage(l);
-                            }}
-                            className={`px-1.5 py-0.5 rounded text-[10px] font-mono-num font-bold transition-colors ${
-                              activeLang === l ? 'bg-[#7C6CFF] text-white' : 'bg-white/10 text-gray-400 hover:text-white'
-                            }`}
-                          >
+                          <button key={l} onClick={() => { setActiveLang(l); onChangeLanguage(l); setBroadcastState({ loading: false, error: null, result: null }); }}
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-mono-num font-bold ${activeLang === l ? 'bg-[#7C6CFF] text-white' : 'bg-white/10 text-gray-400 hover:text-white'}`}>
                             {l.toUpperCase()}
                           </button>
                         ))}
                       </div>
                     </div>
 
-                    <div className="bg-black/40 border border-white/10 p-2.5 rounded-lg text-[11px] font-mono-num text-gray-300">
-                      <span className="text-[#7C6CFF] font-bold block mb-0.5">
-                        {currentTranslation.langName} Audio Script:
-                      </span>
-                      "{currentTranslation.announcementText}"
-                    </div>
+                    <textarea
+                      value={announcementText}
+                      onChange={(e) => setAnnouncementText(e.target.value)}
+                      rows={2}
+                      className="bg-black/40 border border-white/10 p-2.5 rounded-lg text-[11px] text-gray-200 resize-none focus:outline-none focus:border-[#7C6CFF]"
+                      placeholder="Announcement text (English) — translated on dispatch"
+                    />
+
+                    {broadcastState.result && (
+                      <div className="bg-black/40 border border-[#7C6CFF]/30 p-2.5 rounded-lg text-[11px] font-mono-num text-gray-300">
+                        <span className="text-[#7C6CFF] font-bold block mb-0.5">Translated ({broadcastState.result.language}):</span>
+                        {broadcastState.result.translated_text}
+                      </div>
+                    )}
+                    {broadcastState.error && (
+                      <div className="bg-[#FF3B5C]/10 border border-[#FF3B5C]/30 p-2.5 rounded-lg text-[11px] text-[#FF3B5C]">
+                        {broadcastState.error}
+                      </div>
+                    )}
 
                     <button
-                      onClick={handlePlayAudio}
-                      disabled={isPlayingAudio}
-                      className={`w-full py-2 px-3 rounded-lg font-heading font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                        isPlayingAudio
-                          ? 'bg-[#7C6CFF] text-white animate-pulse'
-                          : 'bg-[#7C6CFF] hover:bg-[#6856ff] text-white'
-                      }`}
+                      onClick={handleBroadcast}
+                      disabled={broadcastState.loading || !announcementText.trim()}
+                      className="w-full py-2 px-3 rounded-lg font-heading font-bold text-xs flex items-center justify-center gap-2 bg-[#7C6CFF] hover:bg-[#6856ff] text-white disabled:opacity-50"
                     >
-                      <Play className="w-3.5 h-3.5 fill-current" />
-                      <span>
-                        {isPlayingAudio
-                          ? `Playing Audio Wave (${currentTranslation.langName})...`
-                          : `Play Bhashini Announcement (${currentTranslation.langName})`}
-                      </span>
+                      {broadcastState.loading ? (
+                        <><Loader2 className="w-3.5 h-3.5 animate-spin" /><span>Translating & Dispatching...</span></>
+                      ) : (
+                        <><Play className="w-3.5 h-3.5 fill-current" /><span>Translate & Broadcast ({activeLang.toUpperCase()})</span></>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -549,10 +561,7 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
               <span className="font-heading font-bold text-sm text-[#7C6CFF] flex items-center gap-2">
                 <Sparkles className="w-4 h-4" /> 1-Tap Countermeasure Confirmation
               </span>
-              <button
-                onClick={() => setConfirmationModalAction(null)}
-                className="p-1 rounded-lg hover:bg-white/10 text-slate-400"
-              >
+              <button onClick={() => { setConfirmationModalAction(null); setDispatchState({ loading: false, error: null }); }} className="p-1 rounded-lg hover:bg-white/10 text-slate-400">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -562,28 +571,32 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
               <div className="bg-[#151726] border border-white/10 p-3 rounded-xl font-heading font-bold text-xs text-slate-100">
                 "{confirmationModalAction.actionText}"
               </div>
-              <span className="text-xs text-slate-400 font-mono-num mt-1">
-                Expected Impact: {confirmationModalAction.impact}
-              </span>
+              <span className="text-xs text-slate-400 font-mono-num mt-1">Expected Impact: {confirmationModalAction.impact}</span>
             </div>
+
+            {dispatchState.error && (
+              <div className="bg-[#FF3B5C]/10 border border-[#FF3B5C]/30 rounded-xl p-3 flex items-start gap-2 text-[#FF3B5C] text-xs">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <span>{dispatchState.error}</span>
+              </div>
+            )}
 
             <div className="flex items-center gap-3 mt-2">
               <button
-                onClick={() => setConfirmationModalAction(null)}
-                className="flex-1 py-2 bg-white/10 text-white border-transparent hover:bg-white/20 font-semibold text-xs rounded-xl transition-colors cursor-pointer"
+                onClick={() => { setConfirmationModalAction(null); setDispatchState({ loading: false, error: null }); }}
+                className="flex-1 py-2 bg-white/10 text-white hover:bg-white/20 font-semibold text-xs rounded-xl"
               >
                 Cancel
               </button>
               <button
                 onClick={handleExecuteAction}
-                disabled={isExecutingAction}
-                className="flex-1 py-2 bg-[#7C6CFF] hover:bg-[#6856ff] text-white font-heading font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                disabled={dispatchState.loading}
+                className="flex-1 py-2 bg-[#7C6CFF] hover:bg-[#6856ff] text-white font-heading font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                {isExecutingAction ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Executing...</span>
-                  </>
+                {dispatchState.loading ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /><span>Executing...</span></>
+                ) : dispatchState.error ? (
+                  <span>Retry Dispatch</span>
                 ) : (
                   <span>Dispatch Action Now</span>
                 )}

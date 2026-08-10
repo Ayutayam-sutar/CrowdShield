@@ -386,6 +386,23 @@ export default function App() {
             `Alert #${data.alert_id} was resolved by volunteer ${data.resolved_by || 'Unknown'}`,
             'info'
           );
+        } else if (data.event === 'INTERVENTION_DISPATCHED' && data.zoneId) {
+          // Backend resolves ALL open alerts in this zone on dispatch — mirror that here
+          // instead of waiting for the next TELEMETRY_UPDATE to overwrite stale alert state.
+          setAlerts((prevAlerts) =>
+            prevAlerts.map((a) =>
+              a.zoneId === data.zoneId && a.status === 'active'
+                ? { ...a, status: 'resolved' as const }
+                : a
+            )
+          );
+
+          addToastNotification(
+            '✅ Intervention Dispatched',
+            data.message || `${data.actionText} deployed for ${data.zoneName}.`,
+            'info',
+            data.zoneId
+          );
         }
       });
 
