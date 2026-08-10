@@ -80,7 +80,7 @@ export const INITIAL_CCTV_FEEDS: CCTVFeed[] = [
   },
   {
     id: 'cam_06',
-    name: 'CAM-06: Exit Gate',
+    name: 'CAM-06: Back Gate',
     location: 'Exit Gate / Food Court (gate_2)',
     zoneId: 'gate_2',
     status: 'online',

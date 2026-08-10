@@ -13,6 +13,7 @@ class TelemetryCreate(BaseModel):
     surge_score: Optional[float] = 0.0
     flow_conflict: bool = False
     reverse_flow_detected: bool = False
+    inference_ms: Optional[float] = 0.0
 
 class TelemetryResponse(TelemetryCreate):
     id: int

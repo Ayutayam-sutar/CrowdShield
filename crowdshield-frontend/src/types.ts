@@ -38,6 +38,7 @@ export interface VenueZone {
   polygon: [number, number][]; // lat, lng pairs
   center: [number, number];
   gateStatus: 'open' | 'restricted' | 'closed' | 'evacuation';
+  inferenceMs?: number;
 }
 
 export interface YoloDetection {

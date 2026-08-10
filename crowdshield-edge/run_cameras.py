@@ -6,12 +6,12 @@ import time
 
 # Define your 6 camera inputs, their target zones, and streaming ports
 cameras = [
-    {"video": "video.mp4",  "zone": "gate_1", "port": 5000},
-    {"video": "video2.mp4", "zone": "zone_library_roundabout", "port": 5001},
+    {"video": "passage.mp4",  "zone": "gate_1", "port": 5000},
+    {"video": "street.mp4", "zone": "zone_library_roundabout", "port": 5001},
     {"video": "video3.mp4", "zone": "zone_sports_complex_rd", "port": 5002},
     {"video": "video4.mp4", "zone": "zone_e_block_lawn_rd", "port": 5003},
     {"video": "video.mp4",  "zone": "zone_admin_block_rd", "port": 5004},
-    {"video": "video2.mp4", "zone": "gate_2", "port": 5005},
+    {"video": "exit.mp4", "zone": "gate_2", "port": 5005},
 ]
 
 processes = []
@@ -19,7 +19,7 @@ processes = []
 
 def cleanup_processes(signum=None, frame=None):
   """Safely terminates all running camera subprocesses on exit or CTRL+C."""
-  print("\n🛑 Shutting down all 4 CrowdShield camera streams...")
+  print("\n🛑 Shutting down all 6 CrowdShield camera streams...")
   for p in processes:
     if p.poll() is None:
       try:
@@ -75,7 +75,7 @@ if __name__ == "__main__":
     time.sleep(3)
 
   print(
-      "\n📡 All 4 Edge streams are live! Press CTRL+C to shut them all down.\n"
+      "\n📡 All 6 Edge streams are live! Press CTRL+C to shut them all down.\n"
   )
 
   # Active Health Monitoring Loop

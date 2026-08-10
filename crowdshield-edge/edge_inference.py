@@ -240,6 +240,11 @@ def generate_mjpeg_stream():
           verbose=False,
       )
 
+      inference_ms = 0.0
+      if results and len(results) > 0 and hasattr(results[0], "speed"):
+        if isinstance(results[0].speed, dict):
+          inference_ms = results[0].speed.get("inference", 0.0)
+
       people_in_zone = 0
       zone_speeds = []
       reverse_flow_count = 0
@@ -383,6 +388,7 @@ def generate_mjpeg_stream():
             "flow_conflict": bool(flow_conflict),
             "surge_score": round(surge_score, 3),
             "reverse_flow_detected": bool(reverse_flow_detected),
+            "inference_ms": round(inference_ms, 1),
         }
 
         threading.Thread(

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   ViewMode,
   AdminRoute,
@@ -78,6 +78,7 @@ export function mapBackendZoneToFrontend(raw: any): VenueZone {
     ],
     center: [centerLat, centerLng],
     gateStatus: (raw.gate_status ?? raw.gateStatus ?? 'open').toLowerCase() as any,
+    inferenceMs: raw.inference_ms ?? 0,
   };
 }
 
@@ -117,6 +118,48 @@ export default function App() {
   const [zones, setZones] = useState<VenueZone[]>([]);
   const [alerts, setAlerts] = useState<CrowdAlert[]>(INITIAL_ALERTS);
   const [cctvFeeds, setCctvFeeds] = useState<CCTVFeed[]>(INITIAL_CCTV_FEEDS);
+
+  const [lastTelemetryUpdate, setLastTelemetryUpdate] = useState<Record<string, number>>({});
+  const [ticker, setTicker] = useState<number>(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTicker((t) => t + 1);
+    }, 3000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const processedZones = useMemo(() => {
+    return zones.map((z) => {
+      if (isScenarioActive) return z;
+      const lastUpdate = lastTelemetryUpdate[z.id];
+      const isFeedActive = lastUpdate && (Date.now() - lastUpdate < 10000);
+      if (!isFeedActive) {
+        return {
+          ...z,
+          currentHeadcount: 0,
+          density: 0,
+          riskScore: 0,
+          riskLevel: 'safe' as const,
+          flowRate: 0,
+          inferenceMs: 0,
+        };
+      }
+      return z;
+    });
+  }, [zones, lastTelemetryUpdate, isScenarioActive, ticker]);
+
+  const displayedCctvFeeds = useMemo(() => {
+    return cctvFeeds.map((feed) => {
+      if (isScenarioActive) return feed;
+      const lastUpdate = lastTelemetryUpdate[feed.zoneId];
+      const isFeedActive = lastUpdate && (Date.now() - lastUpdate < 10000);
+      return {
+        ...feed,
+        status: isFeedActive ? ('online' as const) : ('offline' as const),
+      };
+    });
+  }, [cctvFeeds, lastTelemetryUpdate, isScenarioActive, ticker]);
   const [citizenReports, setCitizenReports] = useState<CitizenReport[]>(INITIAL_CITIZEN_REPORTS);
 
   // Toast Notifications State
@@ -276,8 +319,8 @@ export default function App() {
 
   // Monitor zones for threshold breaches
   useEffect(() => {
-    checkAndGenerateCrowdAlerts(zones);
-  }, [zones]);
+    checkAndGenerateCrowdAlerts(processedZones);
+  }, [processedZones]);
 
   // WebSocket Connection & Real-Time Telemetry Subscription
   useEffect(() => {
@@ -287,6 +330,12 @@ export default function App() {
       const unsubscribe = wsService.subscribe((data) => {
         if (data.event === 'TELEMETRY_UPDATE' && data.zone) {
           const updatedZone = mapBackendZoneToFrontend(data.zone);
+
+          setLastTelemetryUpdate((prev) => ({
+            ...prev,
+            [updatedZone.id]: Date.now()
+          }));
+
           // Update existing zone or dynamically insert new zone (e.g., z-3)
           setZones((prevZones) => {
             const exists = prevZones.some((z) => z.id === updatedZone.id);
@@ -471,7 +520,7 @@ export default function App() {
   const activeAlertCount = alerts.filter((a) => a.status === 'active').length;
 
   // Safe filtering: Add optional chaining to prevent silent UI crashes if a zone name is missing
-  const displayedZones = zones.filter((z) =>
+  const displayedZones = processedZones.filter((z) =>
     (z?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
     (z?.code || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -580,21 +629,21 @@ export default function App() {
             <LiveMapView
               selectedVenue={selectedVenue}
               zones={displayedZones}
-              cctvFeeds={cctvFeeds}
+              cctvFeeds={displayedCctvFeeds}
               isCctvExpanded={isCctvExpanded}
               onToggleCctvExpanded={() => setIsCctvExpanded(!isCctvExpanded)}
             />
           )}
 
           {adminRoute === 'cameras' && (
-            <CamerasView cctvFeeds={cctvFeeds} zones={displayedZones} />
+            <CamerasView cctvFeeds={displayedCctvFeeds} zones={displayedZones} />
           )}
 
           {adminRoute === 'alerts' && (
             <AlertsView
               alerts={alerts}
-              cctvFeeds={cctvFeeds}
-              zones={zones}
+              cctvFeeds={displayedCctvFeeds}
+              zones={processedZones}
               selectedLanguage={language}
               onChangeLanguage={(lang) => setLanguage(lang)}
               onOpenEmergencyBroadcast={() => setIsEmergencyBroadcastOpen(true)}
