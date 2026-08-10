@@ -23,6 +23,13 @@ export interface PolygonPoint {
   lng: number;
 }
 
+export interface EvacuationRoute {
+  status: 'SUCCESS' | 'BLOCKED' | 'ERROR';
+  message: string;
+  path_nodes?: string[];
+  cost?: number;
+  target_exit?: string;
+}
 export interface VenueZone {
   id: string;
   name: string;
@@ -35,10 +42,11 @@ export interface VenueZone {
   riskScore: number; // 0 - 100
   riskLevel: RiskLevel;
   trend: 'up' | 'down' | 'stable';
-  polygon: [number, number][]; // lat, lng pairs
+ polygon: [number, number][]; // lat, lng pairs
   center: [number, number];
-  gateStatus: 'open' | 'restricted' | 'closed' | 'evacuation';
+  gateStatus: 'open' | 'restricted' | 'closed' | 'evacuation' | 'one_way';
   inferenceMs?: number;
+  evacuationRoute?: EvacuationRoute;
 }
 
 export interface YoloDetection {
