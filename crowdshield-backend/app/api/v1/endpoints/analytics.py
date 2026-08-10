@@ -39,7 +39,7 @@ async def get_historical_analytics(db: AsyncSession = Depends(get_db)):
     # 1. Footfall query (max headcount per hour) - FIXED GROUPING
     footfall_query = (
         select(
-            func.date_trunc(text("'hour'"), TelemetryLog.timestamp).label('hour_ts'),
+            func.strftime('%Y-%m-%d %H:00:00', TelemetryLog.timestamp).label('hour_ts'),
             func.max(TelemetryLog.person_count).label('footfall')
         )
         .where(TelemetryLog.timestamp >= twenty_four_hours_ago)
@@ -52,7 +52,7 @@ async def get_historical_analytics(db: AsyncSession = Depends(get_db)):
     # 2. Alerts query for bottlenecks - FIXED GROUPING
     alerts_query = (
         select(
-            func.date_trunc(text("'hour'"), CrowdAlert.created_at).label('hour_ts'),
+            func.strftime('%Y-%m-%d %H:00:00', CrowdAlert.created_at).label('hour_ts'),
             func.count(CrowdAlert.id).label('bottlenecks')
         )
         .where(CrowdAlert.created_at >= twenty_four_hours_ago)
@@ -66,7 +66,8 @@ async def get_historical_analytics(db: AsyncSession = Depends(get_db)):
     
     for row in footfall_rows:
         if not row.hour_ts: continue
-        hour_str = row.hour_ts.strftime('%H:00')
+        # Since SQLite strftime returns a string, we parse it or use it directly
+        hour_str = row.hour_ts[11:16] if isinstance(row.hour_ts, str) else row.hour_ts.strftime('%H:00')
         hourly_data[hour_str] = {
             "hour": hour_str,
             "footfall": int(row.footfall or 0),
@@ -76,7 +77,7 @@ async def get_historical_analytics(db: AsyncSession = Depends(get_db)):
         
     for row in alerts_rows:
         if not row.hour_ts: continue
-        hour_str = row.hour_ts.strftime('%H:00')
+        hour_str = row.hour_ts[11:16] if isinstance(row.hour_ts, str) else row.hour_ts.strftime('%H:00')
         if hour_str not in hourly_data:
             hourly_data[hour_str] = {
                 "hour": hour_str,
