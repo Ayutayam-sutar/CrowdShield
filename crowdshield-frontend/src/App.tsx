@@ -104,7 +104,17 @@ export default function App() {
   const { isAuthenticated, role, logout } = useAuth();
 
   // State
-  const [viewMode, setViewMode] = useState<ViewMode>('auth');
+  // Read initial viewMode from localStorage so refreshes don't reset your screen
+  const [viewMode, setViewModeState] = useState<ViewMode>(() => {
+    const saved = localStorage.getItem('crowdshield_view_mode');
+    return (saved as ViewMode) || 'auth';
+  });
+
+  // Helper to sync viewMode changes with localStorage
+  const setViewMode = (mode: ViewMode) => {
+    setViewModeState(mode);
+    localStorage.setItem('crowdshield_view_mode', mode);
+  };
   const [adminRoute, setAdminRoute] = useState<AdminRoute>('dashboard');
   const [venues, setVenues] = useState<VenueInfo[]>([]);
   const [selectedVenue, setSelectedVenue] = useState<VenueInfo | null>(null);
@@ -386,23 +396,15 @@ export default function App() {
     }
   }, [isAuthenticated]);
 
-  useEffect(() => {
+useEffect(() => {
     const handleNetworkStatus = (e: Event) => {
       const customEvent = e as CustomEvent;
-      if (customEvent.detail.status === 'offline') {
-        setIsCloudSyncLost(true);
-      } else {
-        setIsCloudSyncLost(false);
-      }
+      setIsCloudSyncLost(customEvent.detail.status === 'offline');
     };
 
     const handleVoiceCommandEvent = (e: Event) => {
       const customEvent = e as CustomEvent;
-      addToastNotification(
-        '🎙️ Voice Command Recognized',
-        customEvent.detail,
-        'info'
-      );
+      addToastNotification('🎙️ Voice Command Recognized', customEvent.detail, 'info');
     };
 
     const handleSystemDispatchEvent = (e: Event) => {
@@ -424,31 +426,62 @@ export default function App() {
       ]);
     };
 
+    // THIS IS THE NEW LISTENER: It catches the WS signal and forces the app into crisis mode!
+    const handleScenarioChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setIsScenarioActive(customEvent.detail.active);
+    };
+
     window.addEventListener('network_status', handleNetworkStatus);
     window.addEventListener('voice_command_executed', handleVoiceCommandEvent);
     window.addEventListener('system_dispatch', handleSystemDispatchEvent);
+    window.addEventListener('scenario_state_change', handleScenarioChange);
 
     return () => {
       window.removeEventListener('network_status', handleNetworkStatus);
       window.removeEventListener('voice_command_executed', handleVoiceCommandEvent);
       window.removeEventListener('system_dispatch', handleSystemDispatchEvent);
+      window.removeEventListener('scenario_state_change', handleScenarioChange);
     };
-  }, []);
+  }, []); 
 
   // Handlers
-  const handleTriggerScenario = () => {
-    setIsScenarioActive(true);
+  const handleTriggerScenario = async () => {
+    setIsScenarioActive(true); // Optimistic local update
+    try {
+      // Tell the backend to broadcast the stampede globally
+      await api.post('/interventions/scenario', { action: 'trigger' });
+      addToastNotification(
+        'SYSTEM OVERRIDE', 
+        'Global Stampede Scenario triggered. Broadcasting to all Citizen devices.', 
+        'critical'
+      );
+    } catch (err) {
+      console.error('Failed to trigger scenario on backend:', err);
+    }
   };
 
-  const handleResetScenario = () => {
-    setIsScenarioActive(false);
+  const handleResetScenario = async () => {
+    setIsScenarioActive(false); // Optimistic local update
+    try {
+      // Tell the backend to stand down
+      await api.post('/interventions/scenario', { action: 'reset' });
+      addToastNotification(
+        'SYSTEM NORMAL', 
+        'Scenario reset. Returning to standard telemetry.', 
+        'info'
+      );
+    } catch (err) {
+      console.error('Failed to reset scenario on backend:', err);
+    }
+
     api.get('/zones').then((res) => {
       const rawZones = Array.isArray(res.data) ? res.data : [];
       setZones(rawZones.map(mapBackendZoneToFrontend));
     }).catch((err) => {
       console.error('[API] Failed to reload zones after reset:', err);
     });
-  };
+  }; 
 
   const handleToggleNetworkMode = () => {
     setNetworkMode((prev) => (prev === 'cloud' ? 'edge' : 'cloud'));
@@ -539,17 +572,24 @@ export default function App() {
   if (role === 'CITIZEN' || role === 'VOLUNTEER' || viewMode === 'citizen') {
     return (
       <div className="min-h-screen bg-[#FAFAF7]">
+        {/* ADD THIS SO CITIZENS SEE WEBSOCKET ALERTS */}
+        <ToastContainer
+          toasts={toasts}
+          onDismiss={handleDismissToast}
+          onInspectAlert={(zoneId) => setViewMode('admin')} 
+        />
+        
         <CitizenPortalView
           reports={citizenReports}
           onSubmitReport={handleAddCitizenReport}
           isScenarioActive={isScenarioActive}
           onLogout={logout}
           alerts={alerts}
+          zones={zones} 
         />
         <RoleSwitcher
           currentView="citizen"
           onSwitchView={(mode) => {
-            // Can't switch to admin if not admin
             if (role !== 'ADMIN' && mode === 'admin') return;
             setViewMode(mode);
           }}
