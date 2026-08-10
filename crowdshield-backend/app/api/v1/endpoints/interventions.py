@@ -17,6 +17,8 @@ class InterventionRequest(BaseModel):
     actionText: Optional[str] = None
     zoneId: Optional[str] = "soa-iter-01"
     impact: Optional[str] = "Immediate risk mitigation"
+    language: Optional[str] = "en"
+    announcementText: Optional[str] = None
 
 class ScenarioRequest(BaseModel):
     action: str  # Expects 'trigger' or 'reset'
@@ -48,13 +50,15 @@ async def dispatch_intervention(
 
     await db.commit()
 
-    # Broadcast real-time dispatch event over WebSockets
+    # Broadcast real-time dispatch event over WebSockets to ALL devices
     ws_payload = {
         "event": "INTERVENTION_DISPATCHED",
         "actionText": target_action,
         "zoneId": target_zone_id,
         "zoneName": zone_name,
         "impact": payload.impact,
+        "language": payload.language or "en",
+        "announcementText": payload.announcementText,
         "status": "DISPATCHED",
         "message": f"CRITICAL: {target_action} deployed for {zone_name}."
     }

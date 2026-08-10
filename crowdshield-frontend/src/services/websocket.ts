@@ -23,6 +23,8 @@ export interface TelemetryEvent {
   actionText?: string;
   impact?: string;
   zoneName?: string;
+  announcementText?: string; // Add this line
+  language?: string;
 }
 
 type MessageCallback = (data: TelemetryEvent) => void;

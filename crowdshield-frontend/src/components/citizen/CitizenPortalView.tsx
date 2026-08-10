@@ -25,6 +25,7 @@ import { speakAnnouncement } from '../../utils/speech';
 import { VolunteerTasksView } from './VolunteerTasksView';
 import { useAuth } from '../../context/AuthContext';
 import { checkGeofenceIntersections, GeofenceZone } from '../../utils/geofence';
+import { wsService } from '../../services/websocket';
 
 interface CitizenPortalViewProps {
   reports: CitizenReport[];
@@ -48,14 +49,13 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
   const [selectedLang, setSelectedLang] = useState<SupportedLanguage>('en');
   const [reportCategory, setReportCategory] = useState<CitizenReport['category']>('Overcrowding');
   
-  // Real ITER campus zones fallback list
   const activeCampusZones = zones.length > 0 ? zones : [
-    { id: 'gate_1', name: 'Main Gate', center: [20.2515, 85.7980] },
-    { id: 'zone_admin_block_rd', name: 'Administrative Block Road', center: [20.2508, 85.7984] },
-    { id: 'zone_library_roundabout', name: 'Central Library Roundabout', center: [20.2496, 85.7988] },
-    { id: 'zone_sports_complex_rd', name: 'Sports Complex / Physics Dept Road', center: [20.2485, 85.7980] },
-    { id: 'gate_2', name: 'EV Charging / Food Court Junction', center: [20.2475, 85.7975] },
-    { id: 'zone_e_block_lawn_rd', name: 'E Block Lawn / F Block Road', center: [20.2488, 85.7995] }
+    { id: 'gate_1', name: 'Main Gate', center: [20.2512, 85.8018] },
+    { id: 'zone_admin_block_rd', name: 'Administrative Block Road', center: [20.2503, 85.8008] },
+    { id: 'zone_library_roundabout', name: 'Central Library Roundabout', center: [20.2494, 85.8000] },
+    { id: 'zone_sports_complex_rd', name: 'Sports Complex Road', center: [20.2480, 85.7990] },
+    { id: 'gate_2', name: 'EV Charging Junction (Gate 2)', center: [20.2472, 85.7983] },
+    { id: 'zone_e_block_lawn_rd', name: 'E Block Lawn / F Block Road', center: [20.2488, 85.8008] }
   ];
 
   const [reportLocation, setReportLocation] = useState<string>(activeCampusZones[0].name);
@@ -66,23 +66,42 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
-  // Determine highest risk zone dynamically from telemetry
+  // Dynamic Live Announcement state driven by Admin Dispatches over WebSocket
+  const [liveAnnouncementText, setLiveAnnouncementText] = useState<string | null>(null);
+
   const highestRiskZone = zones && zones.length > 0 
     ? [...zones].sort((a, b) => (b.riskScore || 0) - (a.riskScore || 0))[0]
     : null;
 
-  const currentZoneName = highestRiskZone?.name || activeCampusZones[1]?.name || 'ITER Campus';
+  const currentZoneName = highestRiskZone?.name || activeCampusZones[2]?.name || 'Central Library Roundabout';
 
-// Geolocation & Geofence Tracking (Supports Testing & Live Modes)
+  // WebSocket Listener: Triggers live audio speech and banner updates on Citizen device!
   useEffect(() => {
-    // 🚨 HACKATHON DEMO TOGGLE 🚨
-    // TRUE = Teleports you to ITER Library for testing from home (Bomikhal)
-    // FALSE = Uses actual live GPS tracking for the final presentation
+    const unsubscribe = wsService.subscribe((data) => {
+      if (data.event === 'INTERVENTION_DISPATCHED') {
+        const textToAnnounce = data.announcementText || data.message || data.actionText || '';
+        const langToUse = (data.language as SupportedLanguage) || selectedLang || 'en';
+
+        if (textToAnnounce) {
+          setLiveAnnouncementText(textToAnnounce);
+          setIsPlayingAudio(true);
+          speakAnnouncement(textToAnnounce, langToUse);
+
+          const durationMs = Math.max(textToAnnounce.length * 75, 4000);
+          setTimeout(() => setIsPlayingAudio(false), durationMs);
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [selectedLang]);
+
+  // Demo Geolocation & Geofence Proximity Warning
+  useEffect(() => {
     const isTestingMode = true; 
 
     if (isTestingMode) {
-      // --- MOCK TESTING MODE ---
-      const demoLat = 20.2495;
+      const demoLat = 20.2494;
       const demoLng = 85.8000;
       setUserLocation({ lat: demoLat, lng: demoLng });
 
@@ -90,8 +109,8 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
         const gfZones: GeofenceZone[] = activeCampusZones.map((z: any) => ({
           id: z.id,
           name: z.name,
-          centerLat: z.center?.[0] || z.center_lat || 20.2496,
-          centerLng: z.center?.[1] || z.center_lng || 85.7988,
+          centerLat: z.center?.[0] || z.center_lat || 20.2494,
+          centerLng: z.center?.[1] || z.center_lng || 85.8000,
           radiusMeters: 60,
           riskLevel: z.id === 'zone_library_roundabout' ? 'critical' : 'warning'
         }));
@@ -107,55 +126,17 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
       } else {
         setGeofenceWarning(null);
       }
-    } else {
-      // --- LIVE PRODUCTION MODE ---
-      if (!('geolocation' in navigator)) return;
-
-      const watchId = navigator.geolocation.watchPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          setUserLocation({ lat: latitude, lng: longitude });
-
-          if (isScenarioActive) {
-            const gfZones: GeofenceZone[] = activeCampusZones.map((z: any) => ({
-              id: z.id,
-              name: z.name,
-              centerLat: z.center?.[0] || z.center_lat || 20.2496,
-              centerLng: z.center?.[1] || z.center_lng || 85.7988,
-              radiusMeters: 60,
-              riskLevel: z.id === 'zone_library_roundabout' ? 'critical' : 'warning'
-            }));
-
-            const intersections = checkGeofenceIntersections(latitude, longitude, gfZones);
-            if (intersections.length > 0) {
-              const zoneName = intersections[0].name;
-              setGeofenceWarning(`CRITICAL CONGESTION AHEAD: You are approaching ${zoneName}. Divert immediately via Gate 2 (EV Charging Junction).`);
-              if ('vibrate' in navigator) navigator.vibrate([500, 250, 500]);
-            } else {
-              setGeofenceWarning(null);
-            }
-          } else {
-            setGeofenceWarning(null);
-          }
-        },
-        (error) => console.error("Error watching live position", error),
-        { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
-      );
-
-      return () => navigator.geolocation.clearWatch(watchId);
     }
   }, [isScenarioActive, zones, activeCampusZones]);
 
-  // Offline BLE Mesh Relay State
   const [bleMeshActive, setBleMeshActive] = useState(true);
-
-  // Photo / Video Media Attachment State
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
   const [mediaFileName, setMediaFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const translation = BHASHINI_TRANSLATIONS[selectedLang] || BHASHINI_TRANSLATIONS.en;
+  const activeAnnouncementText = liveAnnouncementText || translation.announcementText;
 
   const handleSimulateSampleImage = () => {
     setMediaUrl('https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=80');
@@ -187,8 +168,8 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
       photoUrl: mediaType === 'image' ? (mediaUrl || undefined) : undefined,
       videoUrl: mediaType === 'video' ? (mediaUrl || undefined) : undefined,
       mediaType: mediaType || undefined,
-      latitude: userLocation?.lat || 20.2496,
-      longitude: userLocation?.lng || 85.7988
+      latitude: userLocation?.lat || 20.2494,
+      longitude: userLocation?.lng || 85.8000
     } as any);
 
     setReportDesc('');
@@ -206,8 +187,8 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
 
   const playBhashiniTTS = () => {
     setIsPlayingAudio(true);
-    speakAnnouncement(translation.announcementText, selectedLang);
-    const estimatedMs = Math.max(translation.announcementText.length * 70, 3000);
+    speakAnnouncement(activeAnnouncementText, selectedLang);
+    const estimatedMs = Math.max(activeAnnouncementText.length * 75, 3000);
     setTimeout(() => setIsPlayingAudio(false), estimatedMs);
   };
 
@@ -260,7 +241,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          {/* Language Selector */}
           <div className="flex items-center gap-1 bg-white/10 px-2 sm:px-2.5 py-1 rounded-xl border border-white/15 hover:bg-white/15 transition-colors">
             <Languages className="w-3.5 h-3.5 text-[#2C7BE5] shrink-0" />
             <select
@@ -288,7 +268,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
         </div>
       </header>
 
-      {/* Main Mode Navigation Bar */}
+      {/* Main Navigation Bar */}
       <div className="bg-white border-b border-[#E7E5DD] px-3.5 sm:px-6 py-2 flex items-center gap-2 sm:gap-3 shadow-xs">
         <button
           onClick={() => setActiveTab('feed')}
@@ -316,7 +296,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
         </button>
       </div>
 
-      {/* Main Screen Content */}
+      {/* Main Content */}
       <main className="p-3.5 sm:p-6 flex flex-col gap-4 sm:gap-5 flex-1 pb-28 sm:pb-32">
         {activeTab === 'drill' ? (
           <EvacuationDrillMode />
@@ -329,26 +309,26 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                 </div>
               )}
               
-              {/* Urgent Live Broadcast Banner */}
+              {/* Urgent Live Broadcast Banner (Driven dynamically by WS!) */}
               <div className={`p-4 rounded-2xl border flex flex-col justify-between gap-3 shadow-xs lg:col-span-2 transition-all ${
-                isScenarioActive
+                isScenarioActive || liveAnnouncementText
                   ? 'bg-[#FF3B5C]/10 border-[#FF3B5C]/40 text-[#151726]'
                   : 'bg-white border-[#E7E5DD] text-[#151726]'
               }`}>
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
-                    <BellRing className={`w-4 h-4 shrink-0 ${isScenarioActive ? 'text-[#FF3B5C] animate-bounce' : 'text-[#2C7BE5]'}`} />
+                    <BellRing className={`w-4 h-4 shrink-0 ${isScenarioActive || liveAnnouncementText ? 'text-[#FF3B5C] animate-bounce' : 'text-[#2C7BE5]'}`} />
                     <span className="font-heading font-bold text-xs uppercase tracking-wider truncate">
-                      {isScenarioActive ? 'EVACUATE NOW' : 'SAFETY UPDATE'}
+                      {isScenarioActive ? 'EVACUATE NOW' : liveAnnouncementText ? 'LIVE EMERGENCY DISPATCH' : 'SAFETY UPDATE'}
                     </span>
                   </div>
                   <span className="text-[10px] font-mono-num font-semibold text-[#5B5F73] bg-[#FAFAF7] px-2 py-0.5 rounded-md border border-[#E7E5DD] shrink-0">
-                    Official Announcement
+                    Official Command Stream
                   </span>
                 </div>
 
                 <p className="text-xs font-medium leading-relaxed bg-[#FAFAF7] p-3 rounded-xl border border-[#E7E5DD]/70 text-[#151726]">
-                  "{translation.announcementText}"
+                  "{activeAnnouncementText}"
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-2">
@@ -357,7 +337,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                     className="flex-1 py-2.5 bg-[#2C7BE5] hover:bg-[#2066c6] text-white rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-[0.98]"
                   >
                     <Volume2 className={`w-4 h-4 ${isPlayingAudio ? 'animate-pulse text-[#22D3A6]' : ''}`} />
-                    <span>{isPlayingAudio ? 'Playing Audio...' : `Listen in ${translation.langName}`}</span>
+                    <span>{isPlayingAudio ? 'Broadcasting Speech...' : `Listen in ${translation.langName}`}</span>
                   </button>
 
                   <button
@@ -370,7 +350,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                 </div>
               </div>
 
-              {/* Offline Communication Status Bar */}
+              {/* Offline Mesh Bar */}
               <div className="bg-[#151726] border border-white/10 rounded-2xl p-4 text-white shadow-xs flex flex-col justify-between gap-3">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2.5 min-w-0">
@@ -488,7 +468,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
         )}
       </main>
 
-      {/* Bottom Floating SOS Hotline Bar */}
+      {/* Bottom Floating SOS Bar */}
       <div className="fixed bottom-0 left-0 right-0 w-full max-w-5xl mx-auto p-3 sm:p-4 bg-[#151726] text-white border-t border-white/10 z-40 flex items-center justify-between shadow-2xl px-4 sm:px-6">
         <div className="flex items-center gap-2.5 min-w-0">
           <PhoneCall className="w-4 h-4 text-[#FF3B5C] animate-pulse shrink-0" />
@@ -503,7 +483,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
             href="tel:112"
             className="px-2.5 sm:px-3.5 py-1.5 bg-[#FF3B5C] hover:bg-[#e02e4d] text-white rounded-xl font-heading font-bold text-xs shadow-md transition-all active:scale-95 flex items-center gap-1"
           >
-            <span>📞ASHUTOSH <span className="hidden sm:inline">(Police)</span></span>
+            <span>📞 112 <span className="hidden sm:inline">(Police)</span></span>
           </a>
 
           <a
@@ -589,7 +569,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                   />
                 </div>
 
-                {/* Media Attachment Simulation UI */}
                 <div className="flex flex-col gap-2">
                   {mediaUrl ? (
                     <div className="relative rounded-xl overflow-hidden border border-[#E7E5DD] bg-black h-32">
