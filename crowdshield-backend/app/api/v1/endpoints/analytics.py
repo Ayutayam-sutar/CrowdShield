@@ -161,6 +161,7 @@ async def generate_ai_summary(incident_id: str, db: AsyncSession = Depends(get_d
 
 class AuditLogResponse(BaseModel):
     id: str
+    alertId: str
     timestamp: str
     zone: str
     peak_density: str
@@ -198,6 +199,7 @@ async def get_audit_logs(db: AsyncSession = Depends(get_db)):
             
         audit_logs.append({
             "id": short_id,
+            "alertId": alert_id_str,
             "timestamp": alert.created_at.strftime("%H:%M:%S") if alert.created_at else "Unknown",
             "zone": zone_name or str(alert.zone_id) or "Unknown Zone",
             "peak_density": f"{alert.density:.1f} p/m²" if alert.density else "N/A",

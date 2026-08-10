@@ -1,148 +1,111 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  BarChart3, 
-  Download, 
-  TrendingUp, 
-  AlertOctagon, 
-  CheckCircle2, 
-  FileSpreadsheet, 
-  Calendar,
-  Clock,
-  Sparkles,
-  X,
-  Copy,
-  Check,
-  FileText
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Download, AlertTriangle, CheckCircle2, Sparkles, X, Copy, Check, FileText, RefreshCw
 } from 'lucide-react';
-import { 
-  BarChart, 
-  Bar, 
-  AreaChart,
-  Area,
-  XAxis, 
-  YAxis, 
-  Tooltip, 
-  ResponsiveContainer, 
-  CartesianGrid, 
-  LineChart, 
-  Line 
+import {
+  BarChart, Bar, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer
 } from 'recharts';
+import api from '../../utils/api';
 
-export const AnalyticsView: React.FC<{ zones?: any[] }> = ({ zones = [] }) => {
-  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+interface HistoricalPoint { hour: string; footfall: number; bottlenecks: number; }
+interface AuditLog {
+  id: string;
+  alertId: string; // requires the backend patch above
+  timestamp: string;
+  zone: string;
+  peak_density: string;
+  intervention: string;
+  resolution_time: string;
+}
+
+type FetchState<T> = { data: T | null; loading: boolean; error: string | null };
+
+export const AnalyticsView: React.FC = () => {
+  const [history, setHistory] = useState<FetchState<HistoricalPoint[]>>({ data: null, loading: true, error: null });
+  const [logs, setLogs] = useState<FetchState<AuditLog[]>>({ data: null, loading: true, error: null });
+
+  const [summaryModal, setSummaryModal] = useState<{ alertId: string; text: string; loading: boolean; error: string | null } | null>(null);
   const [copied, setCopied] = useState(false);
-  const [aiSummary, setAiSummary] = useState<string>('');
-  const [isLoadingSummary, setIsLoadingSummary] = useState<boolean>(false);
-  const [historicalData, setHistoricalData] = useState<any[]>([]);
-  const [auditLogs, setAuditLogs] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isLoadingLogs, setIsLoadingLogs] = useState<boolean>(true);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const api = (await import('../../utils/api')).default;
-        const [historyRes, logsRes] = await Promise.all([
-          api.get('/analytics/history'),
-          api.get('/analytics/audit-logs')
-        ]);
-        
-        setHistoricalData(historyRes.data);
-        if (logsRes.data && logsRes.data.length > 0) {
-          setAuditLogs(logsRes.data);
-        } else {
-          setAuditLogs([
-            { id: '#LOG-4482', timestamp: '18:41:22', zone: 'West Exit Gate (z-03)', peak_density: '4.80 p/m²', intervention: 'Aux Gate 4 Unlocked + Bhashini PA', resolution_time: '2.4 mins' },
-            { id: '#LOG-4410', timestamp: '14:30:15', zone: 'North Plaza Entrance', peak_density: '3.60 p/m²', intervention: 'Rerouted inflow to Sector Delta', resolution_time: '4.1 mins' },
-            { id: '#LOG-4390', timestamp: '09:12:05', zone: 'South Concourse Ramp', peak_density: '3.10 p/m²', intervention: 'Security Guard Squad Dispatched', resolution_time: '1.8 mins' }
-          ]);
-        }
-      } catch (err) {
-        console.error("Failed to fetch analytics data", err);
-        setAuditLogs([
-          { id: '#LOG-4482', timestamp: '18:41:22', zone: 'West Exit Gate (z-03)', peak_density: '4.80 p/m²', intervention: 'Aux Gate 4 Unlocked + Bhashini PA', resolution_time: '2.4 mins' },
-          { id: '#LOG-4410', timestamp: '14:30:15', zone: 'North Plaza Entrance', peak_density: '3.60 p/m²', intervention: 'Rerouted inflow to Sector Delta', resolution_time: '4.1 mins' },
-          { id: '#LOG-4390', timestamp: '09:12:05', zone: 'South Concourse Ramp', peak_density: '3.10 p/m²', intervention: 'Security Guard Squad Dispatched', resolution_time: '1.8 mins' }
-        ]);
-      } finally {
-        setIsLoading(false);
-        setIsLoadingLogs(false);
-      }
-    };
-    fetchData();
+  const loadHistory = useCallback(async () => {
+    setHistory((s) => ({ ...s, loading: true, error: null }));
+    try {
+      const res = await api.get<HistoricalPoint[]>('/analytics/history');
+      setHistory({ data: res.data, loading: false, error: null });
+    } catch (err: any) {
+      setHistory({ data: null, loading: false, error: err?.response?.data?.detail || 'Failed to load historical analytics.' });
+    }
   }, []);
 
+  const loadLogs = useCallback(async () => {
+    setLogs((s) => ({ ...s, loading: true, error: null }));
+    try {
+      const res = await api.get<AuditLog[]>('/analytics/audit-logs');
+      setLogs({ data: res.data, loading: false, error: null });
+    } catch (err: any) {
+      setLogs({ data: null, loading: false, error: err?.response?.data?.detail || 'Failed to load audit logs.' });
+    }
+  }, []);
+
+  useEffect(() => { loadHistory(); loadLogs(); }, [loadHistory, loadLogs]);
+
   const handleExportCSV = () => {
-    const csvContent = "data:text/csv;charset=utf-8," 
+    if (!logs.data || logs.data.length === 0) return;
+    const csvContent = "data:text/csv;charset=utf-8,"
       + "Log ID,Timestamp,Zone,Peak Density,Intervention Applied,Resolution Time\n"
-      + auditLogs.map(e => `"${e.id}","${e.timestamp}","${e.zone}","${e.peak_density}","${e.intervention}","${e.resolution_time}"`).join("\n");
-    const encodedUri = encodeURI(csvContent);
+      + logs.data.map(e => `"${e.id}","${e.timestamp}","${e.zone}","${e.peak_density}","${e.intervention}","${e.resolution_time}"`).join("\n");
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "CrowdShield_Incident_Report.csv");
+    link.setAttribute("href", encodeURI(csvContent));
+    link.setAttribute("download", `CrowdShield_Incident_Report_${new Date().toISOString().slice(0,10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  const handleGenerateSummary = async (alertId?: string) => {
-    setIsAiModalOpen(true);
-    setIsLoadingSummary(true);
-    setAiSummary('');
-    
-    let targetId = alertId;
-    if (!targetId || targetId === "LOG-4482") {
-      // Find the real ID from the most recent audit log if "LOG-4482" dummy is passed
-      targetId = auditLogs.length > 0 ? auditLogs[0].id.replace('#LOG-', '') : "dummy_id";
-    }
-    
+  const handleGenerateSummary = async (log: AuditLog) => {
+    setSummaryModal({ alertId: log.alertId, text: '', loading: true, error: null });
     try {
-      const api = (await import('../../utils/api')).default;
-      const response = await api.post(`/analytics/generate-summary/${targetId}`);
-      setAiSummary(response.data.summary);
+      const response = await api.post(`/analytics/generate-summary/${log.alertId}`);
+      setSummaryModal({ alertId: log.alertId, text: response.data.summary, loading: false, error: null });
     } catch (err: any) {
-      console.warn("Backend LLM failed or missing API keys. Falling back to edge-generated simulation.");
-      // Simulate LLM typing delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const fallbackReport = `**Incident Executive Summary: CG-8924**\n\n**Overview:** \nAt 18:41 IST, the YOLOv11 Edge Vision pipeline detected a critical crowd density surge (4.80 p/m²) at the West Exit Gate. The flow egress rate dropped to 10 p/min, indicating a severe physical bottleneck.\n\n**Action Taken:** \nThe A* Spatial Routing Engine automatically recalculated the safest evacuation path. The operator executed a remote override to unlock Auxiliary Gate 4 and deployed a localized Bhashini PA broadcast in Hindi and Odia to safely divert the incoming crowd.\n\n**Resolution:** \nThe intervention relieved physical pressure within 2.4 minutes. Sector density stabilized to a safe 0.4 p/m². No injuries reported. System returned to optimal state.`;
-      
-      setAiSummary(fallbackReport);
-    } finally {
-      setIsLoadingSummary(false);
+      // Real failure — never fall back to a fabricated summary for an audit-facing report.
+      const detail = err?.response?.status === 401 || err?.response?.status === 403
+        ? 'Admin authentication required to generate this summary.'
+        : err?.response?.data?.detail || 'Summary generation failed. The AI backend may be unavailable.';
+      setSummaryModal({ alertId: log.alertId, text: '', loading: false, error: detail });
     }
   };
 
-  const handleCopyAiSummary = () => {
-    navigator.clipboard.writeText(aiSummary);
+  const handleCopySummary = () => {
+    if (!summaryModal?.text) return;
+    navigator.clipboard.writeText(summaryModal.text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const chartData = history.data ?? [];
+  const peakFootfall = chartData.length ? Math.max(...chartData.map(d => d.footfall)) : 0;
+  const maxBottlenecks = chartData.length ? Math.max(...chartData.map(d => d.bottlenecks)) : 0;
+
   return (
     <div className="p-6 flex flex-col gap-6 font-body text-white">
-      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-heading font-bold text-2xl tracking-tight">
-            Analytics & Historic Incident Intelligence
-          </h1>
-          <p className="text-xs text-white/50 mt-1">
-            Aggregate footfall trends, bottleneck frequency logs, and downloadable compliance audit exports.
-          </p>
+          <h1 className="font-heading font-bold text-2xl tracking-tight">Analytics & Historic Incident Intelligence</h1>
+          <p className="text-xs text-white/50 mt-1">Live footfall trends, bottleneck frequency, and audit exports — last 24 hours.</p>
         </div>
-
         <div className="flex items-center gap-3">
           <button
-            onClick={() => handleGenerateSummary()}
-            className="px-4 py-2 bg-[#7C6CFF] hover:bg-[#6856FF] text-white rounded-xl font-heading font-bold text-xs flex items-center gap-2 shadow-md transition-colors cursor-pointer"
+            onClick={() => { loadHistory(); loadLogs(); }}
+            className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl font-heading font-bold text-xs flex items-center gap-2 transition-colors cursor-pointer"
           >
-            <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
-            <span>Generate AI Summary</span>
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Refresh</span>
           </button>
           <button
             onClick={handleExportCSV}
-            className="px-4 py-2 bg-[#2C7BE5] hover:bg-[#2066c6] text-white rounded-xl font-heading font-bold text-xs flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
+            disabled={!logs.data || logs.data.length === 0}
+            className="px-4 py-2 bg-[#2C7BE5] hover:bg-[#2066c6] disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl font-heading font-bold text-xs flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
           >
             <Download className="w-4 h-4" />
             <span>Export CSV Report</span>
@@ -150,41 +113,34 @@ export const AnalyticsView: React.FC<{ zones?: any[] }> = ({ zones = [] }) => {
         </div>
       </div>
 
-      {/* Grid of Analytics Charts */}
-      {isLoading ? (
-        <div className="flex items-center justify-center h-64 bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl shadow-2xl">
+      {/* Historical charts */}
+      {history.loading ? (
+        <div className="flex items-center justify-center h-64 bg-white/5 border border-white/10 rounded-2xl">
           <div className="flex flex-col items-center gap-3 text-[#7C6CFF]">
-            <div className="w-8 h-8 border-4 border-current border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-8 h-8 border-4 border-current border-t-transparent rounded-full animate-spin" />
             <span className="font-heading font-bold animate-pulse text-sm">Fetching telemetry history...</span>
           </div>
         </div>
+      ) : history.error ? (
+        <div className="bg-[#FF3B5C]/10 border border-[#FF3B5C]/30 rounded-2xl p-6 flex items-center gap-3 text-[#FF3B5C] text-sm">
+          <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+          <span>{history.error}</span>
+          <button onClick={loadHistory} className="ml-auto px-3 py-1.5 bg-[#FF3B5C]/20 hover:bg-[#FF3B5C]/30 rounded-lg text-xs font-bold">Retry</button>
+        </div>
+      ) : chartData.length === 0 ? (
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-8 text-center text-sm text-white/50">
+          No telemetry recorded in the last 24 hours yet.
+        </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {(() => {
-            const avgDensity = zones.length > 0 ? zones.reduce((acc, z) => acc + z.density, 0) / zones.length : 2.5;
-            const chartData = historicalData.length > 0 ? historicalData : Array.from({length: 10}).map((_, i) => ({
-              hour: `${i + 8}:00`,
-              footfall: Math.round(1500 * (avgDensity / 2.5) + Math.random() * 200),
-              bottlenecks: avgDensity > 3.5 ? Math.floor(Math.random() * 4) + 1 : 0
-            }));
-            return (
-              <>
-          {/* Footfall Trend */}
           <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-2xl flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-heading font-bold text-base text-white">
-                  Hourly Footfall Surge Pattern
-                </h3>
-                <p className="text-xs text-white/50">
-                  Aggregated entrance counts across all 12 venue turnstiles.
-                </p>
+                <h3 className="font-heading font-bold text-base text-white">Hourly Footfall Surge Pattern</h3>
+                <p className="text-xs text-white/50">Max headcount per hour, from live TelemetryLog.</p>
               </div>
-              <span className="font-mono-num text-xs font-bold text-[#06b6d4]">
-                Peak: {Math.max(0, ...chartData.map(d => d.footfall)).toLocaleString()}
-              </span>
+              <span className="font-mono-num text-xs font-bold text-[#06b6d4]">Peak: {peakFootfall.toLocaleString()}</span>
             </div>
-  
             <div className="h-64 w-full mt-2">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -202,23 +158,15 @@ export const AnalyticsView: React.FC<{ zones?: any[] }> = ({ zones = [] }) => {
               </ResponsiveContainer>
             </div>
           </div>
-  
-          {/* Bottlenecks by Hour */}
+
           <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-2xl flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-heading font-bold text-base text-white">
-                  Bottleneck Frequency Incident Bar
-                </h3>
-                <p className="text-xs text-white/50">
-                  Number of detected crush risk warnings by hour.
-                </p>
+                <h3 className="font-heading font-bold text-base text-white">Bottleneck Frequency</h3>
+                <p className="text-xs text-white/50">Warning/critical alerts opened per hour.</p>
               </div>
-              <span className="font-mono-num text-xs font-bold text-[#f43f5e]">
-                Max: {Math.max(0, ...chartData.map(d => d.bottlenecks))} Bottlenecks
-              </span>
+              <span className="font-mono-num text-xs font-bold text-[#f43f5e]">Max: {maxBottlenecks}</span>
             </div>
-  
             <div className="h-64 w-full mt-2">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -230,19 +178,14 @@ export const AnalyticsView: React.FC<{ zones?: any[] }> = ({ zones = [] }) => {
               </ResponsiveContainer>
             </div>
           </div>
-              </>
-            );
-          })()}
         </div>
       )}
 
-      {/* Audit Log Table */}
+      {/* Audit log */}
       <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-2xl flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-heading font-bold text-base text-white">
-            Past Incident & Dispatch Audit Log
-          </h3>
-          <span className="text-xs text-white/50 font-mono-num">Showing last 4 entries</span>
+          <h3 className="font-heading font-bold text-base text-white">Past Incident & Dispatch Audit Log</h3>
+          <span className="text-xs text-white/50 font-mono-num">{logs.data ? `${logs.data.length} entries` : ''}</span>
         </div>
 
         <div className="overflow-x-auto">
@@ -255,19 +198,20 @@ export const AnalyticsView: React.FC<{ zones?: any[] }> = ({ zones = [] }) => {
                 <th className="py-3 px-3">Peak Density</th>
                 <th className="py-3 px-3">Intervention Applied</th>
                 <th className="py-3 px-3">Resolution Time</th>
+                <th className="py-3 px-3 text-right">AI Summary</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/10">
-              {isLoadingLogs ? (
-                <tr>
-                  <td colSpan={6} className="py-6 text-center text-white/50">Loading audit logs...</td>
-                </tr>
-              ) : auditLogs.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-6 text-center text-white/50">No past incidents found.</td>
-                </tr>
+              {logs.loading ? (
+                <tr><td colSpan={7} className="py-6 text-center text-white/50">Loading audit logs...</td></tr>
+              ) : logs.error ? (
+                <tr><td colSpan={7} className="py-6 text-center text-[#FF3B5C]">
+                  {logs.error} <button onClick={loadLogs} className="underline ml-2">Retry</button>
+                </td></tr>
+              ) : !logs.data || logs.data.length === 0 ? (
+                <tr><td colSpan={7} className="py-6 text-center text-white/50">No past incidents found.</td></tr>
               ) : (
-                auditLogs.map((log) => (
+                logs.data.map((log) => (
                   <tr key={log.id} className="hover:bg-white/5 transition-colors">
                     <td className="py-3 px-3 font-mono-num font-bold text-white">{log.id}</td>
                     <td className="py-3 px-3 font-mono-num text-white">{log.timestamp}</td>
@@ -275,6 +219,14 @@ export const AnalyticsView: React.FC<{ zones?: any[] }> = ({ zones = [] }) => {
                     <td className="py-3 px-3 font-mono-num text-[#f43f5e] font-bold">{log.peak_density}</td>
                     <td className="py-3 px-3 text-white">{log.intervention}</td>
                     <td className="py-3 px-3 font-mono-num text-[#22D3A6] font-bold">{log.resolution_time}</td>
+                    <td className="py-3 px-3 text-right">
+                      <button
+                        onClick={() => handleGenerateSummary(log)}
+                        className="px-2.5 py-1 bg-[#7C6CFF]/20 hover:bg-[#7C6CFF] border border-[#7C6CFF]/40 text-white rounded-lg text-[11px] font-bold flex items-center gap-1 ml-auto"
+                      >
+                        <Sparkles className="w-3 h-3" /> Summarize
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}
@@ -283,69 +235,55 @@ export const AnalyticsView: React.FC<{ zones?: any[] }> = ({ zones = [] }) => {
         </div>
       </div>
 
-      {/* Gen-AI Incident Summary Modal (Beacon Violet Styling) */}
-      {isAiModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-body animate-fadeIn">
-          <div className="bg-[#151726] border-2 border-[#7C6CFF] text-white rounded-2xl shadow-2xl max-w-xl w-full overflow-hidden flex flex-col gap-4 p-6 relative">
-            {/* Header */}
+      {/* AI Summary Modal */}
+      {summaryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-body">
+          <div className="bg-[#151726] border-2 border-[#7C6CFF] text-white rounded-2xl shadow-2xl max-w-xl w-full overflow-hidden flex flex-col gap-4 p-6">
             <div className="flex items-center justify-between border-b border-white/10 pb-4">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-[#7C6CFF]/20 text-[#7C6CFF] rounded-xl border border-[#7C6CFF]/30">
-                  <Sparkles className="w-5 h-5 animate-pulse text-amber-300" />
+                  <Sparkles className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-heading font-bold text-base text-white tracking-wide">
-                    Gen-AI Post-Incident Executive Summary
-                  </h3>
-                  <p className="text-[11px] text-white/60 font-mono-num">
-                    Generated via Sentinel LLM Node · Ref: CG-8924
-                  </p>
+                  <h3 className="font-heading font-bold text-base text-white">Gen-AI Post-Incident Summary</h3>
+                  <p className="text-[11px] text-white/60 font-mono-num">Alert {summaryModal.alertId}</p>
                 </div>
               </div>
-
-              <button
-                onClick={() => setIsAiModalOpen(false)}
-                className="p-1.5 rounded-xl hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer"
-              >
+              <button onClick={() => setSummaryModal(null)} className="p-1.5 rounded-xl hover:bg-white/10 text-white/60">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Modal Body - Post-Incident Report */}
-            <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col gap-3 font-mono-num text-xs leading-relaxed text-gray-200">
-              <div className="flex items-center justify-between text-[11px] border-b border-white/10 pb-2 text-white/70">
-                <span className="flex items-center gap-1.5 text-[#22D3A6] font-bold">
-                  <FileText className="w-3.5 h-3.5" /> Incident Report
-                </span>
+            <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col gap-3 font-mono-num text-xs leading-relaxed text-gray-200 min-h-[120px]">
+              <div className="flex items-center gap-1.5 text-[#22D3A6] font-bold text-[11px] border-b border-white/10 pb-2">
+                <FileText className="w-3.5 h-3.5" /> Incident Report
               </div>
-
-              <div className="space-y-2 text-[#E2E8F0]">
-                {isLoadingSummary ? (
-                  <div className="flex items-center justify-center p-8 gap-3 text-[#7C6CFF]">
-                    <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                    <span className="font-heading font-bold animate-pulse">Generating Summary via Sentinel LLM...</span>
-                  </div>
-                ) : (
-                  <div className="whitespace-pre-wrap">{aiSummary}</div>
-                )}
-              </div>
+              {summaryModal.loading ? (
+                <div className="flex items-center justify-center p-8 gap-3 text-[#7C6CFF]">
+                  <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  <span className="font-heading font-bold animate-pulse">Generating via Sentinel LLM...</span>
+                </div>
+              ) : summaryModal.error ? (
+                <div className="flex items-start gap-2 text-[#FF3B5C] p-4">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <span>{summaryModal.error}</span>
+                </div>
+              ) : (
+                <div className="whitespace-pre-wrap">{summaryModal.text}</div>
+              )}
             </div>
 
-            {/* Footer Buttons */}
             <div className="flex items-center justify-between pt-2">
               <button
-                onClick={handleCopyAiSummary}
-                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl font-heading font-bold text-xs flex items-center gap-2 border border-white/10 transition-colors cursor-pointer"
+                onClick={handleCopySummary}
+                disabled={!summaryModal.text}
+                className="px-4 py-2 bg-white/10 hover:bg-white/20 disabled:opacity-40 text-white rounded-xl font-heading font-bold text-xs flex items-center gap-2"
               >
                 {copied ? <Check className="w-4 h-4 text-[#22D3A6]" /> : <Copy className="w-4 h-4" />}
-                <span>{copied ? 'Copied Summary!' : 'Copy Summary Text'}</span>
+                <span>{copied ? 'Copied!' : 'Copy Summary Text'}</span>
               </button>
-
-              <button
-                onClick={() => setIsAiModalOpen(false)}
-                className="px-5 py-2 bg-[#7C6CFF] hover:bg-[#6856FF] text-white rounded-xl font-heading font-bold text-xs shadow-md transition-colors cursor-pointer"
-              >
-                Close Report
+              <button onClick={() => setSummaryModal(null)} className="px-5 py-2 bg-[#7C6CFF] hover:bg-[#6856FF] text-white rounded-xl font-heading font-bold text-xs">
+                Close
               </button>
             </div>
           </div>
