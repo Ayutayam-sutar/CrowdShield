@@ -225,5 +225,5 @@ async def get_predictive_forecast(zone_id: str, db: AsyncSession = Depends(get_d
     """
     res = await predict_density(zone_id, db)
     if "error" in res:
-        raise HTTPException(status_code=400, detail=res["error"])
+        raise HTTPException(status_code=400, detail=res["error "])
     return res
