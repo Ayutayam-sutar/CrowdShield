@@ -48,7 +48,7 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
             </button>
           </div>
 
-          {/* Session Details / Mock Operator Credentials */}
+          {/* Session Details / Operator Credentials */}
           <div className="flex flex-col gap-2 p-3 rounded-xl bg-white/5 border border-white/10 text-xs">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-[#2C7BE5]/20 text-[#2C7BE5] border border-[#2C7BE5]/30 flex items-center justify-center font-bold text-xs flex-shrink-0">
@@ -56,7 +56,7 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
               </div>
               <div className="flex flex-col min-w-0 flex-1">
                 <span className="text-xs font-bold text-white font-heading truncate">
-                  {currentView === 'admin' ? `Operator ID: ${userId?.substring(0, 8)}` : `Visitor ID: ${userId?.substring(0, 8)}`}
+                  {currentView === 'admin' ? `Operator ID: ${userId?.substring(0, 8) || 'SOA-01'}` : `Visitor ID: ${userId?.substring(0, 8) || 'CITIZEN'}`}
                 </span>
                 <span className="text-[10px] text-[#22D3A6] font-mono-num">
                   {role === 'ADMIN' ? 'Role: Senior Crowd Controller' : 'Citizen App Companion'}
@@ -71,10 +71,48 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
               </div>
               <div>
                 <span className="text-white/40 block">Node Location:</span>
-                <span className="font-bold text-white">Control Room 7G</span>
+                <span className="font-bold text-white">ITER Control Room</span>
               </div>
             </div>
           </div>
+
+          {/* View Switcher Actions */}
+          {role === 'ADMIN' && (
+            <div className="flex flex-col gap-1.5 pt-1">
+              <span className="text-[10px] text-white/50 uppercase font-mono-num font-bold">Switch Operational View</span>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => {
+                    onSwitchView('admin');
+                    setIsOpen(false);
+                  }}
+                  className={`py-2 px-2.5 rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    currentView === 'admin'
+                      ? 'bg-[#2C7BE5] text-white shadow-sm'
+                      : 'bg-white/5 hover:bg-white/10 text-white/70 border border-white/10'
+                  }`}
+                >
+                  <Shield className="w-3.5 h-3.5" />
+                  <span>Admin Deck</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    onSwitchView('citizen');
+                    setIsOpen(false);
+                  }}
+                  className={`py-2 px-2.5 rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    currentView === 'citizen'
+                      ? 'bg-[#22D3A6] text-[#151726] shadow-sm'
+                      : 'bg-white/5 hover:bg-white/10 text-white/70 border border-white/10'
+                  }`}
+                >
+                  <User className="w-3.5 h-3.5" />
+                  <span>Citizen View</span>
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Reset Crisis Simulation Trigger */}
           <div className="pt-1 flex flex-col gap-2">
@@ -96,6 +134,7 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
             <button
               onClick={() => {
                 setIsOpen(false);
+                localStorage.removeItem('crowdshield_view_mode');
                 logout();
               }}
               className="w-full py-2.5 px-3 rounded-xl bg-[#FF3B5C]/15 hover:bg-[#FF3B5C] text-[#FF3B5C] hover:text-white border border-[#FF3B5C]/30 text-xs font-heading font-bold transition-all cursor-pointer flex items-center justify-center gap-2"
@@ -135,4 +174,3 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
     </div>
   );
 };
-

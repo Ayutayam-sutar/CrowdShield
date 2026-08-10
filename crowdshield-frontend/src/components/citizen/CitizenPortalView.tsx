@@ -73,32 +73,64 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
 
   const currentZoneName = highestRiskZone?.name || activeCampusZones[1]?.name || 'ITER Campus';
 
+// Geolocation & Geofence Tracking (Supports Testing & Live Modes)
   useEffect(() => {
-    if ('geolocation' in navigator) {
+    // 🚨 HACKATHON DEMO TOGGLE 🚨
+    // TRUE = Teleports you to ITER Library for testing from home (Bomikhal)
+    // FALSE = Uses actual live GPS tracking for the final presentation
+    const isTestingMode = true; 
+
+    if (isTestingMode) {
+      // --- MOCK TESTING MODE ---
+      const demoLat = 20.2495;
+      const demoLng = 85.8000;
+      setUserLocation({ lat: demoLat, lng: demoLng });
+
+      if (isScenarioActive) {
+        const gfZones: GeofenceZone[] = activeCampusZones.map((z: any) => ({
+          id: z.id,
+          name: z.name,
+          centerLat: z.center?.[0] || z.center_lat || 20.2496,
+          centerLng: z.center?.[1] || z.center_lng || 85.7988,
+          radiusMeters: 60,
+          riskLevel: z.id === 'zone_library_roundabout' ? 'critical' : 'warning'
+        }));
+
+        const intersections = checkGeofenceIntersections(demoLat, demoLng, gfZones);
+        if (intersections.length > 0) {
+          const zoneName = intersections[0].name;
+          setGeofenceWarning(`CRITICAL CONGESTION AHEAD: You are approaching ${zoneName}. Divert immediately via Gate 2 (EV Charging Junction).`);
+          if ('vibrate' in navigator) navigator.vibrate([500, 250, 500]);
+        } else {
+          setGeofenceWarning(null);
+        }
+      } else {
+        setGeofenceWarning(null);
+      }
+    } else {
+      // --- LIVE PRODUCTION MODE ---
+      if (!('geolocation' in navigator)) return;
+
       const watchId = navigator.geolocation.watchPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
           setUserLocation({ lat: latitude, lng: longitude });
 
           if (isScenarioActive) {
-            // Build dynamic geofence zones from active campus topology
             const gfZones: GeofenceZone[] = activeCampusZones.map((z: any) => ({
               id: z.id,
               name: z.name,
               centerLat: z.center?.[0] || z.center_lat || 20.2496,
               centerLng: z.center?.[1] || z.center_lng || 85.7988,
-              radiusMeters: 30,
-              riskLevel: z.riskLevel || (z.id === 'zone_library_roundabout' ? 'critical' : 'warning')
+              radiusMeters: 60,
+              riskLevel: z.id === 'zone_library_roundabout' ? 'critical' : 'warning'
             }));
 
             const intersections = checkGeofenceIntersections(latitude, longitude, gfZones);
             if (intersections.length > 0) {
               const zoneName = intersections[0].name;
               setGeofenceWarning(`CRITICAL CONGESTION AHEAD: You are approaching ${zoneName}. Divert immediately via Gate 2 (EV Charging Junction).`);
-              
-              if ('vibrate' in navigator) {
-                navigator.vibrate([500, 250, 500]);
-              }
+              if ('vibrate' in navigator) navigator.vibrate([500, 250, 500]);
             } else {
               setGeofenceWarning(null);
             }
@@ -106,13 +138,13 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
             setGeofenceWarning(null);
           }
         },
-        (error) => console.error("Error watching position", error),
-        { enableHighAccuracy: true, maximumAge: 0 }
+        (error) => console.error("Error watching live position", error),
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
       );
 
       return () => navigator.geolocation.clearWatch(watchId);
     }
-  }, [isScenarioActive, zones]);
+  }, [isScenarioActive, zones, activeCampusZones]);
 
   // Offline BLE Mesh Relay State
   const [bleMeshActive, setBleMeshActive] = useState(true);
@@ -471,7 +503,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
             href="tel:112"
             className="px-2.5 sm:px-3.5 py-1.5 bg-[#FF3B5C] hover:bg-[#e02e4d] text-white rounded-xl font-heading font-bold text-xs shadow-md transition-all active:scale-95 flex items-center gap-1"
           >
-            <span>📞 112 <span className="hidden sm:inline">(Police)</span></span>
+            <span>📞ASHUTOSH <span className="hidden sm:inline">(Police)</span></span>
           </a>
 
           <a
