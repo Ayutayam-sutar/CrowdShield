@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { CrowdAlert, SupportedLanguage, CCTVFeed, VenueZone } from '../../types';
-import { BHASHINI_TRANSLATIONS } from '../../data/mockData';
 import api from '../../utils/api';
 import { 
   Sparkles, 
@@ -88,9 +87,7 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
 
   useEffect(() => {
     if (selectedAlert) {
-      setAnnouncementText(
-        `Attention visitors near ${selectedAlert.zoneName}. This area is congested. Please move calmly towards the nearest emergency exit.`
-      );
+      setAnnouncementText(''); // Clean slate for live announcement creation
       setBroadcastState({ loading: false, error: null, result: null });
     }
   }, [selectedAlert?.id]);
@@ -121,8 +118,6 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
 
     fetchHistory();
   }, [selectedAlert, displayDensity]);
-
-  const currentTranslation = BHASHINI_TRANSLATIONS[activeLang] || BHASHINI_TRANSLATIONS['en'];
 
   const handleExecuteAction = async () => {
     if (!confirmationModalAction || !selectedAlert) return;
@@ -397,41 +392,7 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
                     <span className="font-bold text-[#7C6CFF] block mb-1 font-heading text-xs">
                       Automated Risk Diagnostic:
                     </span>
-                    {selectedAlert.sentinelAnalysis || "Sentinel AI model active. Analyzing real-time spatial density gradient and bottleneck velocity."}
-                  </div>
-
-                  {/* Hardware Intervention Overrides */}
-                  <div className="flex flex-col gap-2 p-3 bg-[#151726] rounded-xl border border-white/10 text-white">
-                    <span className="font-heading font-bold text-xs uppercase text-[#22D3A6] flex items-center gap-1.5">
-                      <ShieldAlert className="w-3.5 h-3.5" /> Hardware-Level Master Overrides
-                    </span>
-                    <div className="grid grid-cols-2 gap-2 mt-1">
-                      <button
-                        onClick={() => {
-                          setConfirmationModalAction({
-                            actionText: `🔓 Force-Unlock All Turnstiles (${selectedAlert.zoneName})`,
-                            impact: "Immediate physical pressure relief across all exit turnstiles",
-                            targetGateOrZone: selectedAlert.zoneName
-                          });
-                        }}
-                        className="p-2.5 bg-[#FF3B5C]/20 hover:bg-[#FF3B5C] border border-[#FF3B5C]/40 text-white text-[11px] font-bold rounded-lg transition-all cursor-pointer text-left flex items-center gap-1.5"
-                      >
-                        <span>🔓 Force-Unlock All Turnstiles</span>
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          setConfirmationModalAction({
-                            actionText: `📱 Dispatch SMS Cell Broadcast to ${selectedAlert.zoneName}`,
-                            impact: "Reaches all citizen devices within 500m radius via emergency broadcast",
-                            targetGateOrZone: selectedAlert.zoneName
-                          });
-                        }}
-                        className="p-2.5 bg-[#7C6CFF]/20 hover:bg-[#7C6CFF] border border-[#7C6CFF]/40 text-white text-[11px] font-bold rounded-lg transition-all cursor-pointer text-left flex items-center gap-1.5"
-                      >
-                        <span>📱 Dispatch SMS Cell Broadcast</span>
-                      </button>
-                    </div>
+                    {selectedAlert.sentinelAnalysis || "Gathering real-time risk diagnostic data..."}
                   </div>
 
                   {/* Recommended Actions */}
