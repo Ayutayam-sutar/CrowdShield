@@ -8,6 +8,8 @@ interface RoleSwitcherProps {
   onSwitchView: (view: ViewMode) => void;
   isScenarioActive: boolean;
   onResetScenario: () => void;
+  className?: string;
+  style?: React.CSSProperties;
 }
 
 export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
@@ -15,12 +17,17 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
   onSwitchView,
   isScenarioActive,
   onResetScenario,
+  className = '',
+  style,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const { logout, role, userId } = useAuth();
 
   return (
-    <div className={`fixed ${currentView === 'citizen' ? 'bottom-16 sm:bottom-6' : 'bottom-4 sm:bottom-6'} right-4 sm:right-6 z-50 flex flex-col items-end gap-2 font-body transition-all`}>
+    <div 
+      style={style}
+      className={`fixed ${(style && style.bottom) ? '' : (currentView === 'citizen' ? 'bottom-16 sm:bottom-6' : 'bottom-4 sm:bottom-6')} right-4 sm:right-6 z-50 flex flex-col items-end gap-2 font-body transition-all ${className}`}
+    >
       {/* Expanded Popover Panel */}
       {isOpen && (
         <div className="bg-[#151726] text-white p-4 rounded-2xl shadow-2xl border border-white/10 flex flex-col gap-3 w-72 sm:w-80 animate-in fade-in slide-in-from-bottom-2 duration-200">

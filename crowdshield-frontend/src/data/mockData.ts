@@ -7,9 +7,9 @@ export const INITIAL_ZONES: VenueZone[] = [];
 export const INITIAL_CCTV_FEEDS: CCTVFeed[] = [
   {
     id: 'cam_01',
-    name: 'CAM-01: Admin Block Approach',
-    location: 'Administrative Block Road (zone_admin_block_rd)',
-    zoneId: 'zone_admin_block_rd',
+    name: 'CAM-01: Main Gate',
+    location: 'Main Gate (gate_1)',
+    zoneId: 'gate_1',
     status: 'online',
     fps: 30,
     personCount: 0,
@@ -17,9 +17,7 @@ export const INITIAL_CCTV_FEEDS: CCTVFeed[] = [
     edgeNodeId: 'EDGE-DL-03',
     yoloDetections: [
       { id: 'd1', label: 'Person 0.96', confidence: 0.96, bbox: { x: 15, y: 25, width: 12, height: 28 }, type: 'person' },
-      { id: 'd2', label: 'Person 0.94', confidence: 0.94, bbox: { x: 30, y: 35, width: 14, height: 32 }, type: 'person' },
-      { id: 'd3', label: 'BACKLOG NODE (4.8 p/m²)', confidence: 0.99, bbox: { x: 50, y: 20, width: 40, height: 60 }, type: 'backlog' },
-      { id: 'd4', label: 'VELOCITY SLOW (0.2m/s)', confidence: 0.91, bbox: { x: 55, y: 65, width: 30, height: 25 }, type: 'velocity_anomaly' }
+      { id: 'd2', label: 'Person 0.94', confidence: 0.94, bbox: { x: 30, y: 35, width: 14, height: 32 }, type: 'person' }
     ]
   },
   {
@@ -63,6 +61,35 @@ export const INITIAL_CCTV_FEEDS: CCTVFeed[] = [
     edgeNodeId: 'EDGE-DL-04',
     yoloDetections: [
       { id: 'd8', label: 'Person 0.97', confidence: 0.97, bbox: { x: 60, y: 40, width: 10, height: 22 }, type: 'person' }
+    ]
+  },
+  {
+    id: 'cam_05',
+    name: 'CAM-05: Admin Block Approach',
+    location: 'Administrative Block Road (zone_admin_block_rd)',
+    zoneId: 'zone_admin_block_rd',
+    status: 'online',
+    fps: 30,
+    personCount: 0,
+    imageUrl: 'http://localhost:5004/video_feed',
+    edgeNodeId: 'EDGE-DL-05',
+    yoloDetections: [
+      { id: 'd3', label: 'BACKLOG NODE (4.8 p/m²)', confidence: 0.99, bbox: { x: 50, y: 20, width: 40, height: 60 }, type: 'backlog' },
+      { id: 'd4', label: 'VELOCITY SLOW (0.2m/s)', confidence: 0.91, bbox: { x: 55, y: 65, width: 30, height: 25 }, type: 'velocity_anomaly' }
+    ]
+  },
+  {
+    id: 'cam_06',
+    name: 'CAM-06: Exit Gate',
+    location: 'Exit Gate / Food Court (gate_2)',
+    zoneId: 'gate_2',
+    status: 'online',
+    fps: 30,
+    personCount: 0,
+    imageUrl: 'http://localhost:5005/video_feed',
+    edgeNodeId: 'EDGE-DL-06',
+    yoloDetections: [
+      { id: 'd9', label: 'Person 0.92', confidence: 0.92, bbox: { x: 10, y: 30, width: 15, height: 25 }, type: 'person' }
     ]
   }
 ];
