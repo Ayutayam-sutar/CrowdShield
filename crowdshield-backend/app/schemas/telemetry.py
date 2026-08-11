@@ -8,7 +8,8 @@ from typing import Optional
 class TelemetryCreate(BaseModel):
     zone_id: str
     person_count: int
-    avg_speed: float
+    avg_speed: Optional[float] = 0.0
+    flow_rate: Optional[float] = 0.0
     density: Optional[float] = 0.0
     surge_score: Optional[float] = 0.0
     flow_conflict: bool = False
@@ -21,5 +22,4 @@ class TelemetryResponse(TelemetryCreate):
     density: float
     surge_score: float
     calculated_risk_score: float
-
     model_config = ConfigDict(from_attributes=True)

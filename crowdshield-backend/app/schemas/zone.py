@@ -12,6 +12,7 @@ class ZoneBase(BaseModel):
     capacity_limit: int
     current_headcount: int = 0
     density: float = 0.0
+    avg_speed: float = 0.0
     flow_rate: float = 0.0
     risk_score: float = 0.0
     risk_level: RiskLevel = RiskLevel.safe

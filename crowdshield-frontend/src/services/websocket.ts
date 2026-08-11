@@ -7,6 +7,7 @@ import { VenueZone, CrowdAlert } from '../types';
 export interface TelemetryEvent {
   event:
     | 'TELEMETRY_UPDATE'
+    | 'NEW_ALERT'
     | 'RESOLVED_BY_VOLUNTEER'
     | 'SCENARIO_TRIGGERED'
     | 'SCENARIO_RESET'
@@ -23,7 +24,7 @@ export interface TelemetryEvent {
   actionText?: string;
   impact?: string;
   zoneName?: string;
-  announcementText?: string; // Add this line
+  announcementText?: string;
   language?: string;
 }
 
@@ -80,11 +81,22 @@ class WebSocketService {
           // TELEMETRY UPDATE
           if (data.event === 'TELEMETRY_UPDATE') {
             // Keep console clean because telemetry can arrive frequently.
-            // Uncomment for debugging:
-            //
-            // console.log(
-            //   `⚡ [WebSocket] Inbound Packet -> Zone: ${data.zone?.id} | Density: ${data.zone?.density}`
-            // );
+          }
+
+          // NEW ALERT CREATED
+          else if (data.event === 'NEW_ALERT') {
+            console.warn(
+              '🚨 [WebSocket] NEW ALERT RECEIVED:',
+              data.alert?.title
+            );
+
+            window.dispatchEvent(
+              new CustomEvent('new_alert_received', {
+                detail: {
+                  alert: data.alert,
+                },
+              })
+            );
           }
 
           // SCENARIO TRIGGERED
@@ -97,6 +109,7 @@ class WebSocketService {
               new CustomEvent('scenario_state_change', {
                 detail: {
                   active: true,
+                  alert: data.alert,
                 },
               })
             );

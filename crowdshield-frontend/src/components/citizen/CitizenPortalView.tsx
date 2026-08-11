@@ -83,26 +83,51 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
   );
   const [exitRouteTriggered, setExitRouteTriggered] = useState(false);
 
-  // Fetch real incidents
+  // Helper for status badge formatting and color styling
+  const getStatusBadgeStyle = (status: string) => {
+    const upper = (status || '').toUpperCase();
+    if (upper === 'RESOLVED') {
+      return {
+        label: 'RESOLVED',
+        className: 'bg-emerald-50 text-emerald-600 border-emerald-200 font-bold',
+      };
+    }
+    if (upper === 'CONFIRMED' || upper === 'VERIFIED') {
+      return {
+        label: 'CONFIRMED',
+        className: 'bg-rose-50 text-rose-600 border-rose-200 font-bold',
+      };
+    }
+    return {
+      label: 'PENDING',
+      className: 'bg-amber-50 text-amber-600 border-amber-200 font-bold',
+    };
+  };
+
+  // Fetch real incidents from backend DB
   useEffect(() => {
     const fetchIncidents = async () => {
       try {
         const response = await api.get('/incidents/');
         if (response.data && Array.isArray(response.data)) {
-          const formattedReports: CitizenReport[] = response.data.map((inc: any) => ({
-            id: String(inc.id),
-            category: inc.category || 'Hazard',
-            location: inc.location_name || 'Campus',
-            description: inc.description || '',
-            status: 'PENDING' as any,
-            upvotes: inc.upvotes || 0,
-            timestamp: new Date(inc.created_at || Date.now()).toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit',
-            }),
-            photoUrl: inc.media_type === 'image' ? inc.media_url : undefined,
-            videoUrl: inc.media_type === 'video' ? inc.media_url : undefined,
-          }));
+          const formattedReports: CitizenReport[] = response.data.map((inc: any) => {
+            const rawStatus = (inc.status || 'PENDING').toUpperCase();
+            const displayStatus = rawStatus === 'VERIFIED' ? 'CONFIRMED' : rawStatus;
+            return {
+              id: String(inc.id),
+              category: inc.category || 'Hazard',
+              location: inc.location_name || 'Campus',
+              description: inc.description || '',
+              status: displayStatus as any,
+              upvotes: inc.upvotes || 0,
+              timestamp: new Date(inc.created_at || Date.now()).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              }),
+              photoUrl: inc.media_type === 'image' ? inc.media_url : undefined,
+              videoUrl: inc.media_type === 'video' ? inc.media_url : undefined,
+            };
+          });
           setLiveReports(formattedReports);
         }
       } catch (err) {
@@ -149,9 +174,10 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
   const translation = BHASHINI_TRANSLATIONS[selectedLang] || BHASHINI_TRANSLATIONS.en;
   const activeAnnouncementText = liveAnnouncementText || translation.announcementText;
 
-  // WebSocket listener
+  // WebSocket listener for real-time announcements, status updates & new hazards
   useEffect(() => {
-    const unsubscribe = wsService.subscribe((data) => {
+    const unsubscribe = wsService.subscribe((data: any) => {
+      // 1. Live Interventions / Audio Dispatch
       if (data.event === 'INTERVENTION_DISPATCHED') {
         const textToAnnounce = data.announcementText || data.message || data.actionText || '';
         const langToUse = (data.language as SupportedLanguage) || selectedLang || 'en';
@@ -165,6 +191,33 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
           speakAnnouncement(textToAnnounce, langToUse);
           setTimeout(() => setIsPlayingAudio(false), Math.max(textToAnnounce.length * 75, 4000));
         }
+      } 
+      // 2. Real-time Hazard Status Update (Admin Confirms/Resolves Alert)
+      else if (data.event === 'HAZARD_STATUS_UPDATED' && data.reportId) {
+        const updatedId = String(data.reportId);
+        const updatedStatus = (data.status === 'VERIFIED' ? 'CONFIRMED' : data.status).toUpperCase();
+        setLiveReports((prev) =>
+          prev.map((rep) =>
+            rep.id === updatedId ? { ...rep, status: updatedStatus as any } : rep
+          )
+        );
+      } 
+      // 3. New Citizen Hazard Submitted in Real Time
+      else if (data.event === 'CITIZEN_HAZARD_SUBMITTED' && data.report) {
+        const inc = data.report;
+        const rawStatus = (inc.status || 'PENDING').toUpperCase();
+        const displayStatus = rawStatus === 'VERIFIED' ? 'CONFIRMED' : rawStatus;
+        const formatted: CitizenReport = {
+          id: String(inc.id),
+          category: inc.category || 'Hazard',
+          location: inc.location || inc.location_name || 'Campus',
+          description: inc.description || '',
+          status: displayStatus as any,
+          upvotes: inc.confirmationsCount || inc.upvotes || 0,
+          timestamp: inc.timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          photoUrl: inc.imageUrl || inc.photoUrl,
+        };
+        setLiveReports((prev) => [formatted, ...prev.filter((r) => r.id !== formatted.id)]);
       }
     });
     return () => unsubscribe();
@@ -286,7 +339,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
   const handleFindSafeExit = () => {
     const coords = CAMPUS_ZONE_COORDS[selectedExitZone];
     if (coords) {
-      setExitUserLocation({ ...coords }); // new ref to trigger re-fetch
+      setExitUserLocation({ ...coords });
       setExitRouteTriggered(true);
       setActiveTab('exit');
     }
@@ -632,7 +685,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                 </div>
               </div>
 
-              {/* ── QUICK SAFE EXIT FINDER (on main feed) ── */}
+              {/* ── QUICK SAFE EXIT FINDER ── */}
               <div
                 className={`app-card-elevated p-4 flex flex-col gap-3 ${
                   isScenarioActive ? 'border-2 border-red-200 animate-emergency-border' : ''
@@ -877,52 +930,56 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                       No active hazards reported.
                     </div>
                   ) : (
-                    liveReports.map((rep, idx) => (
-                      <motion.div
-                        key={rep.id || idx}
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.03 }}
-                        className="app-card p-3.5 flex flex-col gap-2.5 hover:shadow-md transition-shadow"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5 truncate">
-                            <ShieldAlert className="w-3.5 h-3.5 text-red-400 shrink-0" />
-                            <span className="truncate">{rep.category}</span>
-                          </span>
-                          <span className="text-[10px] font-mono-num text-slate-400 shrink-0 flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {rep.timestamp}
-                          </span>
-                        </div>
-
-                        <div className="text-xs text-slate-500 leading-relaxed">
-                          <strong className="text-slate-700">{rep.location}:</strong> {rep.description}
-                        </div>
-
-                        {rep.photoUrl && (
-                          <div className="rounded-xl overflow-hidden border border-slate-100 max-h-36">
-                            <img src={rep.photoUrl} alt="Report" className="w-full h-36 object-cover" />
+                    liveReports.map((rep, idx) => {
+                      const badgeStyle = getStatusBadgeStyle(rep.status);
+                      return (
+                        <motion.div
+                          key={rep.id || idx}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: idx * 0.03 }}
+                          className="app-card p-3.5 flex flex-col gap-2.5 hover:shadow-md transition-shadow"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5 truncate">
+                              <ShieldAlert className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                              <span className="truncate">{rep.category}</span>
+                            </span>
+                            <span className="text-[10px] font-mono-num text-slate-400 shrink-0 flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {rep.timestamp}
+                            </span>
                           </div>
-                        )}
 
-                        {rep.videoUrl && (
-                          <div className="rounded-xl overflow-hidden border border-slate-100">
-                            <video src={rep.videoUrl} controls className="w-full max-h-36 object-cover" />
+                          <div className="text-xs text-slate-500 leading-relaxed">
+                            <strong className="text-slate-700">{rep.location}:</strong> {rep.description}
                           </div>
-                        )}
 
-                        <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px]">
-                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-600 border border-amber-100 uppercase">
-                            {rep.status}
-                          </span>
-                          <span className="text-slate-400 font-mono-num flex items-center gap-1 font-semibold">
-                            <ThumbsUp className="w-3 h-3 text-indigo-400" />
-                            {rep.upvotes || 0} Confirmed
-                          </span>
-                        </div>
-                      </motion.div>
-                    ))
+                          {rep.photoUrl && (
+                            <div className="rounded-xl overflow-hidden border border-slate-100 max-h-36">
+                              <img src={rep.photoUrl} alt="Report" className="w-full h-36 object-cover" />
+                            </div>
+                          )}
+
+                          {rep.videoUrl && (
+                            <div className="rounded-xl overflow-hidden border border-slate-100">
+                              <video src={rep.videoUrl} controls className="w-full max-h-36 object-cover" />
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px]">
+                            {/* DYNAMIC BADGE STYLING */}
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${badgeStyle.className}`}>
+                              {badgeStyle.label}
+                            </span>
+                            <span className="text-slate-400 font-mono-num flex items-center gap-1 font-semibold">
+                              <ThumbsUp className="w-3 h-3 text-indigo-400" />
+                              {rep.upvotes || 0} Confirmed
+                            </span>
+                          </div>
+                        </motion.div>
+                      );
+                    })
                   )}
                 </div>
               </div>

@@ -69,7 +69,7 @@ function mapBackendZoneToFrontend(raw: any): VenueZone {
     riskScore: raw.risk_score ?? raw.riskScore ?? 0,
     riskLevel: (raw.risk_level ?? raw.riskLevel ?? 'safe').toLowerCase() as any,
     trend: (raw.trend ?? 'stable').toLowerCase() as any,
-    
+    avg_speed: raw.avg_speed ?? raw.flow_rate ?? raw.flowRate ?? 0,
     // REVERTED: Calculate the polygon dynamically around the exact center point.
     // This guarantees the box will always snap perfectly to the label!
     polygon: raw.polygon || [
@@ -100,11 +100,13 @@ function mapBackendVenueToFrontend(raw: any): VenueInfo {
     currentTotalHeadcount: totalHeadcount,
     activeZonesCount: mappedZones.length,
     affectedZonesCount: affected,
+   
   };
 }
 
 export default function App() {
   const { isAuthenticated, role, logout } = useAuth();
+// Inside App.tsx (near your other useState calls)
 
   // State
   // Read initial viewMode from localStorage so refreshes don't reset your screen
@@ -128,6 +130,7 @@ export default function App() {
   const [isCloudSyncLost, setIsCloudSyncLost] = useState<boolean>(false);
   const [isCctvExpanded, setIsCctvExpanded] = useState<boolean>(true);
 
+  const [isCrisisMode, setIsCrisisMode] = useState<boolean>(false);
   // Core Data Collections State
   const [zones, setZones] = useState<VenueZone[]>([]);
   const [alerts, setAlerts] = useState<CrowdAlert[]>(INITIAL_ALERTS);
@@ -135,6 +138,37 @@ export default function App() {
 
   const [lastTelemetryUpdate, setLastTelemetryUpdate] = useState<Record<string, number>>({});
   const [ticker, setTicker] = useState<number>(0);
+
+useEffect(() => {
+    // Ensure WebSocket is connected
+    wsService.connect();
+
+    const unsubscribe = wsService.subscribe((data) => {
+      if (data.event === 'NEW_ALERT' && data.alert) {
+        setAlerts((prev) => {
+          // Prevent duplicate alert insertions if already present
+          if (prev.some((a) => a.id === data.alert!.id)) return prev;
+          return [data.alert!, ...prev];
+        });
+      } else if (data.event === 'SCENARIO_TRIGGERED') {
+        if (data.alert) {
+          setAlerts((prev) => {
+            if (prev.some((a) => a.id === data.alert!.id)) return prev;
+            return [data.alert!, ...prev];
+          });
+        }
+        setIsCrisisMode(true);
+      } else if (data.event === 'SCENARIO_RESET') {
+        setAlerts([]);
+        setIsCrisisMode(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+
+
 
   useEffect(() => {
     const timer = setInterval(() => {

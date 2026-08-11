@@ -8,10 +8,10 @@ import time
 cameras = [
     {"video": "passage.mp4",  "zone": "gate_1", "port": 5000},
     {"video": "street.mp4", "zone": "zone_library_roundabout", "port": 5001},
-    {"video": "video3.mp4", "zone": "zone_sports_complex_rd", "port": 5002},
-    {"video": "video4.mp4", "zone": "zone_e_block_lawn_rd", "port": 5003},
-    {"video": "video.mp4",  "zone": "zone_admin_block_rd", "port": 5004},
-    {"video": "exit.mp4", "zone": "gate_2", "port": 5005},
+    # {"video": "video3.mp4", "zone": "zone_sports_complex_rd", "port": 5002},
+    # {"video": "video4.mp4", "zone": "zone_e_block_lawn_rd", "port": 5003},
+    # {"video": "video.mp4",  "zone": "zone_admin_block_rd", "port": 5004},
+    # {"video": "exit.mp4", "zone": "gate_2", "port": 5005},
 ]
 
 processes = []

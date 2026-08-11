@@ -12,22 +12,31 @@ from app.api.v1.endpoints import (
     routing,
     auth,
     analytics,
-    interventions
+    interventions,
 )
 from app.api.v1 import websocket
-from app.api.v1.endpoints import incidents
 
 api_router = APIRouter()
 
+# Core Authentication & Venues
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(venues.router, prefix="/venues", tags=["venues"])
 api_router.include_router(zones.router, prefix="/zones", tags=["zones"])
+
+# Real-Time Telemetry & Alerts
 api_router.include_router(telemetry.router, prefix="/telemetry", tags=["telemetry"])
 api_router.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
+
+# Citizen Reports / Hazards (Mounted under all frontend aliases)
+api_router.include_router(incidents.router, prefix="/incidents", tags=["incidents"])
+api_router.include_router(incidents.router, prefix="/hazards", tags=["hazards"])
 api_router.include_router(incidents.router, prefix="/citizen-reports", tags=["citizen-reports"])
+
+# System Interventions, Broadcast & Analytics
 api_router.include_router(broadcast.router, prefix="/broadcast", tags=["broadcast"])
 api_router.include_router(routing.router, prefix="/routing", tags=["routing"])
 api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
 api_router.include_router(interventions.router, prefix="/interventions", tags=["interventions"])
+
+# Real-Time WebSocket Engine
 api_router.include_router(websocket.router, tags=["websocket"])
-api_router.include_router(incidents.router, prefix="/incidents", tags=["incidents"])
