@@ -111,7 +111,7 @@
         {"source": "zone_e_block_lawn_rd", "target": "zone_library_roundabout", "length_meters": 180.0, "max_flow_rate": 90, "overlap_ratio": 0.10}
       ]
     },
-    {
+{
       "id": "kalinga-stadium-01",
       "name": "Kalinga International Stadium Complex",
       "center": [20.2880, 85.8238],
@@ -119,89 +119,107 @@
         {
           "id": "ks_gate_3",
           "code": "KS-G3",
-          "name": "Gate 3 (Main Entrance Plaza)",
+          "name": "Gate 3 (Main Entrance)",
           "max_capacity": 500,
           "is_gate": true,
           "is_exit": true,
-          "lat": 20.287800,
-          "lng": 85.826100,
+          "lat": 20.287861,
+          "lng": 85.826208,
           "polygon": [
-            [20.28795, 85.82595],
-            [20.28795, 85.82625],
-            [20.28765, 85.82625],
-            [20.28765, 85.82595]
+            [20.287981, 85.826058],
+            [20.287981, 85.826358],
+            [20.287741, 85.826358],
+            [20.287741, 85.826058]
           ]
         },
         {
-          "id": "ks_hockey_turf",
-          "code": "KS-HKY",
-          "name": "Main Hockey Turf & Stand",
-          "max_capacity": 800,
-          "is_gate": false,
-          "is_exit": false,
-          "lat": 20.288500,
-          "lng": 85.824000,
+          "id": "ks_sky_walk",
+          "code": "KS-SKY",
+          "name": "Sky Walk",
+          "max_capacity": 500,
+          "is_gate": true,
+          "is_exit": true,
+          "lat": 20.286528,
+          "lng": 85.823773,
           "polygon": [
-            [20.28875, 85.82375],
-            [20.28875, 85.82425],
-            [20.28825, 85.82425],
-            [20.28825, 85.82375]
-          ]
-        },
-        {
-          "id": "ks_athletics",
-          "code": "KS-ATH",
-          "name": "Main Athletics Track Corridor",
-          "max_capacity": 700,
-          "is_gate": false,
-          "is_exit": false,
-          "lat": 20.287500,
-          "lng": 85.823500,
-          "polygon": [
-            [20.28775, 85.82325],
-            [20.28775, 85.82375],
-            [20.28725, 85.82375],
-            [20.28725, 85.82325]
+            [20.286648, 85.823623],
+            [20.286648, 85.823923],
+            [20.286408, 85.823923],
+            [20.286408, 85.823623]
           ]
         },
         {
           "id": "ks_swimming",
           "code": "KS-SWM",
-          "name": "Swimming Pool Complex Junction",
-          "max_capacity": 400,
+          "name": "Hockey stadium entrance",
+          "max_capacity": 600,
           "is_gate": false,
           "is_exit": false,
-          "lat": 20.289000,
-          "lng": 85.823000,
+          "lat": 20.290857,
+          "lng": 85.824318,
           "polygon": [
-            [20.28915, 85.82285],
-            [20.28915, 85.82315],
-            [20.28885, 85.82315],
-            [20.28885, 85.82285]
+            [20.290977, 85.824168],
+            [20.290977, 85.824468],
+            [20.290737, 85.824468],
+            [20.290737, 85.824168]
           ]
         },
         {
-          "id": "ks_indoor",
-          "code": "KS-IND",
-          "name": "Indoor Multi-Purpose Hall Exit",
+          "id": "ks_athletics",
+          "code": "KS-ATH",
+          "name": "Atheletics Entrance",
+          "max_capacity": 400,
+          "is_gate": false,
+          "is_exit": false,
+          "lat": 20.287899,
+          "lng": 85.821359,
+          "polygon": [
+            [20.288019, 85.821209],
+            [20.288019, 85.821509],
+            [20.287779, 85.821509],
+            [20.287779, 85.821209]
+          ]
+        },
+        {
+          "id": "ks_parking",
+          "code": "KS-PAK",
+          "name": "Gate 8B (Way to parking)",
           "max_capacity": 500,
           "is_gate": true,
           "is_exit": true,
-          "lat": 20.288000,
-          "lng": 85.822500,
+          "lat": 20.293225,
+          "lng": 85.822047,
           "polygon": [
-            [20.28815, 85.82235],
-            [20.28815, 85.82265],
-            [20.28785, 85.82265],
-            [20.28785, 85.82235]
+            [20.293345, 85.821897],
+            [20.293345, 85.822197],
+            [20.293105, 85.822197],
+            [20.293105, 85.821897]
+          ]
+        },
+        {
+          "id": "ks_badminton",
+          "code": "KS-BAD",
+          "name": "Badminton stadium junction",
+          "max_capacity": 600,
+          "is_gate": false,
+          "is_exit": false,
+          "lat": 20.293422,
+          "lng": 85.823236,
+          "polygon": [
+            [20.293542, 85.823086],
+            [20.293542, 85.823386],
+            [20.293302, 85.823386],
+            [20.293302, 85.823086]
           ]
         }
       ],
       "edges": [
-        {"source": "ks_gate_3", "target": "ks_hockey_turf", "length_meters": 180.0, "max_flow_rate": 150},
-        {"source": "ks_hockey_turf", "target": "ks_athletics", "length_meters": 120.0, "max_flow_rate": 120},
-        {"source": "ks_athletics", "target": "ks_indoor", "length_meters": 100.0, "max_flow_rate": 100},
-        {"source": "ks_hockey_turf", "target": "ks_swimming", "length_meters": 110.0, "max_flow_rate": 90}
+        {"source": "ks_gate_3", "target": "ks_sky_walk", "length_meters": 150.0, "max_flow_rate": 150},
+        {"source": "ks_sky_walk", "target": "ks_athletics", "length_meters": 120.0, "max_flow_rate": 120},
+        {"source": "ks_athletics", "target": "ks_swimming", "length_meters": 250.0, "max_flow_rate": 120},
+        {"source": "ks_swimming", "target": "ks_badminton", "length_meters": 150.0, "max_flow_rate": 100},
+        {"source": "ks_badminton", "target": "ks_parking", "length_meters": 100.0, "max_flow_rate": 150},
+        {"source": "ks_parking", "target": "ks_swimming", "length_meters": 180.0, "max_flow_rate": 120, "overlap_ratio": 0.10}
       ]
     }
   ]

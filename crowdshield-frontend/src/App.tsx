@@ -711,6 +711,7 @@ useEffect(() => {
 
           {adminRoute === 'twin' && (
             <DigitalTwinView
+            selectedVenue={selectedVenue}
               zones={displayedZones}
             />
           )}

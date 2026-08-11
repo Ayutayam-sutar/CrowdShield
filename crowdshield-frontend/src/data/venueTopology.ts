@@ -39,22 +39,40 @@ export interface TopologyEdge {
 }
 
 export const VENUE_TOPOLOGY: TopologyNode[] = [
+  // --- ITER CAMPUS ---
   { id: 'gate_1', name: 'Main Gate', shortLabel: 'Gate 1', x: 90.0, y: 10.0, isGate: true, isExit: true },
   { id: 'zone_admin_block_rd', name: 'Administrative Block Road', shortLabel: 'Admin Rd', x: 67.1, y: 28.0, isGate: false, isExit: false },
   { id: 'zone_library_roundabout', name: 'Central Library Roundabout', shortLabel: 'Roundabout', x: 48.9, y: 46.0, isGate: false, isExit: false },
   { id: 'zone_sports_complex_rd', name: 'Sports Complex / Physics Dept Road', shortLabel: 'Sports Rd', x: 26.0, y: 74.0, isGate: false, isExit: false },
   { id: 'gate_2', name: 'EV Charging / Food Court Junction', shortLabel: 'Gate 2', x: 10.0, y: 90.0, isGate: true, isExit: true },
   { id: 'zone_e_block_lawn_rd', name: 'E Block Lawn / F Block Road', shortLabel: 'E Block Rd', x: 67.1, y: 58.0, isGate: false, isExit: false },
+
+  // --- KALINGA STADIUM (Projected from updated GPS) ---
+  { id: 'ks_gate_3', name: 'Gate 3 (Main Entrance)', shortLabel: 'Gate 3', x: 90.0, y: 74.5, isGate: true, isExit: true },
+  { id: 'ks_sky_walk', name: 'Sky Walk', shortLabel: 'Sky Walk', x: 49.8, y: 90.0, isGate: true, isExit: true },
+  { id: 'ks_swimming', name: 'Hockey stadium entrance', shortLabel: 'Hockey Ent', x: 58.8, y: 39.7, isGate: false, isExit: false },
+  { id: 'ks_athletics', name: 'Atheletics Entrance', shortLabel: 'Athletics', x: 10.0, y: 74.1, isGate: false, isExit: false },
+  { id: 'ks_parking', name: 'Gate 8B (Way to parking)', shortLabel: 'Gate 8B', x: 21.3, y: 12.2, isGate: true, isExit: true },
+  { id: 'ks_badminton', name: 'Badminton stadium junction', shortLabel: 'Badminton', x: 40.9, y: 10.0, isGate: false, isExit: false }
 ];
 
 // Must match the "edges" array in venue_graph.json exactly - keep in sync.
 export const VENUE_EDGES: TopologyEdge[] = [
+  // --- ITER EDGES ---
   { source: 'gate_1', target: 'zone_admin_block_rd' },
   { source: 'zone_admin_block_rd', target: 'zone_library_roundabout' },
   { source: 'zone_library_roundabout', target: 'zone_sports_complex_rd' },
   { source: 'zone_sports_complex_rd', target: 'gate_2' },
   { source: 'gate_2', target: 'zone_e_block_lawn_rd' },
   { source: 'zone_e_block_lawn_rd', target: 'zone_library_roundabout' },
+
+  // --- KALINGA EDGES ---
+  { source: 'ks_gate_3', target: 'ks_sky_walk' },
+  { source: 'ks_sky_walk', target: 'ks_athletics' },
+  { source: 'ks_athletics', target: 'ks_swimming' },
+  { source: 'ks_swimming', target: 'ks_badminton' },
+  { source: 'ks_badminton', target: 'ks_parking' },
+  { source: 'ks_parking', target: 'ks_swimming' }
 ];
 
 export function getTopologyNode(id: string): TopologyNode | undefined {
