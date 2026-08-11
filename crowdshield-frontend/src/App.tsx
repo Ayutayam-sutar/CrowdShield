@@ -43,8 +43,8 @@ import { EdgeSettingsView } from './components/admin/EdgeSettingsView';
 import { CitizenPortalView } from './components/citizen/CitizenPortalView';
 
 import api from './utils/api';
-
-export function mapBackendZoneToFrontend(raw: any): VenueZone {
+// Bhubaneswar zone offsets so each zone gets distinct map placement
+function mapBackendZoneToFrontend(raw: any): VenueZone {
   // Bhubaneswar zone offsets so each zone gets distinct map placement
   const ZONE_OFFSETS: Record<string, [number, number]> = {
     'z-1': [20.2516, 85.7968], 'z-01': [20.2516, 85.7968],
@@ -52,9 +52,11 @@ export function mapBackendZoneToFrontend(raw: any): VenueZone {
     'z-3': [20.2516, 85.8008], 'z-03': [20.2516, 85.8008],
     'z-4': [20.2476, 85.8008], 'z-04': [20.2476, 85.8008],
   };
+  
   const fallback = ZONE_OFFSETS[(raw.id || '').toLowerCase()] || [20.2496, 85.7988];
   const centerLat = raw.center_lat || (Array.isArray(raw.center) ? raw.center[0] : fallback[0]);
   const centerLng = raw.center_lng || (Array.isArray(raw.center) ? raw.center[1] : fallback[1]);
+  
   return {
     id: raw.id,
     name: raw.name || raw.code || raw.id,
@@ -67,12 +69,16 @@ export function mapBackendZoneToFrontend(raw: any): VenueZone {
     riskScore: raw.risk_score ?? raw.riskScore ?? 0,
     riskLevel: (raw.risk_level ?? raw.riskLevel ?? 'safe').toLowerCase() as any,
     trend: (raw.trend ?? 'stable').toLowerCase() as any,
-    polygon: raw.coordinates_json?.polygon || raw.polygon || [
-      [centerLat - 0.001, centerLng - 0.001],
-      [centerLat + 0.001, centerLng - 0.001],
-      [centerLat + 0.001, centerLng + 0.001],
-      [centerLat - 0.001, centerLng + 0.001]
+    
+    // REVERTED: Calculate the polygon dynamically around the exact center point.
+    // This guarantees the box will always snap perfectly to the label!
+    polygon: raw.polygon || [
+      [centerLat - 0.0008, centerLng - 0.0008],
+      [centerLat + 0.0008, centerLng - 0.0008],
+      [centerLat + 0.0008, centerLng + 0.0008],
+      [centerLat - 0.0008, centerLng + 0.0008]
     ],
+    
     center: [centerLat, centerLng],
     gateStatus: (raw.gate_status ?? raw.gateStatus ?? 'open').toLowerCase() as any,
     inferenceMs: raw.inference_ms ?? 0,
@@ -80,7 +86,7 @@ export function mapBackendZoneToFrontend(raw: any): VenueZone {
   };
 }
 
-export function mapBackendVenueToFrontend(raw: any): VenueInfo {
+function mapBackendVenueToFrontend(raw: any): VenueInfo {
   const mappedZones = (raw.zones || []).map(mapBackendZoneToFrontend);
   const totalHeadcount = mappedZones.reduce((acc: number, z: VenueZone) => acc + z.currentHeadcount, 0);
   const affected = mappedZones.filter((z: VenueZone) => z.riskLevel === 'warning' || z.riskLevel === 'critical').length;
