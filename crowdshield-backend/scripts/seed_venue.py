@@ -87,6 +87,26 @@ async def seed_venue():
                 print(f"Updated Zone: {zone.name} ({zone.id})")
 
         await session.commit()
+        
+        # Seed default admin user
+        from app.models.user import User, UserRole
+        from app.core.security import get_password_hash
+        
+        result = await session.execute(select(User).where(User.username == "admin@crowdshield.com"))
+        admin_user = result.scalars().first()
+        if not admin_user:
+            admin_user = User(
+                username="admin@crowdshield.com",
+                hashed_password=get_password_hash("Sentinel@2026"),
+                role=UserRole.ADMIN,
+                is_active=True
+            )
+            session.add(admin_user)
+            await session.commit()
+            print("Created default admin user.")
+        else:
+            print("Default admin user already exists.")
+            
         print("Seeding complete.")
 
 async def main():

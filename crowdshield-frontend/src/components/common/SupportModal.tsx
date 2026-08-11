@@ -50,7 +50,7 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) =
 
         <button
           onClick={onClose}
-          className="w-full py-2 bg-[#2C7BE5] text-white font-semibold text-xs rounded-xl hover:bg-[#2066c6] transition-colors cursor-pointer"
+          className="w-full py-2 bg-sky-600 text-white font-semibold text-xs rounded-xl hover:bg-sky-700 transition-colors cursor-pointer"
         >
           Dismiss
         </button>

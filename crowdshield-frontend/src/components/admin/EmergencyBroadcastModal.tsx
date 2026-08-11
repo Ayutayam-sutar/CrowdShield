@@ -145,7 +145,7 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-body animate-fadeIn">
-      <div className="bg-[#111827] border-2 border-[#FF3B5C] rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="bg-white border-2 border-[#FF3B5C] rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[90vh] text-slate-800">
         {/* Header */}
         <div className="bg-[#FF3B5C] text-white p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -163,19 +163,19 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer border-none bg-transparent"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="p-5 overflow-y-auto flex flex-col gap-5 bg-[#0B0F19]">
+        <div className="p-5 overflow-y-auto flex flex-col gap-5 bg-white">
           {/* Section 1: Multilingual Bhashini PA Audio */}
-          <div className="bg-[#151726] border border-white/10 rounded-xl p-4 shadow-sm flex flex-col gap-3">
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-xs flex flex-col gap-3">
             <div className="flex items-center justify-between">
-              <span className="font-heading font-bold text-sm text-white flex items-center gap-2">
-                <Volume2 className="w-4 h-4 text-[#7C6CFF]" />
+              <span className="font-heading font-bold text-sm text-slate-800 flex items-center gap-2">
+                <Volume2 className="w-4 h-4 text-indigo-600" />
                 1. Bhashini Multilingual PA System Announcement
               </span>
               <div className="flex items-center gap-1">
@@ -183,8 +183,8 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
                   <button
                     key={l}
                     onClick={() => setActiveLang(l)}
-                    className={`px-2 py-0.5 rounded text-xs font-mono-num font-bold transition-colors ${
-                      activeLang === l ? 'bg-[#7C6CFF] text-white' : 'bg-[#111827] text-slate-400 hover:bg-white/10'
+                    className={`px-2 py-0.5 rounded text-xs font-mono-num font-bold transition-colors border cursor-pointer ${
+                      activeLang === l ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-100'
                     }`}
                   >
                     {l.toUpperCase()}
@@ -193,8 +193,8 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
               </div>
             </div>
 
-            <div className="bg-[#0B0F19] border border-white/10 rounded-lg p-3 text-xs text-slate-300 font-mono-num">
-              <span className="font-bold text-[#7C6CFF] block mb-1">
+            <div className="bg-white border border-slate-200 rounded-lg p-3 text-xs text-slate-700 font-mono-num">
+              <span className="font-bold text-indigo-600 block mb-1">
                 Script ({currentTranslation.langName}):
               </span>
               "{getDynamicScript()}"
@@ -204,10 +204,10 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
               <button
                 onClick={handlePlayPA}
                 disabled={isPlayingAudio}
-                className={`flex-1 py-2.5 px-4 rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                className={`flex-1 py-2.5 px-4 rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border-none ${
                   isPlayingAudio
-                    ? 'bg-[#7C6CFF] text-white animate-pulse'
-                    : 'bg-[#7C6CFF] hover:bg-[#6856ff] text-white shadow-md'
+                    ? 'bg-indigo-600 text-white animate-pulse'
+                    : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md'
                 }`}
               >
                 {isPlayingAudio ? (
@@ -226,19 +226,19 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
           </div>
 
           {/* Section 2: Direct Interventions Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-slate-800">
             {/* SMS Cell Broadcast */}
-            <div className="bg-[#151726] border border-white/10 rounded-xl p-3 flex flex-col justify-between gap-3">
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col justify-between gap-3">
               <div>
-                <span className="text-xs font-bold text-slate-100 block">SMS Cell Broadcast</span>
-                <span className="text-[11px] text-slate-400">Push alert to mobile devices</span>
+                <span className="text-xs font-bold text-slate-800 block">SMS Cell Broadcast</span>
+                <span className="text-[11px] text-slate-500">Push alert to mobile devices</span>
               </div>
               <button
                 onClick={handleSendSMS}
-                className={`w-full py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                className={`w-full py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer border-none ${
                   isCellBroadcastSent
-                    ? 'bg-[#22D3A6]/20 text-[#22D3A6] border border-[#22D3A6]/40'
-                    : 'bg-[#2C7BE5] text-white hover:bg-[#2066c6]'
+                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                    : 'bg-sky-600 text-white hover:bg-sky-700'
                 }`}
               >
                 {isCellBroadcastSent ? <CheckCircle2 className="w-4 h-4" /> : <Send className="w-4 h-4" />}
@@ -247,17 +247,17 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
             </div>
 
             {/* Remote Gate Override */}
-            <div className="bg-[#151726] border border-white/10 rounded-xl p-3 flex flex-col justify-between gap-3">
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col justify-between gap-3">
               <div>
-                <span className="text-xs font-bold text-slate-100 block">Gate Egress Override</span>
-                <span className="text-[11px] text-slate-400">Unlock turnstiles for {targetZoneName}</span>
+                <span className="text-xs font-bold text-slate-800 block">Gate Egress Override</span>
+                <span className="text-[11px] text-slate-500">Unlock turnstiles for {targetZoneName}</span>
               </div>
               <button
                 onClick={handleUnlockGates}
-                className={`w-full py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                className={`w-full py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer border-none ${
                   isGateUnlocked
-                    ? 'bg-[#22D3A6]/20 text-[#22D3A6] border border-[#22D3A6]/40'
-                    : 'bg-[#FFB627] text-[#151726] hover:bg-[#e2a01f]'
+                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                    : 'bg-amber-500 text-white hover:bg-amber-600'
                 }`}
               >
                 {isGateUnlocked ? <CheckCircle2 className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
@@ -266,17 +266,17 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
             </div>
 
             {/* Response Guards */}
-            <div className="bg-[#151726] border border-white/10 rounded-xl p-3 flex flex-col justify-between gap-3">
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col justify-between gap-3">
               <div>
-                <span className="text-xs font-bold text-slate-100 block">Dispatch Security Squad</span>
-                <span className="text-[11px] text-slate-400">Send response team to {targetZoneName}</span>
+                <span className="text-xs font-bold text-slate-800 block">Dispatch Security Squad</span>
+                <span className="text-[11px] text-slate-500">Send response team to {targetZoneName}</span>
               </div>
               <button
                 onClick={handleDeployGuards}
-                className={`w-full py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                className={`w-full py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-slate-200 ${
                   isGuardsDispatched
-                    ? 'bg-[#22D3A6]/20 text-[#22D3A6] border border-[#22D3A6]/40'
-                    : 'bg-white/10 text-white hover:bg-white/20'
+                    ? 'bg-emerald-50 text-emerald-600 border-emerald-200 border-solid'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
               >
                 {isGuardsDispatched ? <CheckCircle2 className="w-4 h-4" /> : <Users className="w-4 h-4" />}
@@ -286,23 +286,23 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
           </div>
 
           {/* Live Dispatch Log */}
-          <div className="bg-[#151726] border border-white/10 text-slate-300 p-4 rounded-xl font-mono-num text-xs flex flex-col gap-2 shadow-xs">
-            <div className="flex items-center justify-between border-b border-white/10 pb-2">
-              <span className="text-[#22D3A6] font-bold text-[11px] uppercase tracking-wider flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#22D3A6] animate-ping" />
+          <div className="bg-slate-50 border border-slate-200 text-slate-700 p-4 rounded-xl font-mono-num text-xs flex flex-col gap-2 shadow-xs">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+              <span className="text-emerald-600 font-bold text-[11px] uppercase tracking-wider flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
                 Live Intervention Logs
               </span>
-              <span className="text-[10px] text-slate-400">Edge Controller Audit Trail</span>
+              <span className="text-[10px] text-slate-500">Edge Controller Audit Trail</span>
             </div>
             {dispatchLog.length === 0 ? (
-              <div className="text-slate-400 text-xs py-2 italic font-body">
+              <div className="text-slate-500 text-xs py-2 italic font-body">
                 No active dispatch logs in current session. Click PA Broadcast or Intervention CTAs above to execute emergency commands.
               </div>
             ) : (
               <div className="flex flex-col gap-1.5 max-h-32 overflow-y-auto pr-1">
                 {dispatchLog.map((log, idx) => (
-                  <div key={idx} className="text-slate-300 border-b border-white/10 pb-1.5 text-[11px] leading-snug last:border-0 font-mono-num font-medium flex items-start gap-2">
-                    <span className="text-[#2C7BE5] font-bold">›</span>
+                  <div key={idx} className="text-slate-600 border-b border-slate-200 pb-1.5 text-[11px] leading-snug last:border-0 font-mono-num font-medium flex items-start gap-2">
+                    <span className="text-sky-600 font-bold">›</span>
                     <span>{log}</span>
                   </div>
                 ))}
@@ -312,10 +312,10 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
         </div>
 
         {/* Footer */}
-        <div className="bg-[#151726] border-t border-white/10 p-3 flex justify-end gap-2">
+        <div className="bg-slate-50 border-t border-slate-200 p-3 flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-semibold text-xs rounded-xl border border-transparent transition-colors cursor-pointer"
+            className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-xs rounded-xl border-none transition-colors cursor-pointer"
           >
             Close Window
           </button>

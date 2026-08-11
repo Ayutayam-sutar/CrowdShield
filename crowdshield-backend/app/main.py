@@ -29,8 +29,25 @@ async def lifespan(app: FastAPI):
         # We don't drop tables here, just create missing ones
         await conn.run_sync(Base.metadata.create_all)
     
-
     logger.info("Database tables verified/created.")
+
+    # Seed default admin user on startup
+    async with async_session() as session:
+        async with session.begin():
+            result = await session.execute(select(User).where(User.username == "admin@crowdshield.com"))
+            admin_user = result.scalars().first()
+            if not admin_user:
+                logger.info("Seeding default admin user...")
+                new_admin = User(
+                    username="admin@crowdshield.com",
+                    hashed_password=get_password_hash("Sentinel@2026"),
+                    role=UserRole.ADMIN,
+                    is_active=True
+                )
+                session.add(new_admin)
+                logger.info("Default admin user seeded.")
+            else:
+                logger.info("Default admin user already exists.")
     
     yield
     

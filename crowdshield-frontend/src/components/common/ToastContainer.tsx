@@ -73,7 +73,7 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
                     onInspectAlert(toast.zoneId);
                     onDismiss(toast.id);
                   }}
-                  className="px-2.5 py-1 bg-[#151726] hover:bg-[#25283e] text-white font-heading font-bold text-[11px] rounded-lg transition-colors cursor-pointer flex items-center gap-1 shadow-xs"
+                  className="px-2.5 py-1 bg-sky-600 hover:bg-sky-700 text-white font-heading font-bold text-[11px] rounded-lg transition-colors cursor-pointer flex items-center gap-1 shadow-xs"
                 >
                   <span>Inspect Alert</span>
                   <ArrowRight className="w-3 h-3" />

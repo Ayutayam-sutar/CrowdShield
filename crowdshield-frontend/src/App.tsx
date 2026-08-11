@@ -23,11 +23,8 @@ import {
 import { HeaderTopBar } from './components/common/HeaderTopBar';
 import { LeftSidebar } from './components/common/LeftSidebar';
 import { RoleSwitcher } from './components/common/RoleSwitcher';
-import { ComplianceFooter } from './components/common/ComplianceFooter';
 import { EmergencyBroadcastModal } from './components/admin/EmergencyBroadcastModal';
 import { VoiceAssistantModal } from './components/common/VoiceAssistantModal';
-import { SupportModal } from './components/common/SupportModal';
-import { SystemLogsModal } from './components/common/SystemLogsModal';
 import { AuthView } from './components/common/AuthView';
 import { ToastContainer } from './components/common/ToastContainer';
 import { useAuth } from './context/AuthContext';
@@ -189,8 +186,6 @@ export default function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isEmergencyBroadcastOpen, setIsEmergencyBroadcastOpen] = useState(false);
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
-  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
-  const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
 
   // Helper function to dispatch Toast Notifications for Admins
   const addToastNotification = (
@@ -621,7 +616,7 @@ useEffect(() => {
   if (role !== 'ADMIN') return null; // Safety check
 
   return (
-    <div className={`min-h-screen bg-[#0B0F19] flex flex-col font-body text-slate-100 ${adminRoute === 'map' ? 'h-screen overflow-hidden' : ''}`}>
+    <div className="h-screen bg-brand-bg flex flex-col font-body text-slate-800 overflow-hidden relative">
       {/* Toast Notifications */}
       <ToastContainer
         toasts={toasts}
@@ -656,14 +651,12 @@ useEffect(() => {
         onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
       />
 
-      <div className={`flex flex-1 relative ${adminRoute === 'map' ? 'min-h-0 overflow-hidden' : ''}`}>
+      <div className="flex flex-1 min-h-0 overflow-hidden relative">
         {/* Left Sticky Sidebar / Mobile Drawer */}
         <LeftSidebar
           currentRoute={adminRoute}
           onNavigate={(route) => setAdminRoute(route)}
           onOpenEmergencyBroadcast={() => setIsEmergencyBroadcastOpen(true)}
-          onOpenSupportModal={() => setIsSupportModalOpen(true)}
-          onOpenLogsModal={() => setIsLogsModalOpen(true)}
           activeAlertCount={activeAlertCount}
           isScenarioActive={isScenarioActive}
           isMobileOpen={isMobileMenuOpen}
@@ -671,7 +664,7 @@ useEffect(() => {
         />
 
         {/* Dynamic Route Content Area */}
-        <main className={`flex-1 min-w-0 ${adminRoute === 'map' ? 'h-full overflow-hidden flex flex-col' : 'pb-28 sm:pb-32'}`}>
+        <main className={`flex-1 min-w-0 h-full ${adminRoute === 'map' ? 'overflow-hidden flex flex-col' : 'overflow-y-auto p-4 sm:p-6 pb-28'}`}>
           {adminRoute === 'dashboard' && (
             <DashboardView
               zones={displayedZones}
@@ -726,9 +719,6 @@ useEffect(() => {
         </main>
       </div>
 
-      {/* Compliance Footer */}
-      <ComplianceFooter />
-
       {/* Role Switcher Pill */}
       <RoleSwitcher
         currentView={viewMode}
@@ -756,17 +746,6 @@ useEffect(() => {
         isOpen={isVoiceModalOpen}
         onClose={() => setIsVoiceModalOpen(false)}
         onExecuteCommand={handleVoiceCommand}
-      />
-
-      <SupportModal
-        isOpen={isSupportModalOpen}
-        onClose={() => setIsSupportModalOpen(false)}
-      />
-
-      <SystemLogsModal
-        isOpen={isLogsModalOpen}
-        onClose={() => setIsLogsModalOpen(false)}
-        isScenarioActive={isScenarioActive}
       />
     </div>
   );

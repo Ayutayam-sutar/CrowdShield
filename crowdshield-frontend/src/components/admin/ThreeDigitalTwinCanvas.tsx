@@ -4,8 +4,6 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TopologyEdge, TopologyNode, getTopologyNode } from '../../data/venueTopology';
 import { Eye, AlertTriangle } from 'lucide-react';
 
-// Node shape as consumed by this canvas: real topology position/role, merged
-// with whatever live telemetry is currently available for it.
 interface MergedNode extends TopologyNode {
   density: number;
   riskLevel: string;
@@ -20,7 +18,6 @@ interface ThreeDigitalTwinCanvasProps {
   onSelectZone: (zoneId: string) => void;
 }
 
-// Map schematic 0-100 x/y layout coords onto a 3D ground plane.
 const toWorld = (x: number, y: number): [number, number] => {
   const worldX = (x - 50) * 0.34;
   const worldZ = (y - 50) * 0.34;
@@ -62,7 +59,7 @@ export const ThreeDigitalTwinCanvas: React.FC<ThreeDigitalTwinCanvasProps> = ({
     }
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0D0F1A);
+    scene.background = new THREE.Color(0xf8fafc); // slate-50 light background
 
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
     camera.position.set(14, 16, 14);
@@ -75,28 +72,28 @@ export const ThreeDigitalTwinCanvas: React.FC<ThreeDigitalTwinCanvasProps> = ({
     controls.maxDistance = 40;
     controls.target.set(0, 0, 0);
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
     dirLight.position.set(10, 20, 12);
     dirLight.castShadow = true;
     dirLight.shadow.mapSize.set(1024, 1024);
     scene.add(dirLight);
 
-    const bluePointLight = new THREE.PointLight(0x2C7BE5, 2, 30);
+    const bluePointLight = new THREE.PointLight(0x0ea5e9, 1.5, 30); // Sky blue point light
     bluePointLight.position.set(-8, 8, -8);
     scene.add(bluePointLight);
 
-    // Floor sized to the schematic layout, not an arbitrary fixed size
+    // Floor sized to the schematic layout, slate-100 architectural look
     const floor = new THREE.Mesh(
       new THREE.PlaneGeometry(24, 24),
-      new THREE.MeshStandardMaterial({ color: 0x151726, roughness: 0.6, metalness: 0.2 })
+      new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.7, metalness: 0.1 })
     );
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     scene.add(floor);
 
-    const gridHelper = new THREE.GridHelper(24, 16, 0x2C7BE5, 0x2A2E45);
+    const gridHelper = new THREE.GridHelper(24, 16, 0x0ea5e9, 0xcbd5e1);
     gridHelper.position.y = 0.02;
     scene.add(gridHelper);
 
@@ -118,7 +115,7 @@ export const ThreeDigitalTwinCanvas: React.FC<ThreeDigitalTwinCanvasProps> = ({
       const points = [new THREE.Vector3(ax, 0.03, az), new THREE.Vector3(bx, 0.03, bz)];
       const geometry = new THREE.BufferGeometry().setFromPoints(points);
       const material = new THREE.LineBasicMaterial({
-        color: isOnHighlightedPath ? 0x22D3A6 : 0x3a3f55,
+        color: isOnHighlightedPath ? 0x10b981 : 0x94a3b8, // active green, inactive slate
         linewidth: isOnHighlightedPath ? 3 : 1,
       });
       scene.add(new THREE.Line(geometry, material));
@@ -136,17 +133,15 @@ export const ThreeDigitalTwinCanvas: React.FC<ThreeDigitalTwinCanvasProps> = ({
       const onPath = highlightedPath.includes(node.id);
       const blockHeight = node.hasTelemetry ? Math.max(0.4, node.density * 0.9) : 0.4;
 
-      let colorHex = 0x3a3f55; // no telemetry yet -> neutral grey
+      let colorHex = 0x64748b; // no telemetry yet -> neutral slate-500
       if (node.hasTelemetry) {
         if (node.riskLevel === 'critical') colorHex = 0xef4444;
         else if (node.riskLevel === 'warning') colorHex = 0xf97316;
-        else if (node.riskLevel === 'caution') colorHex = 0xFFB627;
-        else colorHex = 0x22D3A6;
+        else if (node.riskLevel === 'caution') colorHex = 0xeab308;
+        else colorHex = 0x10b981;
       }
-      if (isSelected) colorHex = 0x2C7BE5;
+      if (isSelected) colorHex = 0x0ea5e9;
 
-      // Gates render as diamonds (rotated boxes) to be visually distinct
-      // from interior zones/junctions, which render as cylinders.
       const geometry = node.isGate
         ? new THREE.OctahedronGeometry(0.7, 0)
         : new THREE.CylinderGeometry(0.7, 0.7, blockHeight, 6);
@@ -154,9 +149,9 @@ export const ThreeDigitalTwinCanvas: React.FC<ThreeDigitalTwinCanvasProps> = ({
       const material = new THREE.MeshStandardMaterial({
         color: colorHex,
         roughness: 0.3,
-        metalness: 0.4,
-        emissive: onPath ? 0x0a5f4a : isHighRisk ? 0x990011 : 0x001122,
-        emissiveIntensity: onPath ? 0.6 : isHighRisk ? 0.8 : 0.15,
+        metalness: 0.2,
+        emissive: onPath ? 0x064e3b : isHighRisk ? 0x7f1d1d : 0x0f172a,
+        emissiveIntensity: onPath ? 0.4 : isHighRisk ? 0.6 : 0.1,
       });
 
       const mesh = new THREE.Mesh(geometry, material);
@@ -170,14 +165,14 @@ export const ThreeDigitalTwinCanvas: React.FC<ThreeDigitalTwinCanvasProps> = ({
       zoneMeshes.push({ mesh, zoneId: node.id, initialY: yPos, isHighRisk, density: node.density });
 
       if (isHighRisk) {
-        const beacon = new THREE.PointLight(0xFF3B5C, 3, 10);
+        const beacon = new THREE.PointLight(0xef4444, 2.5, 10);
         beacon.position.set(wx, yPos + 2, wz);
         scene.add(beacon);
       }
 
       if (onPath) {
         const ringGeo = new THREE.RingGeometry(0.9, 1.05, 24);
-        const ringMat = new THREE.MeshBasicMaterial({ color: 0x22D3A6, side: THREE.DoubleSide, transparent: true, opacity: 0.7 });
+        const ringMat = new THREE.MeshBasicMaterial({ color: 0x10b981, side: THREE.DoubleSide, transparent: true, opacity: 0.7 });
         const ring = new THREE.Mesh(ringGeo, ringMat);
         ring.rotation.x = -Math.PI / 2;
         ring.position.set(wx, 0.04, wz);
@@ -267,13 +262,13 @@ export const ThreeDigitalTwinCanvas: React.FC<ThreeDigitalTwinCanvasProps> = ({
 
   if (webGlError) {
     return (
-      <div className="relative w-full h-[380px] bg-[#0D0F1A] rounded-xl border border-white/10 overflow-hidden flex flex-col items-center justify-center p-6 text-center gap-3">
-        <div className="p-3 bg-amber-500/15 text-amber-500 rounded-full border border-amber-500/30">
+      <div className="relative w-full h-[380px] bg-slate-50 rounded-xl border border-slate-200 overflow-hidden flex flex-col items-center justify-center p-6 text-center gap-3">
+        <div className="p-3 bg-amber-50 text-amber-500 rounded-full border border-amber-200">
           <AlertTriangle className="w-6 h-6" />
         </div>
-        <div className="flex flex-col gap-1 max-w-sm">
-          <span className="font-heading font-bold text-sm text-white">3D WebGL Context Unavailable</span>
-          <span className="text-xs text-slate-400 leading-relaxed">
+        <div className="flex flex-col gap-1 max-w-sm text-slate-800">
+          <span className="font-heading font-bold text-sm">3D WebGL Context Unavailable</span>
+          <span className="text-xs text-slate-500 leading-relaxed">
             Hardware acceleration is disabled or unsupported by your graphics driver.
           </span>
         </div>
@@ -282,18 +277,18 @@ export const ThreeDigitalTwinCanvas: React.FC<ThreeDigitalTwinCanvasProps> = ({
   }
 
   return (
-    <div className="relative w-full h-[380px] bg-[#0D0F1A] rounded-xl border border-white/10 overflow-hidden shadow-inner group">
+    <div className="relative w-full h-[380px] bg-slate-50 rounded-xl border border-slate-200 overflow-hidden shadow-inner group">
       <div ref={mountRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
-      <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 text-white text-xs font-mono-num flex items-center gap-2 pointer-events-none">
-        <Eye className="w-3.5 h-3.5 text-[#22D3A6]" />
+      <div className="absolute top-3 left-3 bg-white/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-200 text-slate-800 text-xs font-mono-num flex items-center gap-2 pointer-events-none">
+        <Eye className="w-3.5 h-3.5 text-emerald-600" />
         <span>Real venue · diamonds = gates · cylinders = zones</span>
       </div>
       {hoveredZoneName && (
-        <div className="absolute bottom-3 left-3 bg-[#2C7BE5] text-white px-3 py-1 rounded-lg text-xs font-bold font-heading shadow-lg border border-white/20">
+        <div className="absolute bottom-3 left-3 bg-sky-600 text-white px-3 py-1 rounded-lg text-xs font-bold font-heading shadow-md border border-sky-700">
           {hoveredZoneName}
         </div>
       )}
-      <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur px-2.5 py-1 rounded-lg border border-white/10 text-[10px] text-white/70 font-mono-num">
+      <div className="absolute bottom-3 right-3 bg-white/80 backdrop-blur px-2.5 py-1 rounded-lg border border-slate-200 text-[10px] text-slate-600 font-mono-num">
         Scroll to Zoom · Right-Click to Pan
       </div>
     </div>

@@ -14,7 +14,8 @@ import {
   RefreshCw,
   AlertTriangle,
   Upload,
-  Loader2
+  Loader2,
+  X
 } from 'lucide-react';
 
 interface CamerasViewProps {
@@ -39,13 +40,11 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [] 
     setFailedFeeds((prev) => ({ ...prev, [feedId]: false }));
   };
 
-  // Extract port from stream URL (e.g. http://localhost:5001/video_feed -> 5001)
   const getPortFromUrl = (url: string, defaultPort: string = '5000') => {
     const match = url.match(/:(\d+)\//);
     return match ? match[1] : defaultPort;
   };
 
-  // Handle direct file upload to specific Edge Camera Node port
   const handleFileUpload = async (feedId: string, port: string, file: File) => {
     if (!file) return;
 
@@ -63,7 +62,6 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [] 
 
       if (response.ok) {
         setUploadStatus((prev) => ({ ...prev, [feedId]: `Hot-swapped: ${file.name}` }));
-        // Instantly force stream reload
         handleRetryFeed(feedId);
       } else {
         setUploadStatus((prev) => ({ ...prev, [feedId]: 'Upload failed on edge node' }));
@@ -79,7 +77,6 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [] 
     }
   };
 
-  // Match feed with live telemetry zone data
   const findMatchedZone = (feed: CCTVFeed): VenueZone | null => {
     if (!zones || zones.length === 0) return null;
     const camNum = feed.id.replace(/\D/g, '');
@@ -113,13 +110,13 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [] 
   };
 
   return (
-    <div className="p-6 flex flex-col gap-6 font-body">
+    <div className="p-6 flex flex-col gap-6 font-body text-slate-800">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-heading font-bold text-2xl text-white tracking-tight">
+          <h1 className="font-heading font-bold text-2xl text-slate-800 tracking-tight">
             YOLO11 Edge Camera Vision Matrix
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-500 mt-1">
             Real-time optical sensors streaming multi-port MJPEG video with live telemetry counters & neural detection.
           </p>
         </div>
@@ -129,8 +126,8 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [] 
             onClick={() => setShowDetections(!showDetections)}
             className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer ${
               showDetections
-                ? 'bg-[#7C6CFF]/15 border-[#7C6CFF]/40 text-[#7C6CFF]'
-                : 'bg-white/5 border-white/10 text-slate-400'
+                ? 'bg-indigo-50 border-indigo-200 text-indigo-600'
+                : 'bg-slate-100 border-slate-200 text-slate-500 hover:bg-slate-200'
             }`}
           >
             <Layers className="w-4 h-4" />
@@ -156,21 +153,21 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [] 
           return (
             <div
               key={feed.id}
-              className="bg-[#111827] border border-slate-800/80 rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(21,23,38,0.04)] flex flex-col"
+              className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs flex flex-col"
             >
               {/* Feed Header */}
-              <div className="p-3 bg-[#151726] text-white flex items-center justify-between border-b border-white/10">
+              <div className="p-3 bg-slate-50 text-slate-800 flex items-center justify-between border-b border-slate-200">
                 <div className="flex items-center gap-2">
-                  <span className={`w-2.5 h-2.5 rounded-full ${isOffline ? 'bg-[#FF3B5C]' : 'bg-[#22D3A6] animate-pulse'}`} />
+                  <span className={`w-2.5 h-2.5 rounded-full ${isOffline ? 'bg-rose-500' : 'bg-emerald-500 animate-pulse'}`} />
                   <span className="font-heading font-bold text-sm">{feed.name}</span>
                   {currentStatus && (
-                    <span className="text-[10px] bg-[#06b6d4]/20 text-[#06b6d4] px-2 py-0.5 rounded font-mono font-bold">
+                    <span className="text-[10px] bg-sky-50 text-sky-600 border border-sky-100 px-2 py-0.5 rounded font-mono font-bold">
                       {currentStatus}
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-2 font-mono-num text-xs text-gray-400">
-                  <span className="px-1.5 py-0.5 rounded bg-white/10 text-[10px] font-bold text-white">Port {port}</span>
+                <div className="flex items-center gap-2 font-mono-num text-xs text-slate-500">
+                  <span className="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] font-bold text-slate-700 border border-slate-200">Port {port}</span>
                   <span>·</span>
                   <span>{feed.fps} FPS</span>
                   <span>·</span>
@@ -181,9 +178,9 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [] 
               {/* CCTV Stream Container */}
               <div className="relative aspect-video bg-black overflow-hidden group">
                 {isOffline ? (
-                  <div className="w-full h-full bg-[#151726] flex flex-col items-center justify-center gap-2.5 text-white p-6 text-center">
+                  <div className="w-full h-full bg-slate-50 flex flex-col items-center justify-center gap-2.5 text-slate-600 p-6 text-center">
                     <VideoOff className="w-9 h-9 text-[#FF3B5C] animate-pulse" />
-                    <span className="font-heading font-bold text-sm tracking-wide text-white">
+                    <span className="font-heading font-bold text-sm tracking-wide text-slate-800">
                       Camera Offline - Awaiting Edge Feed
                     </span>
                     <div className="flex items-center gap-2">
@@ -195,14 +192,14 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [] 
                     <div className="flex items-center gap-3 mt-2">
                       <button
                         onClick={() => handleRetryFeed(feed.id)}
-                        className="px-3.5 py-1.5 bg-[#2C7BE5] hover:bg-[#2C7BE5]/80 rounded-xl text-xs font-bold text-white flex items-center gap-2 cursor-pointer transition-colors shadow-md"
+                        className="px-3.5 py-1.5 bg-sky-600 hover:bg-sky-700 rounded-xl text-xs font-bold text-white flex items-center gap-2 cursor-pointer transition-colors shadow-md border-none"
                       >
                         <RefreshCw className="w-4 h-4" />
                         <span>Retry Stream</span>
                       </button>
 
-                      {/* Direct Upload Fallback Trigger */}
-                      <label className="px-3.5 py-1.5 bg-[#7C6CFF] hover:bg-[#7C6CFF]/80 rounded-xl text-xs font-bold text-white flex items-center gap-2 cursor-pointer transition-colors shadow-md">
+                      {/* Direct Media Upload Button */}
+                      <label className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-xs font-bold text-white flex items-center gap-2 cursor-pointer transition-colors shadow-md">
                         {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                         <span>{isUploading ? 'Uploading...' : 'Hot-Swap Video'}</span>
                         <input
@@ -261,7 +258,7 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [] 
                     {/* Expand Feed Modal */}
                     <button
                       onClick={() => setSelectedFeed(feed)}
-                      className="p-3 bg-white text-[#151726] rounded-full shadow-lg hover:bg-gray-100 transition-transform hover:scale-110 cursor-pointer"
+                      className="p-3 bg-white text-slate-800 rounded-full shadow-lg hover:bg-gray-100 transition-transform hover:scale-110 cursor-pointer border-none"
                       title="Expand Feed"
                     >
                       <Maximize2 className="w-5 h-5" />
@@ -269,7 +266,7 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [] 
 
                     {/* Hot-Swap Media File Upload Button */}
                     <label
-                      className="p-3 bg-[#7C6CFF] text-white rounded-full shadow-lg hover:bg-[#6b58ff] transition-transform hover:scale-110 cursor-pointer flex items-center justify-center"
+                      className="p-3 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 transition-transform hover:scale-110 cursor-pointer flex items-center justify-center"
                       title="Hot-Swap Video Feed File"
                     >
                       {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
@@ -289,40 +286,40 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [] 
               </div>
 
               {/* CCTV Footer Stats - Real Telemetry */}
-<div className="p-4 bg-[#151726] border-t border-white/10 flex items-center justify-between text-xs font-mono-num">
-  <div className="flex items-center gap-5">
-    <div>
-      <span className="text-slate-400 block text-[10px] uppercase font-bold">Headcount</span>
-      <span className={`font-bold text-sm ${isOffline ? 'text-slate-500' : 'text-slate-100'}`}>
-        {isOffline ? '--' : headcount}
-      </span>
-    </div>
-    <div>
-      <span className="text-slate-400 block text-[10px] uppercase font-bold">Density</span>
-      <span className={`font-bold text-sm ${isOffline ? 'text-slate-500' : 'text-slate-100'}`}>
-        {isOffline || !matchedZone ? '--' : `${density.toFixed(1)} p/m²`}
-      </span>
-    </div>
-    <div>
-      <span className="text-[#5B5F73] block text-[10px] uppercase font-bold">Inference</span>
-      <span className={`font-bold ${isOffline ? 'text-slate-500' : 'text-[#22D3A6]'}`}>
-        {isOffline || !matchedZone || !matchedZone.inferenceMs ? '--' : `${matchedZone.inferenceMs.toFixed(1)} ms`}
-      </span>
-    </div>
-  </div>
+              <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs font-mono-num">
+                <div className="flex items-center gap-5">
+                  <div>
+                    <span className="text-slate-500 block text-[10px] uppercase font-bold">Headcount</span>
+                    <span className={`font-bold text-sm ${isOffline ? 'text-slate-400' : 'text-slate-800'}`}>
+                      {isOffline ? '--' : headcount}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block text-[10px] uppercase font-bold">Density</span>
+                    <span className={`font-bold text-sm ${isOffline ? 'text-slate-400' : 'text-slate-800'}`}>
+                      {isOffline || !matchedZone ? '--' : `${density.toFixed(1)} p/m²`}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block text-[10px] uppercase font-bold">Inference</span>
+                    <span className={`font-bold ${isOffline ? 'text-slate-400' : 'text-emerald-600'}`}>
+                      {isOffline || !matchedZone || !matchedZone.inferenceMs ? '--' : `${matchedZone.inferenceMs.toFixed(1)} ms`}
+                    </span>
+                  </div>
+                </div>
 
-  <div className="flex items-center gap-2">
-    <span className={`px-2.5 py-1 rounded-lg border font-bold uppercase text-[10px] ${
-      isOffline ? 'bg-white/5 border-white/10 text-slate-500' : getRiskBadge(riskLevel)
-    }`}>
-      {isOffline
-        ? `Port ${port}: No Live Feed`
-        : matchedZone
-        ? `Zone ${matchedZone.code}: ${riskLevel}`
-        : `Port ${port} Active`}
-    </span>
-  </div>
-</div>
+                <div className="flex items-center gap-2">
+                  <span className={`px-2.5 py-1 rounded-lg border font-bold uppercase text-[10px] ${
+                    isOffline ? 'bg-slate-100 border-slate-200 text-slate-400' : getRiskBadge(riskLevel)
+                  }`}>
+                    {isOffline
+                      ? `Port ${port}: No Live Feed`
+                      : matchedZone
+                      ? `Zone ${matchedZone.code}: ${riskLevel}`
+                      : `Port ${port} Active`}
+                  </span>
+                </div>
+              </div>
             </div>
           );
         })}
@@ -331,19 +328,19 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [] 
       {/* Expanded Feed Modal */}
       {selectedFeed && (
         <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/80 p-4 font-body animate-fadeIn">
-          <div className="bg-[#151726] border border-white/20 rounded-2xl max-w-4xl w-full overflow-hidden flex flex-col text-white">
-            <div className="p-4 border-b border-white/10 flex items-center justify-between">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-4xl w-full overflow-hidden flex flex-col text-slate-800">
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between">
               <div>
-                <h3 className="font-heading font-bold text-base text-white">
+                <h3 className="font-heading font-bold text-base text-slate-800">
                   {selectedFeed.name}
                 </h3>
-                <p className="text-xs text-gray-400 font-mono-num">
+                <p className="text-xs text-slate-500 font-mono-num">
                   Location: {selectedFeed.location} · Stream: http://127.0.0.1:{getPortFromUrl(selectedFeed.imageUrl)}/video_feed
                 </p>
               </div>
               <button
                 onClick={() => setSelectedFeed(null)}
-                className="px-3 py-1 bg-white/10 rounded-lg hover:bg-white/20 text-xs font-bold cursor-pointer"
+                className="px-3 py-1 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-xs font-bold cursor-pointer rounded-lg transition-colors"
               >
                 Close
               </button>

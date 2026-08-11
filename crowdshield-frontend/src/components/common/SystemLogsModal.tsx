@@ -28,38 +28,38 @@ export const SystemLogsModal: React.FC<SystemLogsModalProps> = ({ isOpen, onClos
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-body animate-fadeIn">
-      <div className="bg-[#151726] border border-white/20 rounded-2xl shadow-2xl max-w-xl w-full overflow-hidden p-5 flex flex-col gap-4 text-white">
-        <div className="flex justify-between items-center border-b border-white/10 pb-3">
-          <div className="flex items-center gap-2 text-[#22D3A6] font-heading font-bold text-base">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl max-w-xl w-full overflow-hidden p-5 flex flex-col gap-4 text-slate-800">
+        <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+          <div className="flex items-center gap-2 text-sky-600 font-heading font-bold text-base">
             <Terminal className="w-5 h-5" />
             <span>Edge Daemon System Logs (Live Stream)</span>
           </div>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white">
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="bg-black/50 border border-white/10 p-3 rounded-xl font-mono-num text-xs flex flex-col gap-2 max-h-72 overflow-y-auto">
+        <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl font-mono-num text-xs flex flex-col gap-2 max-h-72 overflow-y-auto">
           {logs.map((log, idx) => (
-            <div key={idx} className="flex items-start gap-2 border-b border-white/5 pb-1.5 last:border-0">
-              <span className="text-gray-500 text-[11px] shrink-0">{log.time}</span>
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
-                log.level.includes('CRITICAL') ? 'bg-[#FF3B5C] text-white' : log.level === 'WARN' ? 'bg-[#FFB627] text-[#151726]' : 'bg-[#2C7BE5] text-white'
+            <div key={idx} className="flex items-start gap-2 border-b border-slate-100 pb-1.5 last:border-0">
+              <span className="text-slate-400 text-[11px] shrink-0">{log.time}</span>
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 text-white ${
+                log.level.includes('CRITICAL') ? 'bg-rose-600' : log.level === 'WARN' ? 'bg-amber-500' : 'bg-sky-600'
               }`}>
                 {log.level}
               </span>
-              <span className="text-gray-200">{log.msg}</span>
+              <span className="text-slate-700">{log.msg}</span>
             </div>
           ))}
         </div>
 
-        <div className="flex items-center justify-between text-[11px] text-gray-400 font-mono-num">
-          <span className="flex items-center gap-1 text-[#22D3A6]">
+        <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono-num">
+          <span className="flex items-center gap-1 text-emerald-600 font-semibold">
             <Cpu className="w-3.5 h-3.5" /> Edge CPU: 14% · RAM: 1.2GB / 8GB
           </span>
           <button
             onClick={onClose}
-            className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-lg transition-colors cursor-pointer"
+            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 font-semibold rounded-lg transition-colors cursor-pointer"
           >
             Close
           </button>
