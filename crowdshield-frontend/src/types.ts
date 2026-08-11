@@ -48,6 +48,7 @@ export interface VenueZone {
   gateStatus: 'open' | 'restricted' | 'closed' | 'evacuation' | 'one_way';
   inferenceMs?: number;
   evacuationRoute?: EvacuationRoute;
+  avg_speed?: number;
 }
 
 export interface YoloDetection {

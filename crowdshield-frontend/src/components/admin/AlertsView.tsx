@@ -7,7 +7,6 @@ import {
   Play, 
   CheckCircle2, 
   AlertTriangle, 
-  ShieldAlert, 
   ArrowRight, 
   Radio,
   X,
@@ -53,6 +52,15 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
   const [broadcastState, setBroadcastState] = useState<{ loading: boolean; error: string | null; result: BroadcastResult | null }>({ loading: false, error: null, result: null });
   const [historyData, setHistoryData] = useState<{ time: string; density: number }[]>([]);
 
+  // CRITICAL FIX 1: Auto-select the newest alert if none is selected or if the selected one resolves
+  useEffect(() => {
+    if (alerts.length > 0) {
+      if (!selectedAlertId || !alerts.find(a => a.id === selectedAlertId)) {
+        setSelectedAlertId(alerts[0].id);
+      }
+    }
+  }, [alerts, selectedAlertId]);
+
   const selectedAlert = alerts.find((a) => a.id === selectedAlertId) || alerts[0] || null;
 
   const activeZone = selectedAlert
@@ -70,18 +78,11 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
   const displayDensity = activeZone ? activeZone.density : (selectedAlert?.density || 0);
   const displayFlowRate = activeZone ? activeZone.flowRate : (selectedAlert?.flowRate || 0);
 
+  // CRITICAL FIX 2: Dynamically look up the camera URL from the props instead of hardcoding ITER
   const getStreamUrl = (zoneId?: string) => {
-    switch ((zoneId || '').toLowerCase()) {
-      case 'z-01':
-      case 'z-1': return 'http://127.0.0.1:5000/video_feed';
-      case 'z-02':
-      case 'z-2': return 'http://127.0.0.1:5001/video_feed';
-      case 'z-03':
-      case 'z-3': return 'http://127.0.0.1:5002/video_feed';
-      case 'z-04':
-      case 'z-4': return 'http://127.0.0.1:5003/video_feed';
-      default: return 'http://127.0.0.1:5000/video_feed';
-    }
+    if (!zoneId) return 'http://localhost:5000/video_feed';
+    const feed = cctvFeeds.find(f => f.zoneId === zoneId);
+    return feed?.imageUrl || 'http://localhost:5000/video_feed';
   };
 
   useEffect(() => {
@@ -123,7 +124,7 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
     setDispatchState({ loading: true, error: null });
 
     try {
-      const res = await api.post<InterventionResult>('/interventions/execute', {
+      await api.post<InterventionResult>('/interventions/execute', {
         actionId: (confirmationModalAction as any).id,
         actionText: confirmationModalAction.actionText,
         zoneId: selectedAlert.zoneId,
@@ -207,6 +208,7 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
                 const isSelected = selectedAlert && alert.id === selectedAlert.id;
                 let borderClass = 'border-l-4 border-[#FF3B5C]';
                 let badgeBg = 'bg-[#FF3B5C]/15 text-[#FF3B5C] border-[#FF3B5C]/30';
+                
                 if (alert.riskLevel === 'warning') {
                   borderClass = 'border-l-4 border-[#FF7A45]';
                   badgeBg = 'bg-[#FF7A45]/15 text-[#FF7A45] border-[#FF7A45]/30';
