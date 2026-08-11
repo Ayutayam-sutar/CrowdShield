@@ -30,6 +30,8 @@ import { wsService } from '../../services/websocket';
 import api from '../../utils/api';
 
 interface CitizenPortalViewProps {
+  reports: CitizenReport[];
+  onSubmitReport: (report: Omit<CitizenReport, "id" | "upvotes" | "status" | "timestamp">) => Promise<void>; // <--- ADD THIS LINE
   isScenarioActive: boolean;
   onLogout?: () => void;
   alerts?: CrowdAlert[];
@@ -37,6 +39,8 @@ interface CitizenPortalViewProps {
 }
 
 export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
+  reports,
+  onSubmitReport,
   isScenarioActive,
   onLogout,
   alerts,
