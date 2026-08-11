@@ -31,30 +31,156 @@ h1, h2, h3, h4, .heading-font {
   font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
 }
 
+/* ─── MOBILE APP CARD SYSTEM ──────────────────────────── */
+
+.app-card {
+  background: #FFFFFF;
+  border-radius: 20px;
+  border: 1px solid #F1F5F9;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.02);
+}
+
+.app-card-elevated {
+  background: #FFFFFF;
+  border-radius: 20px;
+  border: 1px solid #F1F5F9;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04);
+}
+
+.app-card-danger {
+  background: #FFF5F5;
+  border-radius: 20px;
+  border: 1px solid #FEE2E2;
+  box-shadow: 0 1px 3px rgba(239,68,68,0.06), 0 4px 12px rgba(239,68,68,0.03);
+}
+
+.app-input {
+  background: #F8FAFC;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 14px;
+  color: #0F172A;
+  font-size: 13px;
+  padding: 10px 14px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 100%;
+}
+.app-input:focus {
+  outline: none;
+  border-color: #6366F1;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+  background: #FFFFFF;
+}
+.app-input::placeholder {
+  color: #94A3B8;
+}
+
+/* ─── KEYFRAMES ─────────────────────────────────────── */
+
 @keyframes pulse-ring {
   0% {
     transform: scale(0.96);
-    box-shadow: 0 0 0 0 rgba(255, 59, 92, 0.5);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
   }
   70% {
     transform: scale(1.08);
-    box-shadow: 0 0 0 18px rgba(255, 59, 92, 0);
+    box-shadow: 0 0 0 18px rgba(239, 68, 68, 0);
   }
   100% {
     transform: scale(0.96);
-    box-shadow: 0 0 0 0 rgba(255, 59, 92, 0);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
   }
+}
+
+@keyframes gentle-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes emergency-border-pulse {
+  0%, 100% { border-color: rgba(239, 68, 68, 0.3); }
+  50% { border-color: rgba(239, 68, 68, 0.7); }
 }
 
 .animate-risk-pulse {
   animation: pulse-ring 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-/* Custom Leaflet Map styling */
+.animate-gentle-pulse {
+  animation: gentle-pulse 2s ease-in-out infinite;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out forwards;
+}
+
+.animate-emergency-border {
+  animation: emergency-border-pulse 1.5s ease-in-out infinite;
+}
+
+/* ─── LEAFLET ────────────────────────────────────────── */
+
 .leaflet-container {
   width: 100%;
   height: 100%;
   z-index: 1;
   background: #f0f0ea;
+  border-radius: 16px;
 }
 
+.leaflet-control-attribution {
+  display: none !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
+  border-radius: 14px !important;
+  color: #0F172A !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1) !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+}
+
+.leaflet-popup-tip {
+  background: #FFFFFF !important;
+}
+
+.leaflet-popup-close-button {
+  color: #94A3B8 !important;
+}
+
+/* Pretty tooltip for route distance */
+.route-tooltip {
+  background: #FFFFFF !important;
+  border: 1.5px solid #6366F1 !important;
+  border-radius: 10px !important;
+  color: #6366F1 !important;
+  font-weight: 700 !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 11px !important;
+  padding: 4px 10px !important;
+  box-shadow: 0 4px 12px rgba(99,102,241,0.15) !important;
+}
+
+.route-tooltip::before {
+  border-top-color: #FFFFFF !important;
+}
+
+/* Smooth scrollbar */
+.smooth-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.smooth-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.smooth-scroll::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+}
+.smooth-scroll::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}

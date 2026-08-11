@@ -39,35 +39,40 @@ class UnifiedPathfinder:
       with open(path, "r") as f:
         data = json.load(f)
 
-      # 1. Load exact physical nodes and their coordinates
-      for node in data.get("nodes", []):
-        self.graph.add_node(
-            node["id"],
-            lat=node.get("lat", 0.0),
-            lng=node.get("lng", 0.0),
-            is_exit=node.get("is_exit", False),
-            name=node.get("name", node["id"]),
-            type=node.get("type", "zone"),
-        )
+      # --- BUG FIX: Dig into the "venues" array to find the nodes/edges ---
+      venues = data.get("venues", [data]) # Fallback to flat if no venues array exists
 
-      # 2. Load strictly allowed physical paths (Edges)
-      for edge in data.get("edges", []):
-        length = edge.get("distance_meters", edge.get("length_meters", 10.0))
+      for venue in venues:
+        # 1. Load exact physical nodes and their coordinates
+        for node in venue.get("nodes", []):
+          self.graph.add_node(
+              node["id"],
+              lat=node.get("lat", 0.0),
+              lng=node.get("lng", 0.0),
+              is_exit=node.get("is_exit", False),
+              name=node.get("name", node["id"]),
+              type=node.get("type", "zone"),
+          )
 
-        # Forward path
-        self.graph.add_edge(
-            edge["source"],
-            edge["target"],
-            base_weight=length,
-            weight=length,  # Default weight before telemetry is applied
-        )
-        # Reverse path (Assuming bi-directional corridors unless specified)
-        self.graph.add_edge(
-            edge["target"],
-            edge["source"],
-            base_weight=length,
-            weight=length,
-        )
+        # 2. Load strictly allowed physical paths (Edges)
+        for edge in venue.get("edges", []):
+          # Supports both naming conventions from the JSON
+          length = edge.get("distance_meters", edge.get("length_meters", 10.0))
+
+          # Forward path
+          self.graph.add_edge(
+              edge["source"],
+              edge["target"],
+              base_weight=length,
+              weight=length,  # Default weight before telemetry is applied
+          )
+          # Reverse path (Assuming bi-directional corridors unless specified)
+          self.graph.add_edge(
+              edge["target"],
+              edge["source"],
+              base_weight=length,
+              weight=length,
+          )
 
       print(
           "[UnifiedPathfinder] Physical topology loaded successfully."
