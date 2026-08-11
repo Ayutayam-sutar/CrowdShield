@@ -30,10 +30,21 @@ class HistoricalDataResponse(BaseModel):
 async def get_historical_analytics(db: AsyncSession = Depends(get_db)):
     """
     Fetches historical telemetry data and alert counts aggregated by hour for the past 24 hours.
+    Returns empty data if no camera feed is actively running (no telemetry in the last 60s).
     """
     from datetime import datetime, timedelta, timezone
     
     now = datetime.now(timezone.utc)
+
+    # Guard: if no telemetry has been ingested in the last 60 seconds,
+    # the camera feed is not running — return zeros.
+    latest_query = select(func.max(TelemetryLog.timestamp))
+    latest_result = await db.execute(latest_query)
+    latest_ts = latest_result.scalar()
+
+    if not latest_ts or (now - latest_ts).total_seconds() > 120:
+        return []
+
     twenty_four_hours_ago = now - timedelta(hours=24)
 
     # 1. Footfall query (max headcount per hour) - FIXED GROUPING
