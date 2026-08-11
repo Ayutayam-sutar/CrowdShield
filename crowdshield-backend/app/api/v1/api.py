@@ -15,6 +15,7 @@ from app.api.v1.endpoints import (
     interventions
 )
 from app.api.v1 import websocket
+from app.api.v1.endpoints import incidents
 
 api_router = APIRouter()
 
@@ -29,3 +30,4 @@ api_router.include_router(routing.router, prefix="/routing", tags=["routing"])
 api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
 api_router.include_router(interventions.router, prefix="/interventions", tags=["interventions"])
 api_router.include_router(websocket.router, tags=["websocket"])
+api_router.include_router(incidents.router, prefix="/incidents", tags=["incidents"])

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { VenueZone, CrowdAlert, RiskLevel } from '../../types';
+import { VenueZone, CrowdAlert, RiskLevel, VenueInfo } from '../../types'; // <-- Add VenueInfo here
 import {
   Users,
   AlertTriangle,
@@ -22,6 +22,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceL
 const isLegacyPhantomZone = (id: string): boolean => /^z-0?\d$/i.test(id || '');
 
 interface DashboardViewProps {
+  selectedVenue?: VenueInfo | null;
   zones: VenueZone[];
   alerts: CrowdAlert[];
   isScenarioActive: boolean;
@@ -32,6 +33,7 @@ interface DashboardViewProps {
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
+  selectedVenue,
   zones,
   alerts,
   isScenarioActive,
@@ -41,7 +43,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   recentLogs,
 }) => {
   // Real zones only — legacy mock zones filtered out
-  const cleanZones = zones.filter((z) => !isLegacyPhantomZone(z.id));
+ // Filter cleanZones strictly by active venue (ITER vs Kalinga)
+  const cleanZones = React.useMemo(() => {
+    return zones.filter((z) => {
+      if (isLegacyPhantomZone(z.id)) return false;
+      const venueId = (z as any).venue_id || (z as any).venueId;
+      if (selectedVenue?.id && venueId) {
+        return venueId === selectedVenue.id;
+      }
+      const isKalingaSelected = selectedVenue?.id?.includes('kalinga') || selectedVenue?.name?.includes('Kalinga');
+      if (isKalingaSelected) {
+        return z.id.startsWith('ks_');
+      }
+      return !z.id.startsWith('ks_');
+    });
+  }, [zones, selectedVenue]);
   const totalHeadcount = cleanZones.reduce((acc, z) => acc + (z.currentHeadcount ?? 0), 0);
   const totalMaxCapacity = cleanZones.reduce((acc, z) => acc + (z.maxCapacity ?? 500), 0);
   const campusLoadPercent = totalMaxCapacity > 0 ? Math.min(100, Math.round((totalHeadcount / totalMaxCapacity) * 100)) : 0;

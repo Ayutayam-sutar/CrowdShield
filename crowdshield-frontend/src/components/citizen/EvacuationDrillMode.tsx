@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   CheckCircle2, 
   RotateCcw, 
@@ -12,8 +12,10 @@ import {
   MapPin, 
   Info,
   Compass,
-  ArrowUpRight
+  ArrowUpRight,
+  Loader2
 } from 'lucide-react';
+import api from '../../utils/api';
 
 interface EvacuationStep {
   stepNumber: number;
@@ -24,77 +26,139 @@ interface EvacuationStep {
   hazardNote?: string;
   xPercent: number;
   yPercent: number;
+  lat: number;
+  lng: number;
 }
 
-const DRILL_STEPS: EvacuationStep[] = [
-  {
-    stepNumber: 1,
-    title: 'Depart Library Roundabout',
-    instruction: 'Immediately turn south away from Central Library congestion and enter the Sports Complex Pathway.',
-    distanceMeter: 50,
-    landmark: 'Central Library Main Gate',
-    hazardNote: 'Avoid Central Roundabout due to multi-road crowd convergence.',
-    xPercent: 25,
-    yPercent: 75,
-  },
-  {
-    stepNumber: 2,
-    title: 'Bypass Sports Complex Bottleneck',
-    instruction: 'Proceed along Physics Dept Road. Keep right to allow security team vehicles to pass.',
-    distanceMeter: 60,
-    landmark: 'SOA Physics Dept Entrance',
-    xPercent: 50,
-    yPercent: 45,
-  },
-  {
-    stepNumber: 3,
-    title: 'Reach Safe Exit - Gate 2',
-    instruction: 'Pass through Emergency Turnstiles at EV Charging Junction (Gate 2) into the Food Court Open Assembly Area.',
-    distanceMeter: 40,
-    landmark: 'EV Charging Station / Food Court',
-    xPercent: 82,
-    yPercent: 20,
-  },
-];
+interface EvacuationDrillModeProps {
+  userLocation: { lat: number; lng: number };
+  venueId?: string;
+}
 
-export const EvacuationDrillMode: React.FC = () => {
+// Helper to calculate distance between two GPS coordinates in meters
+const calculateDistanceMeters = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+  const R = 6371e3; 
+  const p1 = lat1 * Math.PI/180;
+  const p2 = lat2 * Math.PI/180;
+  const dp = (lat2-lat1) * Math.PI/180;
+  const dl = (lng2-lng1) * Math.PI/180;
+  const a = Math.sin(dp/2) * Math.sin(dp/2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl/2) * Math.sin(dl/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return Math.round(R * c);
+};
+
+export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({ 
+  userLocation, 
+  venueId = "v-1" 
+}) => {
+  const [dynamicSteps, setDynamicSteps] = useState<EvacuationStep[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isAutoSimulating, setIsAutoSimulating] = useState(false);
   const [drillCompleted, setDrillCompleted] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [isVoiceGuidanceActive, setIsVoiceGuidanceActive] = useState(true);
 
-  const currentStep = DRILL_STEPS[currentStepIndex];
-  const totalSteps = DRILL_STEPS.length;
-  const progressPercent = Math.round(((currentStepIndex + (drillCompleted ? 1 : 0)) / totalSteps) * 100);
+  // Fetch live route from backend and map to SVG percentages
+  useEffect(() => {
+    const fetchLiveRoute = async () => {
+      setIsLoading(true);
+      try {
+        const response = await api.post('/routing/evacuate', {
+          venue_id: venueId,
+          current_lat: userLocation.lat,
+          current_lng: userLocation.lng
+        });
 
-  const remainingDistance = DRILL_STEPS.slice(currentStepIndex).reduce((acc, step) => acc + step.distanceMeter, 0);
+        if (response.data && response.data.waypoints && response.data.waypoints.length > 0) {
+          const waypoints = response.data.waypoints;
+          
+          // Calculate Bounding Box to map GPS to SVG Percentages
+          const lats = waypoints.map((w: any) => w.lat);
+          const lngs = waypoints.map((w: any) => w.lng);
+          const minLat = Math.min(...lats);
+          const maxLat = Math.max(...lats);
+          const minLng = Math.min(...lngs);
+          const maxLng = Math.max(...lngs);
+
+          const steps: EvacuationStep[] = waypoints.map((wp: any, index: number) => {
+            // Map to 10% - 90% range to keep dots inside the SVG canvas
+            const xPercent = minLng === maxLng ? 50 : ((wp.lng - minLng) / (maxLng - minLng)) * 80 + 10;
+            const yPercent = minLat === maxLat ? 50 : 100 - (((wp.lat - minLat) / (maxLat - minLat)) * 80 + 10);
+            
+            let dist = 0;
+            if (index < waypoints.length - 1) {
+              dist = calculateDistanceMeters(wp.lat, wp.lng, waypoints[index+1].lat, waypoints[index+1].lng);
+            }
+
+            let title = `Navigate to ${wp.zone_name}`;
+            let instruction = `Proceed safely towards ${wp.zone_name}.`;
+            if (index === 0) {
+              title = `Depart ${wp.zone_name}`;
+              instruction = `Exit your current location at ${wp.zone_name} immediately.`;
+            } else if (index === waypoints.length - 1) {
+              title = `Reach Safe Exit`;
+              instruction = `Pass through ${wp.zone_name} to successfully evacuate.`;
+            }
+
+            return {
+              stepNumber: index + 1,
+              title,
+              instruction,
+              distanceMeter: dist,
+              landmark: wp.zone_name,
+              xPercent,
+              yPercent,
+              lat: wp.lat,
+              lng: wp.lng
+            };
+          });
+
+          setDynamicSteps(steps);
+        }
+      } catch (err) {
+        console.error("Failed to fetch live drill route", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchLiveRoute();
+  }, [userLocation, venueId]);
+
+  const currentStep = dynamicSteps[currentStepIndex];
+  const totalSteps = dynamicSteps.length;
+  const progressPercent = totalSteps > 0 ? Math.round(((currentStepIndex + (drillCompleted ? 1 : 0)) / totalSteps) * 100) : 0;
+  const remainingDistance = dynamicSteps.slice(currentStepIndex).reduce((acc, step) => acc + step.distanceMeter, 0);
+
+  // SVG Line Path Generator
+  const svgPathD = useMemo(() => {
+    if (dynamicSteps.length < 2) return "";
+    return dynamicSteps.map((step, idx) => `${idx === 0 ? 'M' : 'L'} ${step.xPercent} ${step.yPercent}`).join(" ");
+  }, [dynamicSteps]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout | null = null;
     if (isAutoSimulating && !drillCompleted) {
-      timer = setInterval(() => {
-        setElapsedSeconds((prev) => prev + 1);
-      }, 1000);
+      timer = setInterval(() => setElapsedSeconds((prev) => prev + 1), 1000);
     }
-    return () => {
-      if (timer) clearInterval(timer);
-    };
+    return () => { if (timer) clearInterval(timer); };
   }, [isAutoSimulating, drillCompleted]);
 
   useEffect(() => {
     let simInterval: NodeJS.Timeout | null = null;
-    if (isAutoSimulating && !drillCompleted) {
+    if (isAutoSimulating && !drillCompleted && dynamicSteps.length > 0) {
       simInterval = setInterval(() => {
         setCurrentStepIndex((prev) => {
           if (prev < totalSteps - 1) {
-            announceStepVoice(DRILL_STEPS[prev + 1]);
+            announceStepVoice(dynamicSteps[prev + 1]);
             return prev + 1;
           } else {
             setDrillCompleted(true);
             setIsAutoSimulating(false);
             if ('speechSynthesis' in window && isVoiceGuidanceActive) {
-              const speak = new SpeechSynthesisUtterance('Evacuation drill complete. You have reached Safe Exit Gate 2 at the EV Charging Junction.');
+              const speak = new SpeechSynthesisUtterance('Evacuation drill complete. You have reached the safe exit.');
               window.speechSynthesis.speak(speak);
             }
             return prev;
@@ -102,10 +166,8 @@ export const EvacuationDrillMode: React.FC = () => {
         });
       }, 4000);
     }
-    return () => {
-      if (simInterval) clearInterval(simInterval);
-    };
-  }, [isAutoSimulating, drillCompleted, totalSteps, isVoiceGuidanceActive]);
+    return () => { if (simInterval) clearInterval(simInterval); };
+  }, [isAutoSimulating, drillCompleted, totalSteps, isVoiceGuidanceActive, dynamicSteps]);
 
   const announceStepVoice = (step: EvacuationStep) => {
     if (!isVoiceGuidanceActive || !('speechSynthesis' in window)) return;
@@ -117,16 +179,15 @@ export const EvacuationDrillMode: React.FC = () => {
   };
 
   const handleStartDrill = () => {
+    if (dynamicSteps.length === 0) return;
     setCurrentStepIndex(0);
     setDrillCompleted(false);
     setElapsedSeconds(0);
     setIsAutoSimulating(true);
-    announceStepVoice(DRILL_STEPS[0]);
+    announceStepVoice(dynamicSteps[0]);
   };
 
-  const handlePauseDrill = () => {
-    setIsAutoSimulating(false);
-  };
+  const handlePauseDrill = () => setIsAutoSimulating(false);
 
   const handleResetDrill = () => {
     setIsAutoSimulating(false);
@@ -139,7 +200,7 @@ export const EvacuationDrillMode: React.FC = () => {
     if (currentStepIndex < totalSteps - 1) {
       const nextIdx = currentStepIndex + 1;
       setCurrentStepIndex(nextIdx);
-      announceStepVoice(DRILL_STEPS[nextIdx]);
+      announceStepVoice(dynamicSteps[nextIdx]);
     } else {
       setDrillCompleted(true);
       setIsAutoSimulating(false);
@@ -159,6 +220,24 @@ export const EvacuationDrillMode: React.FC = () => {
     return `${mins}m ${remaining < 10 ? '0' : ''}${remaining}s`;
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center p-10 bg-white border border-[#E7E5DD] rounded-2xl gap-4">
+        <Loader2 className="w-8 h-8 text-[#2C7BE5] animate-spin" />
+        <span className="font-heading font-bold text-sm text-[#151726]">Calculating Safe Evacuation Path...</span>
+      </div>
+    );
+  }
+
+  if (dynamicSteps.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center p-10 bg-white border border-[#FF3B5C]/30 rounded-2xl gap-4">
+        <ShieldAlert className="w-8 h-8 text-[#FF3B5C]" />
+        <span className="font-heading font-bold text-sm text-[#151726]">No valid physical route found. Await instructions.</span>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3.5 sm:gap-4 font-body text-[#151726] w-full max-w-full">
       {/* Mode Header Banner */}
@@ -169,13 +248,13 @@ export const EvacuationDrillMode: React.FC = () => {
           </div>
           <div className="min-w-0 flex flex-col">
             <h2 className="font-heading font-bold text-xs sm:text-base tracking-tight flex items-center gap-1.5 sm:gap-2 truncate">
-              <span className="truncate">Evacuation Drill Mode · ITER Campus</span>
+              <span className="truncate">Live Evacuation Drill</span>
               <span className="px-2 py-0.5 rounded-full bg-[#22D3A6] text-[#151726] text-[9px] sm:text-[10px] font-mono-num font-bold uppercase shrink-0">
                 Interactive GPS
               </span>
             </h2>
             <p className="text-[10px] sm:text-[11px] text-white/70 truncate">
-              Simulated turn-by-turn guidance to Gate 2 (EV Junction)
+              Simulated turn-by-turn guidance based on real-time crowd data
             </p>
           </div>
         </div>
@@ -199,46 +278,33 @@ export const EvacuationDrillMode: React.FC = () => {
         <div className="flex items-center justify-between text-xs text-white/80 font-mono-num gap-2">
           <span className="flex items-center gap-1.5 font-bold text-[#22D3A6] truncate">
             <MapPin className="w-4 h-4 text-[#22D3A6] shrink-0" />
-            <span className="truncate">ITER Campus Evacuation Route</span>
+            <span className="truncate">Active Evacuation Route</span>
           </span>
           <span className="bg-white/10 px-2 sm:px-2.5 py-0.5 rounded-full text-[10px] text-white/90 shrink-0 border border-white/10">
-            Live Route: Library Roundabout → Gate 2
+            {totalSteps} Waypoints Generated
           </span>
         </div>
 
-        {/* Vector SVG Map Container */}
+        {/* Dynamic Vector SVG Map Container */}
         <div className="relative w-full h-56 sm:h-64 bg-[#0D0F1A] rounded-xl border border-white/10 overflow-hidden select-none">
           <div 
             className="absolute inset-0 opacity-15 pointer-events-none" 
-            style={{
-              backgroundImage: 'radial-gradient(#2C7BE5 1px, transparent 1px)',
-              backgroundSize: '16px 16px'
-            }}
+            style={{ backgroundImage: 'radial-gradient(#2C7BE5 1px, transparent 1px)', backgroundSize: '16px 16px' }}
           />
 
-          <svg className="absolute inset-0 w-full h-full pointer-events-none stroke-white/20 fill-none" viewBox="0 0 100 100" preserveAspectRatio="none">
-            <rect x="5" y="5" width="90" height="90" rx="10" strokeWidth="0.8" strokeDasharray="2 2" />
-            
-            <rect x="15" y="60" width="28" height="25" rx="3" className="fill-white/5 stroke-white/15" />
-            <text x="29" y="74" fill="#A0A5BA" fontSize="2.8" textAnchor="middle" className="font-sans font-bold">PHYSICS DEPT</text>
-
-            <circle cx="20" cy="80" r="8" className="fill-[#FF3B5C]/20 stroke-[#FF3B5C] animate-pulse" strokeWidth="1" />
-            <text x="20" y="81" fill="#FF3B5C" fontSize="2.3" textAnchor="middle" fontWeight="bold">LIBRARY SURGE</text>
-
-            <rect x="72" y="10" width="22" height="18" rx="4" className="fill-[#22D3A6]/20 stroke-[#22D3A6]" strokeWidth="1.2" />
-            <text x="83" y="20" fill="#22D3A6" fontSize="2.6" textAnchor="middle" fontWeight="bold">GATE 2 EXIT</text>
-
+          <svg className="absolute inset-0 w-full h-full pointer-events-none stroke-white/20 fill-none" preserveAspectRatio="none">
             <path
-              d="M 25 75 L 50 45 L 82 20"
+              d={svgPathD}
               stroke="#22D3A6"
               strokeWidth="2.5"
               strokeDasharray="4 2"
               className="animate-pulse"
               strokeLinecap="round"
+              strokeLinejoin="round"
             />
           </svg>
 
-          {DRILL_STEPS.map((step, idx) => {
+          {dynamicSteps.map((step, idx) => {
             const isPassed = idx < currentStepIndex || drillCompleted;
             const isCurrent = idx === currentStepIndex && !drillCompleted;
 
@@ -253,27 +319,20 @@ export const EvacuationDrillMode: React.FC = () => {
                 }}
               >
                 <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all shadow-md ${
-                  isPassed
-                    ? 'bg-[#22D3A6] text-[#151726]'
-                    : isCurrent
-                    ? 'bg-[#2C7BE5] text-white ring-4 ring-[#2C7BE5]/40 animate-bounce'
-                    : 'bg-[#25283e] text-white/60 border border-white/20'
+                  isPassed ? 'bg-[#22D3A6] text-[#151726]' : isCurrent ? 'bg-[#2C7BE5] text-white ring-4 ring-[#2C7BE5]/40 animate-bounce' : 'bg-[#25283e] text-white/60 border border-white/20'
                 }`}>
                   {isPassed ? <CheckCircle2 className="w-4 h-4" /> : step.stepNumber}
                 </div>
                 <span className="mt-1 text-[9px] font-bold text-white bg-black/85 px-1.5 py-0.5 rounded backdrop-blur whitespace-nowrap shadow-xs border border-white/10">
-                  {step.title}
+                  {step.landmark}
                 </span>
               </div>
             );
           })}
 
-          {!drillCompleted && (
+          {!drillCompleted && currentStep && (
             <div
-              style={{
-                left: `${currentStep.xPercent}%`,
-                top: `${currentStep.yPercent}%`,
-              }}
+              style={{ left: `${currentStep.xPercent}%`, top: `${currentStep.yPercent}%` }}
               className="absolute -translate-x-1/2 -translate-y-1/2 transition-all duration-700 ease-out pointer-events-none z-20"
             >
               <div className="relative flex items-center justify-center">
@@ -330,11 +389,9 @@ export const EvacuationDrillMode: React.FC = () => {
             <Award className="w-7 h-7" />
           </div>
           <div>
-            <h3 className="font-heading font-bold text-base sm:text-lg text-[#151726]">
-              EVACUATION DRILL COMPLETED!
-            </h3>
+            <h3 className="font-heading font-bold text-base sm:text-lg text-[#151726]">EVACUATION DRILL COMPLETED!</h3>
             <p className="text-xs text-[#5B5F73] mt-1 max-w-xs leading-relaxed">
-              You successfully navigated away from Central Library congestion to Safe Exit Gate 2 in <strong className="text-[#151726] font-mono-num">{formatTime(elapsedSeconds)}</strong>.
+              You successfully navigated the optimal safe route in <strong className="text-[#151726] font-mono-num">{formatTime(elapsedSeconds)}</strong>.
             </p>
           </div>
 
@@ -345,8 +402,8 @@ export const EvacuationDrillMode: React.FC = () => {
             </div>
             <div className="h-6 w-px bg-[#E7E5DD]" />
             <div className="text-center">
-              <span className="block text-[10px] text-[#5B5F73]">TOTAL DISTANCE</span>
-              <strong className="text-[#151726] text-xs sm:text-sm">150 meters</strong>
+              <span className="block text-[10px] text-[#5B5F73]">TOTAL WAYPOINTS</span>
+              <strong className="text-[#151726] text-xs sm:text-sm">{totalSteps} Nodes</strong>
             </div>
           </div>
 
@@ -380,21 +437,12 @@ export const EvacuationDrillMode: React.FC = () => {
             </p>
           </div>
 
-          {currentStep.hazardNote && (
-            <div className="bg-[#FF3B5C]/10 border border-[#FF3B5C]/30 p-2.5 rounded-xl flex items-center gap-2 text-xs text-[#151726]">
-              <ShieldAlert className="w-4 h-4 text-[#FF3B5C] shrink-0" />
-              <span className="text-[11px]"><strong>Warning:</strong> {currentStep.hazardNote}</span>
-            </div>
-          )}
-
           <div className="flex items-center gap-2 pt-1">
             <button
               onClick={handlePrevStep}
               disabled={currentStepIndex === 0}
               className={`py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1 transition-all ${
-                currentStepIndex === 0
-                  ? 'opacity-40 bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
-                  : 'bg-white border-[#E7E5DD] text-[#151726] hover:bg-gray-50 cursor-pointer active:scale-95'
+                currentStepIndex === 0 ? 'opacity-40 bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed' : 'bg-white border-[#E7E5DD] text-[#151726] hover:bg-gray-50 cursor-pointer active:scale-95'
               }`}
             >
               <ChevronLeft className="w-4 h-4" />
@@ -402,27 +450,18 @@ export const EvacuationDrillMode: React.FC = () => {
             </button>
 
             {isAutoSimulating ? (
-              <button
-                onClick={handlePauseDrill}
-                className="flex-1 py-2.5 sm:py-3 bg-[#FF7A45] hover:bg-[#e06332] text-white rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-[0.99]"
-              >
+              <button onClick={handlePauseDrill} className="flex-1 py-2.5 sm:py-3 bg-[#FF7A45] hover:bg-[#e06332] text-white rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-[0.99]">
                 <Pause className="w-4 h-4" />
                 <span>Pause Simulation</span>
               </button>
             ) : (
-              <button
-                onClick={handleStartDrill}
-                className="flex-1 py-2.5 sm:py-3 bg-[#2C7BE5] hover:bg-[#2066c6] text-white rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md active:scale-[0.99]"
-              >
+              <button onClick={handleStartDrill} className="flex-1 py-2.5 sm:py-3 bg-[#2C7BE5] hover:bg-[#2066c6] text-white rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md active:scale-[0.99]">
                 <Play className="w-4 h-4 fill-current" />
                 <span>Start Live Auto Drill</span>
               </button>
             )}
 
-            <button
-              onClick={handleNextStep}
-              className="py-2.5 px-3 sm:px-4 bg-[#151726] hover:bg-[#25283e] text-white rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.99]"
-            >
+            <button onClick={handleNextStep} className="py-2.5 px-3 sm:px-4 bg-[#151726] hover:bg-[#25283e] text-white rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.99]">
               <span>Next</span>
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -433,7 +472,7 @@ export const EvacuationDrillMode: React.FC = () => {
       <div className="bg-[#FAFAF7] border border-[#E7E5DD] rounded-xl p-3 flex items-start gap-2.5 text-xs text-[#5B5F73]">
         <Info className="w-4 h-4 text-[#2C7BE5] shrink-0 mt-0.5" />
         <div className="text-[11px] leading-relaxed">
-          <strong className="text-[#151726]">Pro Safety Tip:</strong> Practice this drill before campus evacuation announcements. In real crowd emergencies, follow green exit light indicators and remain calm.
+          <strong className="text-[#151726]">Pro Safety Tip:</strong> Practice this drill before campus evacuation announcements. Follow the computed waypoints and remain calm.
         </div>
       </div>
     </div>

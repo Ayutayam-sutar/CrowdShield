@@ -1,18 +1,208 @@
 {
-  "nodes": [
-    {"id": "gate_1", "name": "Main Gate", "max_capacity": 300, "is_gate": true, "is_exit": true, "lat": 20.251200, "lng": 85.801800},
-    {"id": "zone_admin_block_rd", "name": "Administrative Block Road + Gate Approach", "max_capacity": 500, "is_gate": false, "is_exit": false, "lat": 20.250300, "lng": 85.800800},
-    {"id": "zone_library_roundabout", "name": "Central Library Roundabout", "max_capacity": 400, "is_gate": false, "is_exit": false, "lat": 20.249400, "lng": 85.800000},
-    {"id": "zone_sports_complex_rd", "name": "Sports Complex / Physics Dept Road", "max_capacity": 500, "is_gate": false, "is_exit": false, "lat": 20.248000, "lng": 85.799000},
-    {"id": "gate_2", "name": "EV Charging / Food Court Junction", "max_capacity": 300, "is_gate": true, "is_exit": true, "lat": 20.247200, "lng": 85.798300},
-    {"id": "zone_e_block_lawn_rd", "name": "E Block Lawn / F Block Road", "max_capacity": 500, "is_gate": false, "is_exit": false, "lat": 20.248800, "lng": 85.800800}
-  ],
-  "edges": [
-    {"source": "gate_1", "target": "zone_admin_block_rd", "length_meters": 80.0, "max_flow_rate": 100},
-    {"source": "zone_admin_block_rd", "target": "zone_library_roundabout", "length_meters": 150.0, "max_flow_rate": 120},
-    {"source": "zone_library_roundabout", "target": "zone_sports_complex_rd", "length_meters": 120.0, "max_flow_rate": 100, "overlap_ratio": 0.15},
-    {"source": "zone_sports_complex_rd", "target": "gate_2", "length_meters": 200.0, "max_flow_rate": 100},
-    {"source": "gate_2", "target": "zone_e_block_lawn_rd", "length_meters": 150.0, "max_flow_rate": 90},
-    {"source": "zone_e_block_lawn_rd", "target": "zone_library_roundabout", "length_meters": 180.0, "max_flow_rate": 90, "overlap_ratio": 0.10}
+  "venues": [
+    {
+      "id": "soa-iter-01",
+      "name": "Siksha 'O' Anusandhan University Campus",
+      "center": [20.2494, 85.8000],
+      "nodes": [
+        {
+          "id": "gate_1",
+          "code": "G-1",
+          "name": "Main Gate",
+          "max_capacity": 300,
+          "is_gate": true,
+          "is_exit": true,
+          "lat": 20.251200,
+          "lng": 85.801800,
+          "polygon": [
+            [20.25135, 85.80165],
+            [20.25135, 85.80195],
+            [20.25105, 85.80195],
+            [20.25105, 85.80165]
+          ]
+        },
+        {
+          "id": "zone_admin_block_rd",
+          "code": "Z-ADMIN",
+          "name": "Administrative Block Road + Gate Approach",
+          "max_capacity": 500,
+          "is_gate": false,
+          "is_exit": false,
+          "lat": 20.250300,
+          "lng": 85.800800,
+          "polygon": [
+            [20.25045, 85.80065],
+            [20.25045, 85.80095],
+            [20.25015, 85.80095],
+            [20.25015, 85.80065]
+          ]
+        },
+        {
+          "id": "zone_library_roundabout",
+          "code": "Z-LIB",
+          "name": "Central Library Roundabout",
+          "max_capacity": 400,
+          "is_gate": false,
+          "is_exit": false,
+          "lat": 20.249400,
+          "lng": 85.800000,
+          "polygon": [
+            [20.24955, 85.79985],
+            [20.24955, 85.80015],
+            [20.24925, 85.80015],
+            [20.24925, 85.79985]
+          ]
+        },
+        {
+          "id": "zone_e_block_lawn_rd",
+          "code": "Z-EBLK",
+          "name": "E Block Lawn / F Block Road",
+          "max_capacity": 500,
+          "is_gate": false,
+          "is_exit": false,
+          "lat": 20.248800,
+          "lng": 85.800800,
+          "polygon": [
+            [20.24895, 85.80065],
+            [20.24895, 85.80095],
+            [20.24865, 85.80095],
+            [20.24865, 85.80065]
+          ]
+        },
+        {
+          "id": "zone_sports_complex_rd",
+          "code": "Z-SPORT",
+          "name": "Sports Complex / Physics Dept Road",
+          "max_capacity": 500,
+          "is_gate": false,
+          "is_exit": false,
+          "lat": 20.248000,
+          "lng": 85.799000,
+          "polygon": [
+            [20.24815, 85.79885],
+            [20.24815, 85.79915],
+            [20.24785, 85.79915],
+            [20.24785, 85.79885]
+          ]
+        },
+        {
+          "id": "gate_2",
+          "code": "G-2",
+          "name": "EV Charging / Food Court Junction",
+          "max_capacity": 300,
+          "is_gate": true,
+          "is_exit": true,
+          "lat": 20.247200,
+          "lng": 85.798300,
+          "polygon": [
+            [20.24735, 85.79815],
+            [20.24735, 85.79845],
+            [20.24705, 85.79845],
+            [20.24705, 85.79815]
+          ]
+        }
+      ],
+      "edges": [
+        {"source": "gate_1", "target": "zone_admin_block_rd", "length_meters": 80.0, "max_flow_rate": 100},
+        {"source": "zone_admin_block_rd", "target": "zone_library_roundabout", "length_meters": 150.0, "max_flow_rate": 120},
+        {"source": "zone_library_roundabout", "target": "zone_sports_complex_rd", "length_meters": 120.0, "max_flow_rate": 100, "overlap_ratio": 0.15},
+        {"source": "zone_sports_complex_rd", "target": "gate_2", "length_meters": 200.0, "max_flow_rate": 100},
+        {"source": "gate_2", "target": "zone_e_block_lawn_rd", "length_meters": 150.0, "max_flow_rate": 90},
+        {"source": "zone_e_block_lawn_rd", "target": "zone_library_roundabout", "length_meters": 180.0, "max_flow_rate": 90, "overlap_ratio": 0.10}
+      ]
+    },
+    {
+      "id": "kalinga-stadium-01",
+      "name": "Kalinga International Stadium Complex",
+      "center": [20.2880, 85.8238],
+      "nodes": [
+        {
+          "id": "ks_gate_3",
+          "code": "KS-G3",
+          "name": "Gate 3 (Main Entrance Plaza)",
+          "max_capacity": 500,
+          "is_gate": true,
+          "is_exit": true,
+          "lat": 20.287800,
+          "lng": 85.826100,
+          "polygon": [
+            [20.28795, 85.82595],
+            [20.28795, 85.82625],
+            [20.28765, 85.82625],
+            [20.28765, 85.82595]
+          ]
+        },
+        {
+          "id": "ks_hockey_turf",
+          "code": "KS-HKY",
+          "name": "Main Hockey Turf & Stand",
+          "max_capacity": 800,
+          "is_gate": false,
+          "is_exit": false,
+          "lat": 20.288500,
+          "lng": 85.824000,
+          "polygon": [
+            [20.28875, 85.82375],
+            [20.28875, 85.82425],
+            [20.28825, 85.82425],
+            [20.28825, 85.82375]
+          ]
+        },
+        {
+          "id": "ks_athletics",
+          "code": "KS-ATH",
+          "name": "Main Athletics Track Corridor",
+          "max_capacity": 700,
+          "is_gate": false,
+          "is_exit": false,
+          "lat": 20.287500,
+          "lng": 85.823500,
+          "polygon": [
+            [20.28775, 85.82325],
+            [20.28775, 85.82375],
+            [20.28725, 85.82375],
+            [20.28725, 85.82325]
+          ]
+        },
+        {
+          "id": "ks_swimming",
+          "code": "KS-SWM",
+          "name": "Swimming Pool Complex Junction",
+          "max_capacity": 400,
+          "is_gate": false,
+          "is_exit": false,
+          "lat": 20.289000,
+          "lng": 85.823000,
+          "polygon": [
+            [20.28915, 85.82285],
+            [20.28915, 85.82315],
+            [20.28885, 85.82315],
+            [20.28885, 85.82285]
+          ]
+        },
+        {
+          "id": "ks_indoor",
+          "code": "KS-IND",
+          "name": "Indoor Multi-Purpose Hall Exit",
+          "max_capacity": 500,
+          "is_gate": true,
+          "is_exit": true,
+          "lat": 20.288000,
+          "lng": 85.822500,
+          "polygon": [
+            [20.28815, 85.82235],
+            [20.28815, 85.82265],
+            [20.28785, 85.82265],
+            [20.28785, 85.82235]
+          ]
+        }
+      ],
+      "edges": [
+        {"source": "ks_gate_3", "target": "ks_hockey_turf", "length_meters": 180.0, "max_flow_rate": 150},
+        {"source": "ks_hockey_turf", "target": "ks_athletics", "length_meters": 120.0, "max_flow_rate": 120},
+        {"source": "ks_athletics", "target": "ks_indoor", "length_meters": 100.0, "max_flow_rate": 100},
+        {"source": "ks_hockey_turf", "target": "ks_swimming", "length_meters": 110.0, "max_flow_rate": 90}
+      ]
+    }
   ]
 }

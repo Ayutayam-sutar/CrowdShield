@@ -1,10 +1,13 @@
 import { VenueZone, CCTVFeed, CrowdAlert, CitizenReport, VenueInfo, BhashiniTranslation, SupportedLanguage } from '../types';
 
+// These remain empty because your FastAPI backend is now serving the real Venues and Zones!
 export const INITIAL_VENUES: VenueInfo[] = [];
-
 export const INITIAL_ZONES: VenueZone[] = [];
+export const INITIAL_ALERTS: CrowdAlert[] = [];
 
+// ALL cameras for ALL venues live here. The UI will filter them automatically.
 export const INITIAL_CCTV_FEEDS: CCTVFeed[] = [
+  // --- ITER CAMPUS CAMERAS ---
   {
     id: 'cam_01',
     name: 'CAM-01: Main Gate',
@@ -91,10 +94,74 @@ export const INITIAL_CCTV_FEEDS: CCTVFeed[] = [
     yoloDetections: [
       { id: 'd9', label: 'Person 0.92', confidence: 0.92, bbox: { x: 10, y: 30, width: 15, height: 25 }, type: 'person' }
     ]
+  },
+
+  // --- KALINGA STADIUM CAMERAS ---
+ {
+    id: 'ks_cam_01',
+    name: 'CAM-01: Kalinga Gate 3',
+    location: 'Gate 3 Entrance Plaza (ks_gate_3)',
+    zoneId: 'ks_gate_3',
+    status: 'online',
+    fps: 30,
+    personCount: 0,
+    imageUrl: 'http://localhost:5000/video_feed', // Re-using port 5000
+    edgeNodeId: 'EDGE-KS-01',
+    yoloDetections: [
+      { id: 'kd1', label: 'Person 0.95', confidence: 0.95, bbox: { x: 20, y: 30, width: 12, height: 28 }, type: 'person' }
+    ]
+  },
+  {
+    id: 'ks_cam_02',
+    name: 'CAM-02: Main Hockey Turf',
+    location: 'Main Hockey Turf & Stand (ks_hockey_turf)',
+    zoneId: 'ks_hockey_turf',
+    status: 'online',
+    fps: 30,
+    personCount: 0,
+    imageUrl: 'http://localhost:5001/video_feed', // Re-using port 5001
+    edgeNodeId: 'EDGE-KS-02',
+    yoloDetections: [
+      { id: 'kd2', label: 'Person 0.98', confidence: 0.98, bbox: { x: 40, y: 20, width: 10, height: 22 }, type: 'person' }
+    ]
+  },
+  {
+    id: 'ks_cam_03',
+    name: 'CAM-03: Athletics Track',
+    location: 'Main Athletics Track Corridor (ks_athletics)',
+    zoneId: 'ks_athletics',
+    status: 'online',
+    fps: 28,
+    personCount: 0,
+    imageUrl: 'http://localhost:5002/video_feed', // Re-using port 5002
+    edgeNodeId: 'EDGE-KS-03',
+    yoloDetections: []
+  },
+  {
+    id: 'ks_cam_04',
+    name: 'CAM-04: Swimming Pool Complex',
+    location: 'Swimming Pool Complex Junction (ks_swimming)',
+    zoneId: 'ks_swimming',
+    status: 'online',
+    fps: 30,
+    personCount: 0,
+    imageUrl: 'http://localhost:5003/video_feed', // Re-using port 5003
+    edgeNodeId: 'EDGE-KS-04',
+    yoloDetections: []
+  },
+  {
+    id: 'ks_cam_05',
+    name: 'CAM-05: Indoor Stadium',
+    location: 'Indoor Multi-Purpose Hall Exit (ks_indoor)',
+    zoneId: 'ks_indoor',
+    status: 'online',
+    fps: 30,
+    personCount: 0,
+    imageUrl: 'http://localhost:5004/video_feed', // Re-using port 5004
+    edgeNodeId: 'EDGE-KS-05',
+    yoloDetections: []
   }
 ];
-
-export const INITIAL_ALERTS: CrowdAlert[] = [];
 
 export const BHASHINI_TRANSLATIONS: Record<SupportedLanguage, BhashiniTranslation> = {
   en: {
@@ -157,7 +224,7 @@ export const PREDICTIVE_TREND_DATA = [
   { time: '04:35', current: 2.1, predicted: 2.2, threshold: 4.0 },
   { time: '04:40', current: 2.8, predicted: 3.0, threshold: 4.0 },
   { time: '04:45', current: 3.6, predicted: 3.9, threshold: 4.0 },
-  { time: '04:50', current: 4.8, predicted: 5.4, threshold: 4.0 }, // Surge
+  { time: '04:50', current: 4.8, predicted: 5.4, threshold: 4.0 },
   { time: '04:55 (Predict)', current: null, predicted: 5.8, threshold: 4.0 },
   { time: '05:00 (Predict)', current: null, predicted: 4.2, threshold: 4.0 },
   { time: '05:05 (Predict)', current: null, predicted: 2.5, threshold: 4.0 }
