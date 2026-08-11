@@ -667,6 +667,7 @@ useEffect(() => {
         <main className={`flex-1 min-w-0 h-full ${adminRoute === 'map' ? 'overflow-hidden flex flex-col' : 'overflow-y-auto p-4 sm:p-6 pb-28'}`}>
           {adminRoute === 'dashboard' && (
             <DashboardView
+            selectedVenue={selectedVenue}
               zones={displayedZones}
               alerts={alerts}
               isScenarioActive={isScenarioActive}
@@ -688,7 +689,11 @@ useEffect(() => {
           )}
 
           {adminRoute === 'cameras' && (
-            <CamerasView cctvFeeds={displayedCctvFeeds} zones={displayedZones} />
+           <CamerasView 
+  cctvFeeds={displayedCctvFeeds} 
+  zones={displayedZones} 
+  selectedVenue={selectedVenue} 
+/>
           )}
 
           {adminRoute === 'alerts' && (

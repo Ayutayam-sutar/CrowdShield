@@ -94,6 +94,34 @@ export const getRiskColor = (riskLevel: string): string => {
 
 const isLegacyPhantomZone = (id: string): boolean => /^z-0?\d$/i.test(id || '');
 
+// --- MATHEMATICAL FIX: Force massive backend polygons to shrink down to buildings ---
+const getTightPolygon = (center: [number, number], existingPolygon?: any[]): [number, number][] => {
+  // If the backend provided valid coordinates, use them (force them to be Numbers)
+  if (Array.isArray(existingPolygon) && existingPolygon.length >= 3) {
+    const lats = existingPolygon.map(p => Number(p[0]));
+    const maxSpan = Math.max(...lats) - Math.min(...lats);
+    if (maxSpan < 0.001) {
+      return existingPolygon.map(p => [Number(p[0]), Number(p[1])]);
+    }
+  }
+
+  // Ensure lat/lng are strictly treated as math numbers, not strings
+  const lat = Number(center[0]);
+  const lng = Number(center[1]);
+  
+  // Increased size so the box visibly frames the HTML marker
+  const dLat = 0.0003; 
+  const dLng = 0.0004; 
+
+  return [
+    [lat + dLat, lng - dLng],
+    [lat + dLat, lng + dLng],
+    [lat - dLat, lng + dLng],
+    [lat - dLat, lng - dLng],
+  ];
+};
+// -----------------------------------------------------------------------------------
+
 interface LiveMapViewProps {
   selectedVenue: VenueInfo | null;
   zones: VenueZone[];
@@ -115,13 +143,41 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [localToast, setLocalToast] = useState<string | null>(null);
 
-  // FIXED: Adjusted fallback center coordinates to perfectly align with ITER Central Library
-  const centerCoords: [number, number] = selectedVenue?.centerCoords || [20.2494, 85.8000];
+  // FIXED: Auto-center on ITER or Kalinga based on selection
+  const centerCoords: [number, number] = useMemo(() => {
+    if (selectedVenue?.centerCoords) return selectedVenue.centerCoords;
+    const isKalingaSelected = selectedVenue?.id?.includes('kalinga') || selectedVenue?.name?.includes('Kalinga');
+    return isKalingaSelected ? [20.2880, 85.8238] : [20.2494, 85.8000];
+  }, [selectedVenue]);
 
-  const cleanZones = useMemo(
-    () => zones.filter((z) => !isLegacyPhantomZone(z.id)),
-    [zones]
-  );
+  // --- MATHEMATICAL FIX: Filter CCTV feeds by the active venue ---
+  const filteredCctvFeeds = useMemo(() => {
+    const isKalingaSelected = selectedVenue?.id?.includes('kalinga') || selectedVenue?.name?.includes('Kalinga');
+    
+    return cctvFeeds.filter((feed) => {
+      const isKalingaFeed = (feed.zoneId || '').toLowerCase().startsWith('ks_') || feed.id.startsWith('ks_');
+      
+      if (isKalingaSelected) {
+        return isKalingaFeed; // Show only Kalinga cameras
+      }
+      return !isKalingaFeed;  // Show only ITER cameras
+    });
+  }, [cctvFeeds, selectedVenue]);
+  // FIXED: Only show zones that belong to the selected venue
+  const cleanZones = useMemo(() => {
+    return zones.filter((z) => {
+      if (isLegacyPhantomZone(z.id)) return false;
+      const venueId = (z as any).venue_id || (z as any).venueId;
+      if (selectedVenue?.id && venueId) {
+        return venueId === selectedVenue.id;
+      }
+      const isKalingaSelected = selectedVenue?.id?.includes('kalinga') || selectedVenue?.name?.includes('Kalinga');
+      if (isKalingaSelected) {
+        return z.id.startsWith('ks_');
+      }
+      return !z.id.startsWith('ks_');
+    });
+  }, [zones, selectedVenue]);
 
   const activeEvacuationRoute = useMemo(() => {
     for (const zone of cleanZones) {
@@ -262,12 +318,24 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
 
-          {cleanZones.map((zone) => {
+        {cleanZones.map((zone) => {
             const polygonColor = getRiskColor(zone.riskLevel);
+            
+            // Bulletproof coordinate extraction for both camelCase and snake_case
+            const lat = Number(zone.center?.[0] ?? (zone as any).center_lat ?? (zone as any).centerLat ?? 0);
+            const lng = Number(zone.center?.[1] ?? (zone as any).center_lng ?? (zone as any).centerLng ?? 0);
+            const center: [number, number] = [lat, lng];
+            
+            // Check all possible JSON fields the backend might have used
+            const existingPoly = zone.polygon || (zone as any).coordinates_json || (zone as any).coordinatesJson;
+            
+            // Generate the visible polygon
+            const tightPolygon = getTightPolygon(center, existingPoly);
+
             return (
               <React.Fragment key={zone.id}>
                 <Polygon
-                  positions={zone.polygon}
+                  positions={tightPolygon}
                   pathOptions={{
                     color: polygonColor,
                     fillColor: polygonColor,
@@ -305,7 +373,7 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
                 </Polygon>
 
                 <Marker
-                  position={zone.center}
+                  position={center}
                   icon={createZoneMarkerIcon(zone.code, zone.density, zone.riskLevel)}
                 >
                   <Popup>
@@ -421,14 +489,14 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
           </span>
           <div className="flex items-center gap-3 pr-24 sm:pr-32">
             <span className="text-slate-500 font-mono-num text-[11px] hidden sm:inline">
-              {cctvFeeds.filter((f) => !failedFeeds[f.id]).length} / {cctvFeeds.length} Active Feeds
+              {filteredCctvFeeds.filter((f) => !failedFeeds[f.id]).length} / {filteredCctvFeeds.length} Active Feeds
             </span>
           </div>
         </div>
 
         {isCctvExpanded && (
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 animate-fadeIn">
-            {cctvFeeds.map((feed) => {
+            {filteredCctvFeeds.map((feed) => {
               const port = getPortFromUrl(feed.imageUrl);
               const matchedZone = findMatchedZone(feed);
               const isOffline = failedFeeds[feed.id];

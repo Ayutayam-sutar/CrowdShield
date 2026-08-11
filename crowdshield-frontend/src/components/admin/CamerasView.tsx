@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { CCTVFeed, VenueZone } from '../../types';
+import React, { useState, useMemo } from 'react';
+import { CCTVFeed, VenueZone, VenueInfo } from '../../types'; // Added VenueInfo
 import { 
   Video, 
   Cpu, 
@@ -21,15 +21,32 @@ import {
 interface CamerasViewProps {
   cctvFeeds: CCTVFeed[];
   zones?: VenueZone[];
+  selectedVenue?: VenueInfo | null; // <--- Added selectedVenue prop
 }
 
-export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [] }) => {
+export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [], selectedVenue }) => {
   const [showDetections, setShowDetections] = useState(true);
   const [selectedFeed, setSelectedFeed] = useState<CCTVFeed | null>(null);
   const [failedFeeds, setFailedFeeds] = useState<Record<string, boolean>>({});
   const [streamCacheBusters, setStreamCacheBusters] = useState<Record<string, number>>({});
   const [uploadingFeeds, setUploadingFeeds] = useState<Record<string, boolean>>({});
   const [uploadStatus, setUploadStatus] = useState<Record<string, string>>({});
+
+  // --- MATHEMATICAL FIX: Filter feeds by the active venue ---
+ // --- MATHEMATICAL FIX: Filter feeds by the active venue ---
+  const filteredFeeds = useMemo(() => {
+    const isKalingaSelected = selectedVenue?.id?.includes('kalinga') || selectedVenue?.name?.includes('Kalinga');
+    
+    return cctvFeeds.filter((feed) => {
+      // Check if the camera belongs to Kalinga (either zoneId or feed ID starts with 'ks_')
+      const isKalingaFeed = (feed.zoneId || '').toLowerCase().startsWith('ks_') || feed.id.startsWith('ks_');
+      
+      if (isKalingaSelected) {
+        return isKalingaFeed; // Show only Kalinga cameras
+      }
+      return !isKalingaFeed;  // Show only ITER cameras
+    });
+  }, [cctvFeeds, selectedVenue]);
 
   const handleImageError = (feedId: string) => {
     setFailedFeeds((prev) => ({ ...prev, [feedId]: true }));
@@ -137,7 +154,8 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [] 
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {cctvFeeds.map((feed) => {
+        {/* Changed mapping from cctvFeeds to filteredFeeds */}
+        {filteredFeeds.map((feed) => {
           const port = getPortFromUrl(feed.imageUrl);
           const matchedZone = findMatchedZone(feed);
           const isOffline = failedFeeds[feed.id];

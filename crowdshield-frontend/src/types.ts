@@ -30,6 +30,7 @@ export interface EvacuationRoute {
   cost?: number;
   target_exit?: string;
 }
+
 export interface VenueZone {
   id: string;
   name: string;
@@ -42,7 +43,7 @@ export interface VenueZone {
   riskScore: number; // 0 - 100
   riskLevel: RiskLevel;
   trend: 'up' | 'down' | 'stable';
- polygon: [number, number][]; // lat, lng pairs
+  polygon: [number, number][]; // lat, lng pairs
   center: [number, number];
   gateStatus: 'open' | 'restricted' | 'closed' | 'evacuation' | 'one_way';
   inferenceMs?: number;
@@ -101,14 +102,14 @@ export interface BhashiniTranslation {
 
 export interface CitizenReport {
   id: string;
-  category: 'Overcrowding' | 'Medical Emergency' | 'Hazard' | 'Panic / Commotion';
+  category: string; // Widened so any category string from DB is accepted
   location: string;
   photoUrl?: string;
   videoUrl?: string;
-  mediaType?: 'image' | 'video';
+  mediaType?: 'image' | 'video' | string;
   description: string;
   timestamp: string;
-  status: 'pending' | 'dispatched' | 'resolved';
+  status: 'PENDING' | 'DISPATCHED' | 'RESOLVED' | 'pending' | 'dispatched' | 'resolved' | string; // Accommodate uppercase from database
   upvotes: number;
   latitude?: number;
   longitude?: number;
@@ -135,4 +136,3 @@ export interface ToastNotification {
   timestamp: string;
   zoneId?: string;
 }
-

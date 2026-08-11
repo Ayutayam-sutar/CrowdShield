@@ -1,11 +1,45 @@
 import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Polygon, Polyline, Marker, Tooltip, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Polygon, Polyline, Marker, Tooltip, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { Navigation, Footprints, Clock, AlertTriangle } from 'lucide-react';
+import { Navigation, Footprints, Clock, AlertTriangle, Maximize2, Minimize2 } from 'lucide-react';
 import api from '../../utils/api';
+import { VenueZone } from '../../types';
+
+// Utility to force Leaflet to redraw when expanding to full screen
+const MapUpdater: React.FC<{ center: [number, number]; resizeTrigger?: boolean }> = ({ center, resizeTrigger }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    map.setView(center, map.getZoom());
+  }, [center, map]);
+
+  useEffect(() => {
+    const t1 = setTimeout(() => map.invalidateSize(), 100);
+    const t2 = setTimeout(() => map.invalidateSize(), 500);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [map, resizeTrigger]);
+
+  return null;
+};
+
+const getRiskColor = (riskLevel: string): string => {
+  switch ((riskLevel || '').toLowerCase()) {
+    case 'critical': return '#FF3B5C';
+    case 'warning': return '#FF7A45';
+    case 'caution': return '#FFB627';
+    case 'safe':
+    default: return '#22D3A6';
+  }
+};
 
 interface CitizenEvacuationMapProps {
   isScenarioActive: boolean;
+  userLocation: { lat: number; lng: number };
+  zones: VenueZone[]; // Now accepts ALL zones to mirror the admin map
+  venueId?: string;
 }
 
 const createBlueDotIcon = () =>
@@ -33,29 +67,26 @@ const createGreenExitIcon = () =>
     iconAnchor: [42, 14],
   });
 
-export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({ isScenarioActive }) => {
-  // Mock current user location near Admin Block
-  const currentLat = 20.2510;
-  const currentLng = 85.7983;
-
-  const centerLat = 20.2496;
-  const centerLng = 85.7988;
-
+export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({ 
+  isScenarioActive, 
+  userLocation, 
+  zones = [],
+  venueId = "v-1" 
+}) => {
   const [pathCoordinates, setPathCoordinates] = useState<[number, number][]>([
-    [20.2510, 85.7983],
-    [20.2485, 85.7980],
-    [20.2475, 85.7975]
+    [userLocation.lat, userLocation.lng]
   ]);
-  const [estimatedTime, setEstimatedTime] = useState<number>(3);
+  const [estimatedTime, setEstimatedTime] = useState<number>(0);
   const [directions, setDirections] = useState<string[]>([]);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
     const fetchRoute = async () => {
       try {
         const response = await api.post('/routing/evacuate', {
-          venue_id: 'soa-iter-01', // FIXED: Now matches our DB Seeder!
-          current_lat: currentLat,
-          current_lng: currentLng
+          venue_id: venueId,
+          current_lat: userLocation.lat,
+          current_lng: userLocation.lng
         });
 
         if (response.data && response.data.waypoints && response.data.waypoints.length > 0) {
@@ -71,27 +102,19 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({ isSc
           setDirections(newDirs);
         }
       } catch (err) {
-        console.error("Failed to fetch evacuation route", err);
+        console.error("Failed to fetch live evacuation route", err);
       }
     };
 
     fetchRoute();
-  }, [isScenarioActive]);
-
-  // Red High-Risk Surge Zone Polygon around the Library Roundabout
-  const surgeZonePolygon: [number, number][] = [
-    [20.2499, 85.7985],
-    [20.2499, 85.7991],
-    [20.2493, 85.7991],
-    [20.2493, 85.7985],
-  ];
+  }, [isScenarioActive, userLocation, venueId]);
 
   const midTooltipPoint: [number, number] = pathCoordinates.length > 2 
     ? pathCoordinates[Math.floor(pathCoordinates.length / 2)]
-    : [20.2485, 85.7980];
+    : [userLocation.lat, userLocation.lng];
 
   return (
-    <div className="bg-white border border-[#E7E5DD] rounded-2xl p-3.5 sm:p-5 shadow-xs flex flex-col gap-3 sm:gap-4 font-body text-[#151726] w-full max-w-full">
+    <div className={`bg-white border border-[#E7E5DD] shadow-xs flex flex-col font-body text-[#151726] w-full transition-all duration-300 ${isExpanded ? 'fixed inset-0 z-[9999] rounded-none p-4 sm:p-6' : 'rounded-2xl p-3.5 sm:p-5 gap-3 sm:gap-4 max-w-full'}`}>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#E7E5DD] pb-3 gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="p-2 rounded-xl bg-[#2C7BE5]/10 text-[#2C7BE5] shrink-0">
@@ -99,7 +122,7 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({ isSc
           </div>
           <div className="min-w-0 flex flex-col">
             <h3 className="font-heading font-bold text-xs sm:text-base text-[#151726] tracking-tight truncate flex items-center gap-2">
-              <span>Safe Exit Route</span>
+              <span>Live Evacuation Map</span>
               {isScenarioActive && (
                 <span className="px-2 py-0.5 rounded-full bg-[#FF3B5C]/15 text-[#FF3B5C] text-[10px] font-mono-num font-bold uppercase shrink-0">
                   Active Reroute
@@ -107,7 +130,7 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({ isSc
               )}
             </h3>
             <p className="text-[10px] sm:text-[11px] text-[#5B5F73] font-mono-num truncate">
-              Clear path avoiding crowded areas
+              Dynamic pathing mapped to SOA Campus Telemetry
             </p>
           </div>
         </div>
@@ -117,57 +140,72 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({ isSc
             <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             <span>Estimated Walk: {estimatedTime} mins</span>
           </span>
+          <button 
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="p-1.5 bg-[#FAFAF7] hover:bg-[#E7E5DD] border border-[#E7E5DD] rounded-lg transition-colors ml-2 text-[#5B5F73]"
+            title={isExpanded ? "Minimize Map" : "Full Screen Map"}
+          >
+            {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+          </button>
         </div>
       </div>
 
-      <div className="relative w-full h-60 sm:h-72 md:h-80 rounded-xl sm:rounded-2xl border border-[#E7E5DD] overflow-hidden shadow-inner z-10">
+      <div className={`relative w-full rounded-xl sm:rounded-2xl border border-[#E7E5DD] overflow-hidden shadow-inner z-10 ${isExpanded ? 'flex-1 mt-4' : 'h-60 sm:h-72 md:h-80'}`}>
         <MapContainer
-          center={[centerLat, centerLng]}
+          center={[userLocation.lat, userLocation.lng]}
           zoom={17}
-          scrollWheelZoom={false}
+          scrollWheelZoom={true}
           className="w-full h-full"
           attributionControl={false}
         >
+          {/* This fixes the gray tile rendering bug */}
+          <MapUpdater center={[userLocation.lat, userLocation.lng]} resizeTrigger={isExpanded} />
+          
           <TileLayer
-            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             maxZoom={19}
           />
 
-          <Polygon
-            positions={surgeZonePolygon}
-            pathOptions={{
-              color: '#FF3B5C',
-              fillColor: '#FF3B5C',
-              fillOpacity: 0.4,
-              weight: 2,
-            }}
-          >
-            <Popup>
-              <div className="p-1 font-heading font-bold text-xs text-[#FF3B5C] flex items-center gap-1">
-                <AlertTriangle className="w-3.5 h-3.5" />
-                <span>Central Library Roundabout (Crowded)</span>
-              </div>
-            </Popup>
-          </Polygon>
+          {/* Render all zones with accurate live colors, matching admin panel */}
+          {zones.map((zone) => {
+            if (!zone.polygon || zone.polygon.length === 0) return null;
+            const polygonColor = getRiskColor(zone.riskLevel);
+            
+            return (
+              <Polygon
+                key={zone.id}
+                positions={zone.polygon}
+                pathOptions={{ 
+                  color: polygonColor, 
+                  fillColor: polygonColor, 
+                  fillOpacity: 0.35, 
+                  weight: 2 
+                }}
+              >
+                <Popup>
+                  <div className="p-1 font-heading font-bold text-xs flex items-center gap-1" style={{ color: polygonColor }}>
+                    {zone.riskLevel === 'critical' && <AlertTriangle className="w-3.5 h-3.5" />}
+                    <span>{zone.name} ({zone.riskLevel.toUpperCase()})</span>
+                  </div>
+                </Popup>
+              </Polygon>
+            );
+          })}
 
-          <Polyline
-            positions={pathCoordinates}
-            pathOptions={{
-              color: '#2C7BE5',
-              weight: 6,
-              dashArray: '10, 10',
-              opacity: 0.95,
-              lineCap: 'round',
-            }}
-          >
-            <Tooltip position={midTooltipPoint} permanent direction="top" className="custom-leaflet-tooltip">
-              <span className="font-mono-num font-bold text-[11px] text-[#2C7BE5] bg-white px-2 py-0.5 rounded-md shadow-xs border border-[#2C7BE5]">
-                {estimatedTime}m Walk
-              </span>
-            </Tooltip>
-          </Polyline>
+          {pathCoordinates.length > 1 && (
+            <Polyline
+              positions={pathCoordinates}
+              pathOptions={{ color: '#2C7BE5', weight: 6, dashArray: '10, 10', opacity: 0.95, lineCap: 'round' }}
+            >
+              <Tooltip position={midTooltipPoint} permanent direction="top" className="custom-leaflet-tooltip">
+                <span className="font-mono-num font-bold text-[11px] text-[#2C7BE5] bg-white px-2 py-0.5 rounded-md shadow-xs border border-[#2C7BE5]">
+                  {estimatedTime}m Walk
+                </span>
+              </Tooltip>
+            </Polyline>
+          )}
 
-          <Marker position={pathCoordinates[0] || [centerLat, centerLng]} icon={createBlueDotIcon()}>
+          <Marker position={[userLocation.lat, userLocation.lng]} icon={createBlueDotIcon()}>
             <Popup>
               <div className="p-1 font-heading font-bold text-xs text-[#2C7BE5]">
                 ● You Are Here
@@ -175,56 +213,60 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({ isSc
             </Popup>
           </Marker>
 
-          <Marker position={pathCoordinates[pathCoordinates.length - 1] || [centerLat, centerLng]} icon={createGreenExitIcon()}>
-            <Popup>
-              <div className="p-1 font-heading font-bold text-xs text-[#059669]">
-                ✓ Safe Exit
-              </div>
-            </Popup>
-          </Marker>
+          {pathCoordinates.length > 1 && (
+            <Marker position={pathCoordinates[pathCoordinates.length - 1]} icon={createGreenExitIcon()}>
+              <Popup>
+                <div className="p-1 font-heading font-bold text-xs text-[#059669]">
+                  ✓ Safe Exit
+                </div>
+              </Popup>
+            </Marker>
+          )}
         </MapContainer>
 
-        <div className="absolute bottom-2.5 left-2.5 bg-white/95 backdrop-blur-md px-2.5 sm:px-3 py-1.5 rounded-xl border border-[#E7E5DD] shadow-md z-20 text-[10px] sm:text-[11px] font-mono-num flex items-center gap-2.5 sm:gap-3 flex-wrap max-w-[calc(100%-20px)]">
+        <div className="absolute bottom-2.5 left-2.5 bg-white/95 backdrop-blur-md px-2.5 sm:px-3 py-1.5 rounded-xl border border-[#E7E5DD] shadow-md z-[1000] text-[10px] sm:text-[11px] font-mono-num flex items-center gap-2.5 sm:gap-3 flex-wrap max-w-[calc(100%-20px)]">
           <div className="flex items-center gap-1">
             <span className="w-2.5 h-2.5 rounded-full bg-[#38BDF8] border border-white shrink-0" />
             <span className="font-bold text-[#151726]">You Are Here</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="w-2.5 h-0.5 bg-[#2C7BE5] border-b border-dashed border-[#2C7BE5] shrink-0" />
-            <span className="font-bold text-[#2C7BE5]">Safe Path</span>
+            <span className="font-bold text-[#2C7BE5]">Safe Route</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="w-2.5 h-2.5 rounded bg-[#FF3B5C]/50 border border-[#FF3B5C] shrink-0" />
-            <span className="font-bold text-[#FF3B5C]">Crowded Area</span>
+            <span className="font-bold text-[#FF3B5C]">Risk Area</span>
           </div>
         </div>
       </div>
 
-      <div className="bg-[#FAFAF7] border border-[#E7E5DD] rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col gap-2.5">
-        <span className="font-heading font-bold text-xs text-[#151726] uppercase tracking-wider flex items-center gap-1.5">
-          <Footprints className="w-3.5 h-3.5 text-[#2C7BE5] shrink-0" />
-          <span>Step-by-Step Directions</span>
-        </span>
+      {!isExpanded && (
+        <div className="bg-[#FAFAF7] border border-[#E7E5DD] rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col gap-2.5 mt-4">
+          <span className="font-heading font-bold text-xs text-[#151726] uppercase tracking-wider flex items-center gap-1.5">
+            <Footprints className="w-3.5 h-3.5 text-[#2C7BE5] shrink-0" />
+            <span>Step-by-Step Directions</span>
+          </span>
 
-        <div className="space-y-2 text-xs text-[#151726]">
-          {directions.length > 0 ? (
-            directions.map((dir, idx) => (
-              <div key={idx} className="flex items-start gap-2.5 bg-white p-2.5 rounded-xl border border-[#E7E5DD] hover:border-[#2C7BE5]/40 transition-colors">
-                <span className={`w-5 h-5 rounded-full text-white font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5 shadow-xs ${
-                  idx === directions.length - 1 ? 'bg-[#22D3A6] text-[#151726]' : 'bg-[#2C7BE5]'
-                }`}>
-                  {idx + 1}
-                </span>
-                <div className="flex flex-col min-w-0">
-                  <span className="font-bold text-[#151726] leading-tight">{dir}</span>
+          <div className="space-y-2 text-xs text-[#151726]">
+            {directions.length > 0 ? (
+              directions.map((dir, idx) => (
+                <div key={idx} className="flex items-start gap-2.5 bg-white p-2.5 rounded-xl border border-[#E7E5DD] hover:border-[#2C7BE5]/40 transition-colors">
+                  <span className={`w-5 h-5 rounded-full text-white font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5 shadow-xs ${
+                    idx === directions.length - 1 ? 'bg-[#22D3A6] text-[#151726]' : 'bg-[#2C7BE5]'
+                  }`}>
+                    {idx + 1}
+                  </span>
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-bold text-[#151726] leading-tight">{dir}</span>
+                  </div>
                 </div>
-              </div>
-            ))
-          ) : (
-            <div className="text-center p-3 text-[#5B5F73]">Computing optimal safe route...</div>
-          )}
+              ))
+            ) : (
+              <div className="text-center p-3 text-[#5B5F73]">Computing optimal safe route...</div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

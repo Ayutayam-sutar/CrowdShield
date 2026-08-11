@@ -27,7 +27,11 @@ async def create_incident(incident: IncidentCreate, db: AsyncSession = Depends(g
         media_type=incident.media_type
     )
     db.add(db_incident)
-    await db.flush()
+    
+    # REQUIRED: Commit the transaction to save it permanently to the database
+    await db.commit() 
+    await db.refresh(db_incident) # Refresh to load the newly generated ID
+    
     return db_incident
 
 @router.get("/", response_model=List[IncidentResponse])
@@ -35,7 +39,13 @@ async def read_incidents(skip: int = 0, limit: int = 100, db: AsyncSession = Dep
     """
     Get all citizen SOS reports.
     """
-    result = await db.execute(select(CitizenReport).offset(skip).limit(limit))
+    # Added order_by to ensure the newest reports show up at the top of the feed
+    result = await db.execute(
+        select(CitizenReport)
+        .order_by(CitizenReport.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+    )
     return result.scalars().all()
 
 @router.patch("/{incident_id}/upvote", response_model=IncidentResponse)
@@ -49,5 +59,9 @@ async def upvote_incident(incident_id: str, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Incident not found")
         
     incident.upvotes += 1
-    await db.flush()
+    
+    # REQUIRED: Commit the transaction to save the new upvote count permanently
+    await db.commit()
+    await db.refresh(incident)
+    
     return incident

@@ -13,13 +13,11 @@ from app.schemas.zone import VenueResponse
 
 router = APIRouter()
 
-
 @router.get("/", response_model=List[VenueResponse])
 async def read_venues(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
     """
     Get all active venues with their associated zones.
-    If zones exist in the database without a venue, automatically assigns a default venue
-    pulled from environment variables.
+    If zones exist in the database without a venue, automatically assigns a default venue.
     """
     result = await db.execute(select(Venue).offset(skip).limit(limit))
     venues = result.scalars().all()
@@ -29,14 +27,13 @@ async def read_venues(skip: int = 0, limit: int = 100, db: AsyncSession = Depend
         zones_result = await db.execute(select(Zone))
         zones = zones_result.scalars().all()
         if zones:
-            # Dynamically pull the default venue from the .env file
             default_venue = Venue(
-                id=os.getenv("DEFAULT_VENUE_ID", "v-default"),
-                name=os.getenv("DEFAULT_VENUE_NAME", "Standard Venue"),
-                location=os.getenv("DEFAULT_VENUE_LOCATION", "Global"),
-                gps_center_lat=float(os.getenv("DEFAULT_VENUE_LAT", "0.0")),
-                gps_center_lng=float(os.getenv("DEFAULT_VENUE_LNG", "0.0")),
-                total_capacity=int(os.getenv("DEFAULT_VENUE_CAPACITY", "10000"))
+                id=os.getenv("DEFAULT_VENUE_ID", "soa-iter-01"),
+                name=os.getenv("DEFAULT_VENUE_NAME", "Siksha 'O' Anusandhan University Campus"),
+                location=os.getenv("DEFAULT_VENUE_LOCATION", "Bhubaneswar, Odisha"),
+                gps_center_lat=float(os.getenv("DEFAULT_VENUE_LAT", "20.2496")),
+                gps_center_lng=float(os.getenv("DEFAULT_VENUE_LNG", "85.7988")),
+                total_capacity=int(os.getenv("DEFAULT_VENUE_CAPACITY", "15000"))
             )
             db.add(default_venue)
             await db.flush()
@@ -47,8 +44,20 @@ async def read_venues(skip: int = 0, limit: int = 100, db: AsyncSession = Depend
             result = await db.execute(select(Venue).offset(skip).limit(limit))
             venues = result.scalars().all()
 
-    return venues
+    # [CRITICAL FIX]: Snap massive 200m fallback boxes into tight ~25m building perimeters
+    for venue in venues:
+        for zone in venue.zones:
+            if not zone.coordinates_json:
+                lat_offset = 0.00012  # ~13 meters north/south
+                lng_offset = 0.00015  # ~16 meters east/west
+                zone.coordinates_json = [
+                    [zone.center_lat + lat_offset, zone.center_lng - lng_offset], # Top Left
+                    [zone.center_lat + lat_offset, zone.center_lng + lng_offset], # Top Right
+                    [zone.center_lat - lat_offset, zone.center_lng + lng_offset], # Bottom Right
+                    [zone.center_lat - lat_offset, zone.center_lng - lng_offset]  # Bottom Left
+                ]
 
+    return venues
 
 @router.get("/{venue_id}", response_model=VenueResponse)
 async def read_venue(venue_id: str, db: AsyncSession = Depends(get_db)):
@@ -59,4 +68,17 @@ async def read_venue(venue_id: str, db: AsyncSession = Depends(get_db)):
     venue = result.scalars().first()
     if not venue:
         raise HTTPException(status_code=404, detail="Venue not found")
+        
+    # Snap the boxes for single-venue queries as well
+    for zone in venue.zones:
+        if not zone.coordinates_json:
+            lat_offset = 0.00012
+            lng_offset = 0.00015
+            zone.coordinates_json = [
+                [zone.center_lat + lat_offset, zone.center_lng - lng_offset],
+                [zone.center_lat + lat_offset, zone.center_lng + lng_offset],
+                [zone.center_lat - lat_offset, zone.center_lng + lng_offset],
+                [zone.center_lat - lat_offset, zone.center_lng - lng_offset]
+            ]
+            
     return venue
