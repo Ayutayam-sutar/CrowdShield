@@ -97,15 +97,16 @@ export const INITIAL_CCTV_FEEDS: CCTVFeed[] = [
   },
 
   // --- KALINGA STADIUM CAMERAS ---
- {
+ // --- KALINGA STADIUM CAMERAS (6 Zones = 6 Cameras) ---
+  {
     id: 'ks_cam_01',
-    name: 'CAM-01: Kalinga Gate 3',
-    location: 'Gate 3 Entrance Plaza (ks_gate_3)',
+    name: 'CAM-01: Gate 3',
+    location: 'Gate 3 (Main Entrance)',
     zoneId: 'ks_gate_3',
     status: 'online',
     fps: 30,
     personCount: 0,
-    imageUrl: 'http://localhost:5000/video_feed', // Re-using port 5000
+    imageUrl: 'http://localhost:5000/video_feed',
     edgeNodeId: 'EDGE-KS-01',
     yoloDetections: [
       { id: 'kd1', label: 'Person 0.95', confidence: 0.95, bbox: { x: 20, y: 30, width: 12, height: 28 }, type: 'person' }
@@ -113,13 +114,13 @@ export const INITIAL_CCTV_FEEDS: CCTVFeed[] = [
   },
   {
     id: 'ks_cam_02',
-    name: 'CAM-02: Main Hockey Turf',
-    location: 'Main Hockey Turf & Stand (ks_hockey_turf)',
-    zoneId: 'ks_hockey_turf',
+    name: 'CAM-02: Sky Walk',
+    location: 'Sky Walk',
+    zoneId: 'ks_sky_walk',
     status: 'online',
     fps: 30,
     personCount: 0,
-    imageUrl: 'http://localhost:5001/video_feed', // Re-using port 5001
+    imageUrl: 'http://localhost:5001/video_feed',
     edgeNodeId: 'EDGE-KS-02',
     yoloDetections: [
       { id: 'kd2', label: 'Person 0.98', confidence: 0.98, bbox: { x: 40, y: 20, width: 10, height: 22 }, type: 'person' }
@@ -127,38 +128,50 @@ export const INITIAL_CCTV_FEEDS: CCTVFeed[] = [
   },
   {
     id: 'ks_cam_03',
-    name: 'CAM-03: Athletics Track',
-    location: 'Main Athletics Track Corridor (ks_athletics)',
-    zoneId: 'ks_athletics',
+    name: 'CAM-03: Hockey Stadium',
+    location: 'Hockey stadium entrance',
+    zoneId: 'ks_swimming',
     status: 'online',
     fps: 28,
     personCount: 0,
-    imageUrl: 'http://localhost:5002/video_feed', // Re-using port 5002
+    imageUrl: 'http://localhost:5002/video_feed',
     edgeNodeId: 'EDGE-KS-03',
     yoloDetections: []
   },
   {
     id: 'ks_cam_04',
-    name: 'CAM-04: Swimming Pool Complex',
-    location: 'Swimming Pool Complex Junction (ks_swimming)',
-    zoneId: 'ks_swimming',
+    name: 'CAM-04: Athletics Ent',
+    location: 'Atheletics Entrance',
+    zoneId: 'ks_athletics',
     status: 'online',
     fps: 30,
     personCount: 0,
-    imageUrl: 'http://localhost:5003/video_feed', // Re-using port 5003
+    imageUrl: 'http://localhost:5003/video_feed',
     edgeNodeId: 'EDGE-KS-04',
     yoloDetections: []
   },
   {
     id: 'ks_cam_05',
-    name: 'CAM-05: Indoor Stadium',
-    location: 'Indoor Multi-Purpose Hall Exit (ks_indoor)',
-    zoneId: 'ks_indoor',
+    name: 'CAM-05: Gate 8B Parking',
+    location: 'Gate 8B (Way to parking)',
+    zoneId: 'ks_parking',
     status: 'online',
     fps: 30,
     personCount: 0,
-    imageUrl: 'http://localhost:5004/video_feed', // Re-using port 5004
+    imageUrl: 'http://localhost:5004/video_feed',
     edgeNodeId: 'EDGE-KS-05',
+    yoloDetections: []
+  },
+  {
+    id: 'ks_cam_06',
+    name: 'CAM-06: Badminton Jct',
+    location: 'Badminton stadium junction',
+    zoneId: 'ks_badminton',
+    status: 'online',
+    fps: 30,
+    personCount: 0,
+    imageUrl: 'http://localhost:5005/video_feed',
+    edgeNodeId: 'EDGE-KS-06',
     yoloDetections: []
   }
 ];

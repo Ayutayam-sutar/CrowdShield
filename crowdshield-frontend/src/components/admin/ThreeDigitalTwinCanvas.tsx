@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { TopologyEdge, TopologyNode, getTopologyNode } from '../../data/venueTopology';
+import { TopologyEdge, TopologyNode } from '../../data/venueTopology';
 import { Eye, AlertTriangle } from 'lucide-react';
 
 interface MergedNode extends TopologyNode {
@@ -84,24 +84,28 @@ export const ThreeDigitalTwinCanvas: React.FC<ThreeDigitalTwinCanvasProps> = ({
     bluePointLight.position.set(-8, 8, -8);
     scene.add(bluePointLight);
 
-    // Floor sized to the schematic layout, slate-100 architectural look
+    // --- FIX 1: Expanded Floor & Grid to 40x40 to fit Kalinga Stadium ---
     const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(24, 24),
+      new THREE.PlaneGeometry(40, 40),
       new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.7, metalness: 0.1 })
     );
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     scene.add(floor);
 
-    const gridHelper = new THREE.GridHelper(24, 16, 0x0ea5e9, 0xcbd5e1);
+    const gridHelper = new THREE.GridHelper(40, 20, 0x0ea5e9, 0xcbd5e1);
     gridHelper.position.y = 0.02;
     scene.add(gridHelper);
 
     // --- Draw the real road edges as ground-level lines ---
     edges.forEach((edge) => {
-      const a = getTopologyNode(edge.source);
-      const b = getTopologyNode(edge.target);
-      if (!a || !b) return;
+      // Look up nodes from the filtered 'nodes' prop to prevent ghost lines
+      const a = nodes.find((n) => n.id === edge.source);
+      const b = nodes.find((n) => n.id === edge.target);
+      
+      // If either node isn't in the current venue, skip drawing the line entirely
+      if (!a || !b) return; 
+      
       const [ax, az] = toWorld(a.x, a.y);
       const [bx, bz] = toWorld(b.x, b.y);
 
@@ -112,11 +116,12 @@ export const ThreeDigitalTwinCanvas: React.FC<ThreeDigitalTwinCanvasProps> = ({
             (highlightedPath[i] === edge.target && highlightedPath[i + 1] === edge.source))
       );
 
-      const points = [new THREE.Vector3(ax, 0.03, az), new THREE.Vector3(bx, 0.03, bz)];
+      // --- FIX 2: Raise lines to Y=0.06 to prevent grid blending, and darken inactive color ---
+      const points = [new THREE.Vector3(ax, 0.06, az), new THREE.Vector3(bx, 0.06, bz)];
       const geometry = new THREE.BufferGeometry().setFromPoints(points);
       const material = new THREE.LineBasicMaterial({
-        color: isOnHighlightedPath ? 0x10b981 : 0x94a3b8, // active green, inactive slate
-        linewidth: isOnHighlightedPath ? 3 : 1,
+        color: isOnHighlightedPath ? 0x10b981 : 0x475569, // active green, darker slate for inactive contrast
+        linewidth: isOnHighlightedPath ? 3 : 2,
       });
       scene.add(new THREE.Line(geometry, material));
     });

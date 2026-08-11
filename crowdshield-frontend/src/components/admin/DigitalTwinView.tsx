@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { VenueZone } from '../../types';
+import { VenueZone,VenueInfo } from '../../types';
 import { ThreeDigitalTwinCanvas } from './ThreeDigitalTwinCanvas';
 import {
   VENUE_TOPOLOGY,
@@ -23,7 +23,8 @@ import {
 } from 'lucide-react';
 
 interface DigitalTwinViewProps {
-  zones: VenueZone[];
+  zones: any[]; // Or VenueZone[] depending on your types
+  selectedVenue?: VenueInfo | null; 
 }
 
 interface QueriedRoute {
@@ -34,10 +35,11 @@ interface QueriedRoute {
   target_exit?: string;
 }
 
-function useMergedNodes(zones: VenueZone[]) {
+// ADD activeNodes: any[] to the parameters here!
+export function useMergedNodes(zones: any[], activeNodes: any[]) {
   return useMemo(() => {
-    const byId = new Map(zones.map((z) => [z.id, z]));
-    return VENUE_TOPOLOGY.map((topo) => {
+    const byId = new Map(zones.map((z: any) => [z.id, z]));
+    return activeNodes.map((topo: any) => {
       const live = byId.get(topo.id);
       return {
         ...topo,
@@ -51,7 +53,7 @@ function useMergedNodes(zones: VenueZone[]) {
         hasTelemetry: !!live,
       };
     });
-  }, [zones]);
+  }, [zones, activeNodes]); // <--- ADD activeNodes to this array!
 }
 
 const riskColor = (risk: string) => {
@@ -63,21 +65,53 @@ const riskColor = (risk: string) => {
   }
 };
 
-export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones }) => {
-  const mergedNodes = useMergedNodes(zones);
-  const [selectedZoneId, setSelectedZoneId] = useState<string>(VENUE_TOPOLOGY[0].id);
+export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones, selectedVenue }) => {
+  
+  // 2. Filter Topology based on the active venue dropdown
+  const activeNodes = useMemo(() => {
+    const isKalinga = selectedVenue?.id?.includes('kalinga') || selectedVenue?.name?.includes('Kalinga');
+    return VENUE_TOPOLOGY.filter(node => 
+      isKalinga ? node.id.startsWith('ks_') : !node.id.startsWith('ks_')
+    );
+  }, [selectedVenue]);
+
+  const activeEdges = useMemo(() => {
+    const isKalinga = selectedVenue?.id?.includes('kalinga') || selectedVenue?.name?.includes('Kalinga');
+    return VENUE_EDGES.filter(edge => 
+      isKalinga ? edge.source.startsWith('ks_') : !edge.source.startsWith('ks_')
+    );
+  }, [selectedVenue]);
+
+const mergedNodes = useMergedNodes(zones, activeNodes);
+  
+  // Safely get the first node of the ACTIVE venue to prevent crashes
+  const defaultNodeId = activeNodes.length > 0 ? activeNodes[0].id : '';
+
+  const [selectedZoneId, setSelectedZoneId] = useState<string>(defaultNodeId);
   const [showHeatmap, setShowHeatmap] = useState(true);
   const [is3dActive, setIs3dActive] = useState(true);
 
   // --- Manual route query (Start/Target selectors) ---
-  const [queryStartId, setQueryStartId] = useState<string>(VENUE_TOPOLOGY[0].id);
+  const [queryStartId, setQueryStartId] = useState<string>(defaultNodeId);
   const [queryTargetId, setQueryTargetId] = useState<string>(''); // '' = auto (nearest exit)
-  const [queriedRoute, setQueriedRoute] = useState<QueriedRoute | null>(null);
+  const [queriedRoute, setQueriedRoute] = useState<any | null>(null);
   const [isQuerying, setIsQuerying] = useState(false);
   const [queryError, setQueryError] = useState<string | null>(null);
 
+  // 3. CRITICAL FIX: Reset selections instantly when the venue changes!
+  useEffect(() => {
+    if (activeNodes.length > 0) {
+      setSelectedZoneId(activeNodes[0].id);
+      setQueryStartId(activeNodes[0].id);
+      setQueryTargetId('');
+      setQueriedRoute(null);
+    }
+  }, [activeNodes]);
+
   useEffect(() => {
     let cancelled = false;
+    if (!queryStartId) return; // Guard clause if nodes haven't loaded
+
     setIsQuerying(true);
     setQueryError(null);
 
@@ -105,10 +139,10 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones }) => {
     };
   }, [queryStartId, queryTargetId]);
 
-  const selected = mergedNodes.find((n) => n.id === selectedZoneId) || mergedNodes[0];
+  const selected = mergedNodes.find((n:any) => n.id === selectedZoneId) || mergedNodes[0];
 
   const hasQueriedRoute = queriedRoute?.status === 'SUCCESS' && queriedRoute.path_nodes.length > 1;
-  const passiveLiveRoute = selected.live?.evacuationRoute;
+  const passiveLiveRoute = selected?.live?.evacuationRoute;
   const hasPassiveLiveRoute = !hasQueriedRoute && passiveLiveRoute?.status === 'SUCCESS' && (passiveLiveRoute.path_nodes?.length ?? 0) > 1;
 
   const fallbackExit = nearestExit(selectedZoneId);
@@ -173,7 +207,7 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones }) => {
             onChange={(e) => setQueryStartId(e.target.value)}
             className="bg-transparent text-slate-800 font-bold text-xs focus:outline-none cursor-pointer border-none"
           >
-            {mergedNodes.map((n) => (
+            {mergedNodes.map((n:any) => (
               <option key={`start-${n.id}`} value={n.id} className="bg-white text-slate-800">
                 {n.name}
               </option>
@@ -191,7 +225,7 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones }) => {
             className="bg-transparent text-slate-800 font-bold text-xs focus:outline-none cursor-pointer border-none"
           >
             <option value="" className="bg-white text-slate-800">Nearest exit (auto)</option>
-            {mergedNodes.map((n) => (
+            {mergedNodes.map((n:any) => (
               <option key={`target-${n.id}`} value={n.id} className="bg-white text-slate-800">
                 {n.name}
               </option>
@@ -243,7 +277,7 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones }) => {
 
             <div className="relative w-full aspect-[4/3] bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
               <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMid meet">
-                {VENUE_EDGES.map((edge, i) => {
+                {activeEdges.map((edge, i) => {
                   const a = getTopologyNode(edge.source)!;
                   const b = getTopologyNode(edge.target)!;
                   return <line key={`edge-${i}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#cbd5e1" strokeWidth="1.2" />;
@@ -266,7 +300,7 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones }) => {
                   );
                 })}
 
-                {mergedNodes.map((node) => {
+                {mergedNodes.map((node:any) => {
                   const isSelected = node.id === selected.id;
                   const onPath = displayPath.includes(node.id);
                   const color = node.hasTelemetry ? riskColor(node.riskLevel) : '#94a3b8';
@@ -405,7 +439,7 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones }) => {
           )}
 
           <div className="flex flex-wrap gap-2 pt-2">
-            {mergedNodes.map((n) => (
+            {mergedNodes.map((n:any) => (
               <button
                 key={n.id}
                 onClick={() => setSelectedZoneId(n.id)}

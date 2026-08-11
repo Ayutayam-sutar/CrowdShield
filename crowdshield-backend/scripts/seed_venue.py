@@ -97,6 +97,8 @@ async def seed_venues():
 
         # -------------------------------------------------------------------
         # 2. VENUE 2: Kalinga International Stadium
+# -------------------------------------------------------------------
+        # 2. VENUE 2: Kalinga International Stadium
         # -------------------------------------------------------------------
         kalinga_venue_id = "kalinga-stadium-01"
         result = await session.execute(select(Venue).where(Venue.id == kalinga_venue_id))
@@ -120,30 +122,54 @@ async def seed_venues():
 
         kalinga_zones = [
             {
-                "id": "ks_gate_3", "code": "KS-G3", "name": "Gate 3 (Main Entrance Plaza)", "sector": "gate",
-                "capacity_limit": 500, "center_lat": 20.287800, "center_lng": 85.826100
+                "id": "ks_gate_3", "code": "KS-G3", "name": "Gate 3 (Main Entrance)", "sector": "gate",
+                "capacity_limit": 500, "center_lat": 20.287861, "center_lng": 85.826208
             },
             {
-                "id": "ks_hockey_turf", "code": "KS-HKY", "name": "Main Hockey Turf & Stand", "sector": "junction",
-                "capacity_limit": 800, "center_lat": 20.288500, "center_lng": 85.824000
+                "id": "ks_sky_walk", "code": "KS-SKY", "name": "Sky Walk", "sector": "gate",
+                "capacity_limit": 500, "center_lat": 20.286528, "center_lng": 85.823773
             },
             {
-                "id": "ks_athletics", "code": "KS-ATH", "name": "Main Athletics Track Corridor", "sector": "pathway",
-                "capacity_limit": 700, "center_lat": 20.287500, "center_lng": 85.823500
+                "id": "ks_swimming", "code": "KS-SWM", "name": "Hockey stadium entrance", "sector": "pathway",
+                "capacity_limit": 600, "center_lat": 20.290857, "center_lng": 85.824318
             },
             {
-                "id": "ks_swimming", "code": "KS-SWM", "name": "Swimming Pool Complex Junction", "sector": "pathway",
-                "capacity_limit": 400, "center_lat": 20.289000, "center_lng": 85.823000
+                "id": "ks_athletics", "code": "KS-ATH", "name": "Atheletics Entrance", "sector": "pathway",
+                "capacity_limit": 400, "center_lat": 20.287899, "center_lng": 85.821359
             },
             {
-                "id": "ks_indoor", "code": "KS-IND", "name": "Indoor Multi-Purpose Hall Exit", "sector": "gate",
-                "capacity_limit": 500, "center_lat": 20.288000, "center_lng": 85.822500
+                "id": "ks_parking", "code": "KS-PAK", "name": "Gate 8B (Way to parking)", "sector": "gate",
+                "capacity_limit": 500, "center_lat": 20.293225, "center_lng": 85.822047
+            },
+            {
+                "id": "ks_badminton", "code": "KS-BAD", "name": "Badminton stadium junction", "sector": "pathway",
+                "capacity_limit": 600, "center_lat": 20.293422, "center_lng": 85.823236
             }
         ]
+
+        # Get existing Kalinga zones in DB to remove any stale/duplicate ones
+        existing_ks_result = await session.execute(select(Zone).where(Zone.venue_id == kalinga_venue_id))
+        existing_ks_zones = existing_ks_result.scalars().all()
+        valid_ks_ids = [z["id"] for z in kalinga_zones]
+
+        # Delete old zones that are no longer in our list to clear duplicates
+        for ez in existing_ks_zones:
+            if ez.id not in valid_ks_ids:
+                await session.delete(ez)
+                print(f"🗑️ Removed stale zone: {ez.name}")
 
         for z_data in kalinga_zones:
             result = await session.execute(select(Zone).where(Zone.id == z_data["id"]))
             zone = result.scalars().first()
+            lat = z_data["center_lat"]
+            lng = z_data["center_lng"]
+            poly = [
+                [lat + 0.00012, lng - 0.00015],
+                [lat + 0.00012, lng + 0.00015],
+                [lat - 0.00012, lng + 0.00015],
+                [lat - 0.00012, lng - 0.00015]
+            ]
+            
             if not zone:
                 zone = Zone(
                     id=z_data["id"],
@@ -152,21 +178,22 @@ async def seed_venues():
                     name=z_data["name"],
                     sector=z_data["sector"],
                     capacity_limit=z_data["capacity_limit"],
-                    center_lat=z_data["center_lat"],
-                    center_lng=z_data["center_lng"]
+                    center_lat=lat,
+                    center_lng=lng,
+                    coordinates_json=poly
                 )
                 session.add(zone)
                 print(f"   └─ Created Zone: {zone.name} ({zone.code})")
             else:
                 zone.venue_id = kalinga_venue_id
                 zone.name = z_data["name"]
+                zone.code = z_data["code"]
                 zone.sector = z_data["sector"]
                 zone.capacity_limit = z_data["capacity_limit"]
-                zone.center_lat = z_data["center_lat"]
-                zone.center_lng = z_data["center_lng"]
+                zone.center_lat = lat
+                zone.center_lng = lng
+                zone.coordinates_json = poly
                 print(f"   └─ Updated Zone: {zone.name} ({zone.code})")
-
-        await session.commit()
         
         # -------------------------------------------------------------------
         # 3. Seed Default Admin User
@@ -184,11 +211,13 @@ async def seed_venues():
                 is_active=True
             )
             session.add(admin_user)
-            await session.commit()
             print("👤 Created default admin user (admin@crowdshield.com).")
         else:
             print("👤 Default admin user already exists.")
             
+        # --- THE FIX: Put the commit here so it saves EVERYTHING (Zones + Users) ---
+        await session.commit() 
+        print("💾 Successfully committed all changes to Neon DB!")
         print("✨ Multi-venue database seeding complete.")
 
 async def main():
