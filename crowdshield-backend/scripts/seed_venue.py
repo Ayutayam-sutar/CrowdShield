@@ -23,7 +23,7 @@ async def seed_venue():
         if not venue:
             venue = Venue(
                 id=venue_id,
-                name="Institute of Technical Education and Research (SOA)",
+                name="Siksha 'O' Anusandhan University Campus",
                 location="Bhubaneswar, Odisha",
                 gps_center_lat=20.2496,
                 gps_center_lng=85.7988,

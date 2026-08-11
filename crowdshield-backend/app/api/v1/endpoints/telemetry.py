@@ -24,14 +24,14 @@ router = APIRouter()
 # lat/lng below with exact values pulled from Google Maps "What's here?" on
 # each real gate/block for full accuracy.
 # ---------------------------------------------------------------------------
-CANONICAL_VENUE_ID = "iter-soa-university"
+CANONICAL_VENUE_ID = "soa-iter-01"
 CANONICAL_VENUE = {
     "id": CANONICAL_VENUE_ID,
-    "name": "Siksha 'O' Anusandhan University (ITER Campus)",
-    "location": "Khandagiri, Bhubaneswar, Odisha",
-    "gps_center_lat": 20.2590,
-    "gps_center_lng": 85.7918,
-    "total_capacity": 2500,
+    "name": "Siksha 'O' Anusandhan University Campus",
+    "location": "Bhubaneswar, Odisha",
+    "gps_center_lat": 20.2496,
+    "gps_center_lng": 85.7988,
+    "total_capacity": 15000,
 }
 
 # Registry of the real zones for this venue, matching venue_graph.json.
