@@ -399,28 +399,28 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
         </div>
       </div>
 
-      <div className={`bg-[#151726] text-white z-[400] border-t border-white/10 flex flex-col transition-all duration-300 ease-in-out ${isCctvExpanded ? 'p-3 gap-2' : 'p-2'}`}>
+      <div className={`bg-white text-slate-800 z-[400] border-t border-slate-200 flex flex-col transition-all duration-300 ease-in-out ${isCctvExpanded ? 'p-3 gap-2' : 'p-2'}`}>
         <div 
-          className="flex items-center justify-between px-2 text-xs cursor-pointer select-none hover:bg-white/5 p-1 rounded transition-colors"
+          className="flex items-center justify-between px-2 text-xs cursor-pointer select-none hover:bg-slate-50 p-1 rounded transition-colors"
           onClick={onToggleCctvExpanded}
           title="Click to toggle camera feed panel size"
         >
-          <span className="font-heading font-bold text-gray-300 flex items-center gap-2">
-            <span className="p-0.5 hover:bg-white/10 rounded transition-colors flex items-center justify-center text-[#2C7BE5]">
+          <span className="font-heading font-bold text-slate-700 flex items-center gap-2">
+            <span className="p-0.5 hover:bg-slate-100 rounded transition-colors flex items-center justify-center text-sky-600">
               {isCctvExpanded ? (
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-down"><path d="m6 9 6 6 6-6"/></svg>
               ) : (
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-up"><path d="m18 15-6-6-6 6"/></svg>
               )}
             </span>
-            <Video className="w-4 h-4 text-[#2C7BE5]" />
+            <Video className="w-4 h-4 text-sky-600" />
             LIVE EDGE CCTV FEEDS (MULTI-PORT MJPEG)
-            <span className="text-[10px] bg-[#2C7BE5]/20 text-[#2C7BE5] px-1.5 py-0.5 rounded font-mono font-bold ml-1">
+            <span className="text-[10px] bg-sky-50 text-sky-600 border border-sky-100 px-1.5 py-0.5 rounded font-mono font-bold ml-1">
               {isCctvExpanded ? 'Active' : 'Collapsed'}
             </span>
           </span>
           <div className="flex items-center gap-3 pr-24 sm:pr-32">
-            <span className="text-gray-400 font-mono-num text-[11px] hidden sm:inline">
+            <span className="text-slate-500 font-mono-num text-[11px] hidden sm:inline">
               {cctvFeeds.filter((f) => !failedFeeds[f.id]).length} / {cctvFeeds.length} Active Feeds
             </span>
           </div>
@@ -442,12 +442,12 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
                 <div
                   key={feed.id}
                   onClick={() => setActiveCameraModal(feed)}
-                  className="relative rounded-xl overflow-hidden border border-white/15 bg-black cursor-pointer group aspect-video"
+                  className="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-100 cursor-pointer group aspect-video"
                 >
                   {isOffline ? (
-                    <div className="w-full h-full bg-[#151726] flex flex-col items-center justify-center gap-1.5 text-white p-2 text-center">
+                    <div className="w-full h-full bg-slate-50 flex flex-col items-center justify-center gap-1.5 text-slate-700 p-2 text-center">
                       <VideoOff className="w-5 h-5 text-[#FF3B5C] animate-pulse" />
-                      <span className="font-heading font-bold text-[11px] text-white">
+                      <span className="font-heading font-bold text-[11px] text-slate-800">
                         Camera Offline - Awaiting Edge Feed
                       </span>
                       <span className="px-1.5 py-0.5 rounded bg-[#FF3B5C]/20 border border-[#FF3B5C]/30 text-[#FF3B5C] font-mono-num font-bold text-[9px]">
@@ -455,7 +455,7 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
                       </span>
                       <button
                         onClick={(e) => handleRetryFeed(feed.id, e)}
-                        className="mt-1 px-2.5 py-0.5 bg-[#2C7BE5] hover:bg-[#2C7BE5]/80 rounded text-[10px] font-bold text-white flex items-center gap-1 transition-colors"
+                        className="mt-1 px-2.5 py-0.5 bg-sky-600 hover:bg-sky-700 rounded text-[10px] font-bold text-white flex items-center gap-1 transition-colors"
                       >
                         <RefreshCw className="w-3 h-3" />
                         <span>Retry Stream</span>
@@ -512,20 +512,20 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
       </div>
 
       {activeCameraModal && (
-        <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/80 p-4 font-body animate-fadeIn">
-          <div className="bg-[#151726] border border-white/20 rounded-2xl max-w-3xl w-full overflow-hidden flex flex-col text-white">
-            <div className="p-4 border-b border-white/10 flex items-center justify-between">
+        <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-body animate-fadeIn">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-3xl w-full overflow-hidden flex flex-col text-slate-800">
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between">
               <div>
-                <h3 className="font-heading font-bold text-base text-white">
+                <h3 className="font-heading font-bold text-base text-slate-800">
                   {activeCameraModal.name}
                 </h3>
-                <p className="text-xs text-gray-400 font-mono-num">
+                <p className="text-xs text-slate-500 font-mono-num">
                   Location: {activeCameraModal.location} · Node: {activeCameraModal.edgeNodeId} · Port: {getPortFromUrl(activeCameraModal.imageUrl)}
                 </p>
               </div>
               <button
                 onClick={() => setActiveCameraModal(null)}
-                className="p-1 rounded-lg hover:bg-white/10 text-gray-300"
+                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -533,9 +533,9 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
 
             <div className="relative aspect-video bg-black w-full overflow-hidden">
               {failedFeeds[activeCameraModal.id] ? (
-                <div className="w-full h-full bg-[#151726] flex flex-col items-center justify-center gap-3 text-white p-6 text-center">
+                <div className="w-full h-full bg-slate-50 flex flex-col items-center justify-center gap-3 text-slate-700 p-6 text-center">
                   <VideoOff className="w-10 h-10 text-[#FF3B5C] animate-pulse" />
-                  <span className="font-heading font-bold text-base text-white">
+                  <span className="font-heading font-bold text-base text-slate-800">
                     Camera Offline - Awaiting Edge Feed
                   </span>
                   <span className="px-3 py-1 rounded bg-[#FF3B5C]/20 border border-[#FF3B5C]/40 text-[#FF3B5C] font-mono-num font-bold text-xs">
@@ -543,7 +543,7 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
                   </span>
                   <button
                     onClick={() => handleRetryFeed(activeCameraModal.id)}
-                    className="mt-2 px-4 py-1.5 bg-[#2C7BE5] hover:bg-[#2C7BE5]/80 rounded-xl text-xs font-bold text-white flex items-center gap-2 cursor-pointer transition-colors"
+                    className="mt-2 px-4 py-1.5 bg-sky-600 hover:bg-sky-700 rounded-xl text-xs font-bold text-white flex items-center gap-2 cursor-pointer transition-colors"
                   >
                     <RefreshCw className="w-4 h-4" />
                     <span>Retry Stream Connection</span>
@@ -574,7 +574,7 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
                           : 'border-[#22D3A6] bg-[#22D3A6]/15'
                         }`}
                     >
-                      <span className="absolute -top-5 left-0 bg-[#151726] text-[11px] font-mono-num px-1.5 py-0.5 rounded text-white">
+                      <span className="absolute -top-5 left-0 bg-slate-900 text-[11px] font-mono-num px-1.5 py-0.5 rounded text-white">
                         {det.label}
                       </span>
                     </div>
@@ -583,14 +583,14 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
               )}
             </div>
 
-            <div className="p-4 flex items-center justify-between text-xs font-mono-num text-gray-300 bg-white/5">
+            <div className="p-4 flex items-center justify-between text-xs font-mono-num text-slate-500 bg-slate-50 border-t border-slate-200">
               <span>YOLO11 Edge Stream · Port {getPortFromUrl(activeCameraModal.imageUrl)}</span>
               <span>
                 Live Telemetry: {findMatchedZone(activeCameraModal)?.currentHeadcount ?? 0} headcount · {findMatchedZone(activeCameraModal)?.density.toFixed(1) ?? '--'} p/m²
               </span>
               <button
                 onClick={() => setActiveCameraModal(null)}
-                className="px-4 py-1.5 bg-[#2C7BE5] text-white rounded-lg font-bold font-heading"
+                className="px-4 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-bold font-heading"
               >
                 Close Feed
               </button>

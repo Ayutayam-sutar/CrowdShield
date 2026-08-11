@@ -170,7 +170,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="lg:col-span-2 bg-white border border-[#E7E5DD] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between border-b border-[#E7E5DD] pb-3.5">
             <div className="flex items-center gap-2.5">
-              <div className="p-2.5 bg-[#2C7BE5]/10 border border-[#2C7BE5]/20 text-[#2C7BE5] rounded-xl">
+              <div className="p-2.5 bg-sky-50 border border-sky-200 text-sky-600 rounded-xl">
                 <Users className="w-5 h-5" />
               </div>
               <div>
@@ -226,7 +226,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div className="w-full h-2.5 bg-[#FAFAF7] border border-[#E7E5DD] rounded-full overflow-hidden p-0.5">
                 <div 
                   className={`h-full rounded-full transition-all duration-500 ${
-                    campusLoadPercent >= 80 ? 'bg-[#FF3B5C]' : campusLoadPercent >= 50 ? 'bg-[#FFB627]' : 'bg-gradient-to-r from-[#2C7BE5] to-[#22D3A6]'
+                    campusLoadPercent >= 80 ? 'bg-[#FF3B5C]' : campusLoadPercent >= 50 ? 'bg-[#FFB627]' : 'bg-gradient-to-r from-sky-500 to-emerald-500'
                   }`}
                   style={{ width: `${campusLoadPercent}%` }}
                 />
@@ -336,7 +336,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div>
               <h3 className="text-[#151726] font-heading font-bold text-sm sm:text-base flex items-center gap-2">
                 <span>5-Minute Live Density Stream</span>
-                <span className="px-2 py-0.5 rounded bg-[#2C7BE5]/10 text-[#2C7BE5] border border-[#2C7BE5]/20 text-[10px] font-mono-num font-bold uppercase">
+                <span className="px-2 py-0.5 rounded bg-sky-50 text-sky-600 border border-sky-200 text-[10px] font-mono-num font-bold uppercase">
                   p/m² Density
                 </span>
               </h3>
@@ -346,8 +346,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
             
             <div className="flex items-center gap-3 text-xs font-mono-num">
-              <span className="flex items-center gap-1.5 text-[#2C7BE5]">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#2C7BE5]" /> Mean Density
+              <span className="flex items-center gap-1.5 text-sky-600">
+                <span className="w-2.5 h-2.5 rounded-full bg-sky-500" /> Mean Density
               </span>
               <span className="flex items-center gap-1.5 text-[#FF3B5C]">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#FF3B5C]" /> Predicted Risk
@@ -483,7 +483,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       <td className="py-3 px-3 text-right">
                         <button
                           onClick={onNavigateToMap}
-                          className="px-2.5 py-1 rounded-lg bg-[#FAFAF7] hover:bg-[#E7E5DD] border border-[#E7E5DD] text-[11px] font-bold text-[#2C7BE5] cursor-pointer whitespace-nowrap transition-colors"
+                          className="px-2.5 py-1 rounded-lg bg-[#FAFAF7] hover:bg-[#E7E5DD] border border-[#E7E5DD] text-[11px] font-bold text-sky-600 cursor-pointer whitespace-nowrap transition-colors"
                         >
                           Inspect Node ➔
                         </button>
@@ -501,7 +501,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="bg-white border border-[#E7E5DD] rounded-2xl p-5 shadow-xs flex flex-col gap-3 font-mono-num text-xs">
         <div className="flex items-center justify-between border-b border-[#E7E5DD] pb-3">
           <div className="flex items-center gap-2">
-            <Terminal className="w-4 h-4 text-[#2C7BE5]" />
+            <Terminal className="w-4 h-4 text-sky-600" />
             <span className="font-bold text-xs uppercase tracking-wider text-[#151726]">
               Operations & Command Audit Feed
             </span>
@@ -509,15 +509,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <span className="text-[10px] text-[#5B5F73]">Live Edge Logging</span>
         </div>
 
-        <div className="bg-[#151726] text-white rounded-xl p-3.5 h-36 overflow-y-auto space-y-1.5 text-[11px] select-text">
+        <div className="bg-slate-50 border border-slate-200 text-slate-800 rounded-xl p-3.5 h-36 overflow-y-auto space-y-1.5 text-[11px] select-text">
           {recentLogs && recentLogs.length > 0 ? (
             recentLogs.map((log, i) => (
               <div key={i} className={`flex items-start gap-2 leading-relaxed ${
-                log.type === 'warning' ? 'text-[#FFB627]' : log.type === 'success' ? 'text-[#22D3A6]' : 'text-slate-300'
+                log.type === 'warning' ? 'text-amber-600 font-semibold' : log.type === 'success' ? 'text-emerald-600 font-semibold' : 'text-slate-700'
               }`}>
-                <span className="text-slate-600 select-none">›</span>
+                <span className="text-slate-400 select-none">›</span>
                 <span className="text-slate-400 font-bold shrink-0">[{log.timestamp}]</span>
-                <span className="text-[#38BDF8] font-bold shrink-0">[{log.source}]</span>
+                <span className="text-sky-600 font-bold shrink-0">[{log.source}]</span>
                 <span className="truncate">{log.action}</span>
               </div>
             ))

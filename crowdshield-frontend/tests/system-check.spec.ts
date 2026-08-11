@@ -5,6 +5,7 @@ test.describe('CrowdShield End-to-End System Check', () => {
   test('Flow 1: App Boot & Admin Login', async ({ page }) => {
     const consoleErrors: string[] = [];
     page.on('console', msg => {
+      console.log(`[Flow 1 Console] [${msg.type()}] ${msg.text()}`);
       if (msg.type() === 'error') {
         consoleErrors.push(msg.text());
       }
@@ -19,7 +20,6 @@ test.describe('CrowdShield End-to-End System Check', () => {
     await page.waitForTimeout(2000);
     const html = await page.content();
     console.log("HTML length:", html.length);
-    console.log("HTML snippet:", html.substring(0, 500));
     await page.screenshot({ path: 'debug-auth.png' });
     
     // Fill Admin credentials on the unified login form
@@ -30,13 +30,17 @@ test.describe('CrowdShield End-to-End System Check', () => {
     await page.locator('button', { hasText: 'Authenticate & Launch Portal' }).click();
 
     // Assert that we reach the dashboard
-    await expect(page.locator('text=Venue Composite Risk Index')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Live Campus Footfall')).toBeVisible({ timeout: 15000 });
     
     // If no console errors were pushed from React crashes
     expect(consoleErrors.filter(e => e.includes('React') || e.includes('Uncaught'))).toEqual([]);
   });
 
   test('Flow 2: Dashboard UI & WebSocket Stability', async ({ page }) => {
+    page.on('console', msg => {
+      console.log(`[Flow 2 Console] [${msg.type()}] ${msg.text()}`);
+    });
+
     await page.goto('/');
     
     // Fill Admin credentials on the unified login form
@@ -45,7 +49,7 @@ test.describe('CrowdShield End-to-End System Check', () => {
     await page.locator('button', { hasText: 'Authenticate & Launch Portal' }).click();
 
     // Wait for the Dashboard
-    await expect(page.locator('text=Venue Composite Risk Index')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Live Campus Footfall')).toBeVisible({ timeout: 15000 });
 
     let wsConnected = false;
     let wsError = false;
@@ -76,14 +80,15 @@ test.describe('CrowdShield End-to-End System Check', () => {
   });
 
   test('Flow 3: Citizen Portal & A* Map Rendering', async ({ page }) => {
-    await page.goto('/');
-    
     const consoleErrors: string[] = [];
     page.on('console', msg => {
+      console.log(`[Flow 3 Console] [${msg.type()}] ${msg.text()}`);
       if (msg.type() === 'error') {
         consoleErrors.push(msg.text());
       }
     });
+
+    await page.goto('/');
 
     // Switch to Register as Citizen view
     await page.locator('button', { hasText: 'Register as Citizen' }).click();
@@ -98,7 +103,12 @@ test.describe('CrowdShield End-to-End System Check', () => {
     await page.locator('button', { hasText: 'Register & Enter Portal' }).click();
 
     // Wait for Citizen Portal to load
-    await expect(page.locator('text=Safe Exit Guide').or(page.locator('text=Evacuation Map'))).toBeVisible({ timeout: 15000 });
+    try {
+      await expect(page.locator('text=Safe Exit Guide').or(page.locator('text=Evacuation Map'))).toBeVisible({ timeout: 15000 });
+    } catch (e) {
+      await page.screenshot({ path: 'debug-citizen-fail.png' });
+      throw e;
+    }
     
     // Wait for the leaflet container to render on the default Feed view
     const leafletContainer = page.locator('.leaflet-container');

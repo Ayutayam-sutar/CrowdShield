@@ -9,8 +9,6 @@ import {
   Box, 
   Settings, 
   Radio, 
-  HelpCircle, 
-  FileText,
   ShieldCheck,
   ChevronRight,
   X
@@ -20,8 +18,6 @@ interface LeftSidebarProps {
   currentRoute: AdminRoute;
   onNavigate: (route: AdminRoute) => void;
   onOpenEmergencyBroadcast: () => void;
-  onOpenSupportModal: () => void;
-  onOpenLogsModal: () => void;
   activeAlertCount: number;
   isScenarioActive: boolean;
   isMobileOpen?: boolean;
@@ -32,8 +28,6 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   currentRoute,
   onNavigate,
   onOpenEmergencyBroadcast,
-  onOpenSupportModal,
-  onOpenLogsModal,
   activeAlertCount,
   isScenarioActive,
   isMobileOpen = false,
@@ -72,19 +66,19 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
       {/* Sidebar / Mobile Drawer Container */}
       <aside className={`
         bg-[#FFFFFF] border-r border-[#E7E5DD] flex flex-col justify-between shrink-0 font-body select-none
-        lg:w-64 lg:flex lg:h-[calc(100vh-57px)] lg:sticky lg:top-[57px] lg:z-20
+        lg:w-64 lg:flex lg:h-full lg:z-20 overflow-hidden
         ${isMobileOpen 
           ? 'fixed inset-y-0 left-0 w-72 z-50 h-full shadow-2xl animate-in slide-in-from-left duration-200 flex' 
           : 'hidden lg:flex'}
       `}>
-        {/* Top Branding & Main Nav */}
-        <div className="p-4 flex flex-col gap-5 overflow-y-auto">
+        {/* Top Branding & Main Nav (strictly flex-1 min-h-0 overflow-y-auto to allow scrolling inside this area ONLY) */}
+        <div className="p-4 flex flex-col gap-5 flex-1 min-h-0 overflow-y-auto">
           {/* Brand Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#151726] text-white flex items-center justify-center shadow-md relative">
-                <ShieldCheck className="w-6 h-6 text-[#2C7BE5]" />
-                <span className="w-2.5 h-2.5 rounded-full bg-[#22D3A6] absolute -top-0.5 -right-0.5 ring-2 ring-white" />
+              <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center shadow-md relative">
+                <ShieldCheck className="w-6 h-6 text-sky-600" />
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 absolute -top-0.5 -right-0.5 ring-2 ring-white" />
               </div>
               <div className="flex flex-col">
                 <span className="font-heading font-bold text-lg text-[#151726] tracking-tight leading-tight">
@@ -107,87 +101,68 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
             )}
           </div>
 
-        {/* Status Indicator Pill */}
-        <div className="bg-[#FAFAF7] border border-[#E7E5DD] p-2.5 rounded-xl flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${isScenarioActive ? 'bg-[#FF3B5C] animate-ping' : 'bg-[#22D3A6]'}`} />
-            <span className="font-semibold text-[#151726]">
-              {isScenarioActive ? 'CRISIS ELEVATED' : 'SYSTEM OPTIMAL'}
+          {/* Status Indicator Pill */}
+          <div className="bg-[#FAFAF7] border border-[#E7E5DD] p-2.5 rounded-xl flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${isScenarioActive ? 'bg-[#FF3B5C] animate-ping' : 'bg-[#22D3A6]'}`} />
+              <span className="font-semibold text-[#151726]">
+                {isScenarioActive ? 'CRISIS ELEVATED' : 'SYSTEM OPTIMAL'}
+              </span>
+            </div>
+            <span className="font-mono-num text-[11px] text-[#5B5F73]">
+              {isScenarioActive ? 'CRITICAL' : 'SAFE'}
             </span>
           </div>
-          <span className="font-mono-num text-[11px] text-[#5B5F73]">
-            {isScenarioActive ? 'CRITICAL' : 'SAFE'}
-          </span>
+
+          {/* Nav Links */}
+          <nav className="flex flex-col gap-1">
+            <div className="text-[11px] font-bold text-[#5B5F73] uppercase tracking-wider px-3 py-1">
+              Navigation
+            </div>
+            {navItems.map((item) => {
+              const isActive = currentRoute === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => handleNavClick(item.id)}
+                  className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-all duration-150 cursor-pointer border-none ${
+                    isActive
+                      ? 'bg-sky-600 text-white shadow-sm'
+                      : 'text-[#5B5F73] hover:text-[#151726] hover:bg-[#FAFAF7]'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    {item.icon}
+                    <span className="font-heading tracking-wide">{item.label}</span>
+                  </div>
+                  {item.badge !== undefined && item.badge > 0 && (
+                    <span className={`text-[10px] font-mono-num px-2 py-0.5 rounded-full font-bold ${
+                      isActive ? 'bg-white/20 text-white' : 'bg-[#FF3B5C] text-white'
+                    }`}>
+                      {item.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
         </div>
 
-        {/* Nav Links */}
-        <nav className="flex flex-col gap-1">
-          <div className="text-[11px] font-bold text-[#5B5F73] uppercase tracking-wider px-3 py-1">
-            Navigation
-          </div>
-          {navItems.map((item) => {
-            const isActive = currentRoute === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => handleNavClick(item.id)}
-                className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-all duration-150 cursor-pointer ${
-                  isActive
-                    ? 'bg-[#2C7BE5] text-white shadow-sm'
-                    : 'text-[#5B5F73] hover:text-[#151726] hover:bg-[#FAFAF7]'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  {item.icon}
-                  <span className="font-heading tracking-wide">{item.label}</span>
-                </div>
-                {item.badge !== undefined && item.badge > 0 && (
-                  <span className={`text-[10px] font-mono-num px-2 py-0.5 rounded-full font-bold ${
-                    isActive ? 'bg-white/20 text-white' : 'bg-[#FF3B5C] text-white'
-                  }`}>
-                    {item.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </nav>
-      </div>
-
-      {/* Footer Controls & Solid Red Emergency Broadcast Button */}
-      <div className="p-4 border-t border-[#E7E5DD] flex flex-col gap-3 bg-[#FAFAF7]/50">
-        {/* EMERGENCY BROADCAST BUTTON (Solid Red #FF3B5C) */}
-        <button
-          onClick={onOpenEmergencyBroadcast}
-          className="w-full bg-[#FF3B5C] hover:bg-[#e02e4d] text-white p-3 rounded-xl font-heading font-bold text-xs flex items-center justify-between shadow-[0_4px_14px_rgba(255,59,92,0.35)] transition-all cursor-pointer active:scale-[0.98]"
-        >
-          <div className="flex items-center gap-2">
-            <Radio className="w-4 h-4 animate-pulse" />
-            <span>EMERGENCY BROADCAST</span>
-          </div>
-          <ChevronRight className="w-4 h-4" />
-        </button>
-
-        {/* Sub Links */}
-        <div className="flex items-center justify-between px-1 text-xs text-[#5B5F73]">
+        {/* Footer Controls & Solid Red Emergency Broadcast Button */}
+        <div className="p-4 border-t border-[#E7E5DD] flex flex-col gap-3 bg-[#FAFAF7]/50 shrink-0">
+          {/* EMERGENCY BROADCAST BUTTON (Solid Red #FF3B5C) */}
           <button
-            onClick={onOpenSupportModal}
-            className="flex items-center gap-1.5 hover:text-[#151726] transition-colors cursor-pointer"
+            onClick={onOpenEmergencyBroadcast}
+            className="w-full bg-[#FF3B5C] hover:bg-[#e02e4d] text-white p-3 rounded-xl font-heading font-bold text-xs flex items-center justify-between shadow-[0_4px_14px_rgba(255,59,92,0.35)] transition-all cursor-pointer active:scale-[0.98] border-none"
           >
-            <HelpCircle className="w-3.5 h-3.5 text-[#2C7BE5]" />
-            <span>Support</span>
-          </button>
-
-          <button
-            onClick={onOpenLogsModal}
-            className="flex items-center gap-1.5 hover:text-[#151726] transition-colors cursor-pointer"
-          >
-            <FileText className="w-3.5 h-3.5 text-[#7C6CFF]" />
-            <span>System Logs</span>
+            <div className="flex items-center gap-2">
+              <Radio className="w-4 h-4 animate-pulse" />
+              <span>EMERGENCY BROADCAST</span>
+            </div>
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
-      </div>
-    </aside>
-  </>
-);
+      </aside>
+    </>
+  );
 };

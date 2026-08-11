@@ -15,16 +15,16 @@
 }
 
 @theme {
-  --color-brand-bg: #0B0F19;
-  --color-brand-panel: #111827;
-  --color-brand-cyan: #06b6d4;
-  --color-brand-crimson: #f43f5e;
+  --color-brand-bg: #F8FAFC;
+  --color-brand-panel: #FFFFFF;
+  --color-brand-cyan: #0284c7;
+  --color-brand-crimson: #e11d48;
 }
 
 body {
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   background-color: var(--color-brand-bg);
-  color: #F8FAFC;
+  color: #0F172A;
 }
 
 h1, h2, h3, h4, .heading-font {
