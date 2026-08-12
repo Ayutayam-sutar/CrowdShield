@@ -29,7 +29,7 @@ import {
   Shield,
   Clock,
 } from 'lucide-react';
-import { speakAnnouncement } from '../../utils/speech';
+import { speakAnnouncement, speakSarvamTTS } from '../../utils/speech';
 import { VolunteerTasksView } from './VolunteerTasksView';
 import { useAuth } from '../../context/AuthContext';
 import { checkGeofenceIntersections, GeofenceZone } from '../../utils/geofence';
@@ -172,7 +172,75 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
   const currentZoneName = highestRiskZone?.name || activeCampusZones[2]?.name || 'Central Library Roundabout';
 
   const translation = BHASHINI_TRANSLATIONS[selectedLang] || BHASHINI_TRANSLATIONS.en;
-  const activeAnnouncementText = liveAnnouncementText || translation.announcementText;
+
+  const [routeWaypoints, setRouteWaypoints] = useState<string[]>([]);
+  const [isRouteLoading, setIsRouteLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchRouteInfo = async () => {
+      if (!isScenarioActive) {
+        setRouteWaypoints([]);
+        return;
+      }
+      setIsRouteLoading(true);
+      try {
+        const response = await api.post('/routing/evacuate/', {
+          venue_id: 'soa-iter-01',
+          current_lat: exitUserLocation.lat,
+          current_lng: exitUserLocation.lng,
+        });
+        if (response.data && response.data.waypoints) {
+          const names = response.data.waypoints.map((wp: any) => wp.zone_name);
+          setRouteWaypoints(names);
+        }
+      } catch (err) {
+        console.error('Error fetching evacuation route waypoints for announcement:', err);
+      } finally {
+        setIsRouteLoading(false);
+      }
+    };
+    fetchRouteInfo();
+  }, [isScenarioActive, exitUserLocation]);
+
+  const getDynamicEvacuationText = () => {
+    const startZone = selectedExitZone || 'your location';
+    if (routeWaypoints.length < 2) {
+      if (selectedLang === 'hi') {
+        return `कृपया ध्यान दें! शिक्षा ओ अनुसंधान विश्वविद्यालय परिसर में भगदड़ की आशंका है। कृपया निकटतम सुरक्षित निकास की ओर शांतिपूर्वक आगे बढ़ें।`;
+      }
+      if (selectedLang === 'od') {
+        return `ଧ୍ୟାନ ଦିଅନ୍ତୁ! ଭିଡ଼ ବିପଦ ଚିହ୍ନଟ ହୋଇଛି। ଦୟାକରି ଶୀଘ୍ର ନିକଟସ୍ଥ ପ୍ରସ୍ଥାନ ଦ୍ୱାରକୁ ଯାଆନ୍ତୁ।`;
+      }
+      if (selectedLang === 'bn') {
+        return `বিশেষ সতর্কবার্তা! ভিড় ও হুড়োহুড়ি এড়াতে অনুগ্রহ করে নিকটতম নিরাপদ গেটের দিকে যান।`;
+      }
+      if (selectedLang === 'ta') {
+        return `கவனத்திற்கு! நெரிசல் ஆபத்து. தயவுசெய்து அருகிலுள்ள அவசர வழியே வெளியேறவும்.`;
+      }
+      return `Attention! A stampede risk has been detected at Siksha O Anusandhan University Campus. Please proceed calmly towards the nearest safe exit.`;
+    }
+
+    const viaZones = routeWaypoints.slice(0, -1).join(', ');
+    const destination = routeWaypoints[routeWaypoints.length - 1];
+
+    if (selectedLang === 'hi') {
+      return `कृपया ध्यान दें! शिक्षा ओ अनुसंधान विश्वविद्यालय परिसर में भगदड़ की आशंका है। ${startZone} से आपका सुरक्षित मार्ग है: ${viaZones}, फिर ${destination}। कृपया शांतिपूर्वक बाहर निकलें।`;
+    }
+    if (selectedLang === 'od') {
+      return `ଧ୍ୟାନ ଦିଅନ୍ତୁ! ଶିକ୍ଷା ଓ ଅନୁସନ୍ଧାନ ବିଶ୍ୱବିଦ୍ୟାଳୟ ପରିସରରେ ଭିଡ଼ ଜନିତ ବିପଦ ଅଛି। ${startZone} ରୁ ଆପଣଙ୍କ ପ୍ରସ୍ଥାନ ମାର୍ଗ ହେଉଛି: ${viaZones}, ଏବଂ ${destination}। ଦୟาକରି ଶାନ୍ତ ଭାବରେ ପ୍ରସ୍ଥାନ କରନ୍ତୁ।`;
+    }
+    if (selectedLang === 'bn') {
+      return `বিশেষ সতর্কবার্তা! শিক্ষা ও অনুসন্ধান বিশ্ববিদ্যালয় চত্বরে হুড়োহুড়ির আশঙ্কা রয়েছে। ${startZone} থেকে আপনার নিরাপদ পথ হলো: ${viaZones}, তারপর ${destination}। অনুগ্রহ করে শান্তভাবে চলুন।`;
+    }
+    if (selectedLang === 'ta') {
+      return `கவனத்திற்கு! சிக்ஷா ஓ அனுசந்தன் பல்கலைக்கழக வளாகத்தில் நெரிசல் ஆபத்து. ${startZone} இலிருந்து உங்களின் அவசர வழி: ${viaZones}, பின்னர் ${destination}. தயவுசெய்து அமைதியாக வெளியேறவும்.`;
+    }
+    return `Attention! A stampede risk has been detected at Siksha O Anusandhan University Campus. Your safest route from ${startZone} is: ${viaZones}, then pass through ${destination} to successfully evacuate. Please proceed calmly.`;
+  };
+
+  const activeAnnouncementText = isScenarioActive
+    ? getDynamicEvacuationText()
+    : (liveAnnouncementText || translation.announcementText);
 
   // WebSocket listener for real-time announcements, status updates & new hazards
   useEffect(() => {
@@ -320,10 +388,10 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
     }, 2500);
   };
 
-  const playBhashiniTTS = () => {
+  const playBhashiniTTS = async () => {
     setIsPlayingAudio(true);
-    speakAnnouncement(activeAnnouncementText, selectedLang);
-    setTimeout(() => setIsPlayingAudio(false), Math.max(activeAnnouncementText.length * 75, 3000));
+    await speakSarvamTTS(activeAnnouncementText, selectedLang);
+    setIsPlayingAudio(false);
   };
 
   // Handle safe exit location change
@@ -365,19 +433,36 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
               transition={{ type: 'spring', damping: 22 }}
-              className="app-card-danger p-6 max-w-sm w-full"
+              className="app-card-danger p-6 max-w-sm w-full relative"
             >
+              <button
+                onClick={() => setGeofenceWarning(null)}
+                className="absolute top-4 right-4 p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                title="Dismiss Warning"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
               <div className="w-14 h-14 rounded-2xl bg-red-100 flex items-center justify-center mb-4">
                 <ShieldAlert className="w-7 h-7 text-red-500" />
               </div>
               <h2 className="text-lg font-heading font-black text-slate-900 mb-2">Proximity Warning</h2>
               <p className="text-sm text-slate-600 leading-relaxed mb-5">{geofenceWarning}</p>
-              <button
-                onClick={() => { setGeofenceWarning(null); setActiveTab('exit'); }}
-                className="w-full py-3.5 bg-red-500 hover:bg-red-600 text-white rounded-2xl font-heading font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-red-500/20 active:scale-[0.97]"
-              >
-                <Compass className="w-4 h-4" /> Show Safe Route
-              </button>
+              
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => { setGeofenceWarning(null); setActiveTab('exit'); }}
+                  className="w-full py-3.5 bg-red-500 hover:bg-red-600 text-white rounded-2xl font-heading font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-red-500/20 active:scale-[0.97]"
+                >
+                  <Compass className="w-4 h-4" /> Show Safe Route
+                </button>
+                <button
+                  onClick={() => setGeofenceWarning(null)}
+                  className="w-full py-3 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 border border-slate-200 rounded-2xl font-heading font-bold text-sm flex items-center justify-center transition-all cursor-pointer active:scale-[0.97]"
+                >
+                  Dismiss
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}

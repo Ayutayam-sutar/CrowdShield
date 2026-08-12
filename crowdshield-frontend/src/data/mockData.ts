@@ -180,32 +180,32 @@ export const BHASHINI_TRANSLATIONS: Record<SupportedLanguage, BhashiniTranslatio
   en: {
     lang: 'en',
     langName: 'English',
-    announcementText: 'Attention visitors in West Exit Sector. Gate 3 is congested. Please move calmly towards Emergency Exit Gate 4 on your right for a safe and smooth exit.',
-    audioDurationSec: 8
+    announcementText: '',
+    audioDurationSec: 0
   },
   hi: {
     lang: 'hi',
     langName: 'Hindi (हिंदी)',
-    announcementText: 'कृपया ध्यान दें! पश्चिम निकास द्वार 3 पर भीड़ अधिक है। शांति बनाए रखें और अपने दाहिनी ओर आपातकालीन द्वार 4 की तरफ बढ़ें।',
-    audioDurationSec: 9
+    announcementText: '',
+    audioDurationSec: 0
   },
   od: {
     lang: 'od',
     langName: 'Odia (ଓଡ଼ିଆ)',
-    announcementText: 'ଧ୍ୟାନ ଦିଅନ୍ତୁ! ପଶ୍ଚିମ ପ୍ରସ୍ଥାନ ଦ୍ୱାର ୩ ରେ ପ୍ରବଳ ଭିଡ଼ ଅଛି। ଦୟାକରି ଶାନ୍ତ ରୁହନ୍ତୁ ଏବଂ ଡାହାଣ ପାଖରେ ଥିବା ଆପାତକାଳୀନ ଦ୍ୱାର ୪ କୁ ଯାଆନ୍ତୁ।',
-    audioDurationSec: 10
+    announcementText: '',
+    audioDurationSec: 0
   },
   bn: {
     lang: 'bn',
     langName: 'Bengali (বাংলা)',
-    announcementText: 'বিশেষ সতর্কবার্তা! পশ্চিম এক্সিট গেট ৩-এ ভিড় বেশি। অনুগ্রহ করে শান্ত থাকুন এবং ডানদিকের জরুরি গেট ৪-এর দিকে যান।',
-    audioDurationSec: 9
+    announcementText: '',
+    audioDurationSec: 0
   },
   ta: {
     lang: 'ta',
     langName: 'Tamil (தமிழ்)',
-    announcementText: 'கவனத்திற்கு! மேற்கு வெளியேறும் வாயில் 3-ல் கூட்டம் அதிகமாக உள்ளது. அமைதியாக வலதுபுறம் உள்ள அவசர வாயில் 4-ஐ நோக்கிச் செல்லவும்.',
-    audioDurationSec: 10
+    announcementText: '',
+    audioDurationSec: 0
   }
 };
 
