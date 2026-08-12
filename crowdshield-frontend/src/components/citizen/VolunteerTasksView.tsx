@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { CrowdAlert } from '../../types';
-import { ShieldAlert, CheckCircle2, UserCircle, MessageSquare } from 'lucide-react';
+import { ShieldAlert, CheckCircle2, UserCircle } from 'lucide-react';
 import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 
@@ -13,12 +13,16 @@ export const VolunteerTasksView: React.FC<VolunteerTasksViewProps> = ({ alerts }
   const [resolvingId, setResolvingId] = useState<string | null>(null);
   const [notes, setNotes] = useState<string>('');
 
-  const activeAlerts = alerts.filter(a => a.status === 'active');
+  // 🚨 FIX 1: Make sure we catch 'OPEN' alerts coming straight from the live Python backend!
+  const activeAlerts = alerts.filter(
+    a => a.status && (a.status.toLowerCase() === 'active' || a.status.toLowerCase() === 'open')
+  );
 
   const handleResolve = async (alertId: string) => {
     setResolvingId(alertId);
     try {
-      await api.patch(`/api/v1/alerts/${alertId}/status`, {
+      // 🚨 FIX 2: Removed the redundant "/api/v1/" prefix so it doesn't double up and break the request
+      await api.patch(`/alerts/${alertId}/status`, {
         status: 'RESOLVED',
         volunteer_id: userId || 'VOL-UNKNOWN',
         notes: notes || 'Resolved on-site by volunteer'
@@ -67,7 +71,7 @@ export const VolunteerTasksView: React.FC<VolunteerTasksViewProps> = ({ alerts }
               
               <div className="text-xs text-[#5B5F73] bg-[#FAFAF7] p-2 rounded-lg border border-[#E7E5DD]">
                 <strong className="text-[#151726]">Location:</strong> {alert.zoneName} <br/>
-                <strong className="text-[#151726]">Instructions:</strong> {alert.recommendedActions[0]?.actionText || alert.sentinelAnalysis}
+                <strong className="text-[#151726]">Instructions:</strong> {alert.recommendedActions?.[0]?.actionText || alert.sentinelAnalysis || "Awaiting AI Analysis..."}
               </div>
 
               <div className="flex flex-col gap-2 mt-2">

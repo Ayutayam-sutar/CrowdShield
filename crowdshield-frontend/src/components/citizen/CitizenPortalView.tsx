@@ -766,6 +766,7 @@ const [isCriticalUI, setIsCriticalUI] = useState(false);
                 venueId={selectedVenue?.id || "soa-iter-01"}
                 isScenarioActive={isScenarioActive}
                 key={`drill-${exitUserLocation.lat}-${exitUserLocation.lng}`}
+                
               />
             </motion.div>
           ) : (
