@@ -258,7 +258,7 @@ async def create_telemetry(
               {
                   "id": f"act-2-{zone.id}",
                   "actionText": (
-                      "Broadcast Bhashini Multilingual PA Diversion Announcement"
+                      "Broadcast Sarvam AI Multilingual PA Diversion Announcement"
                   ),
                   "impact": f"Redirect traffic via route: {route_msg}",
                   "targetGateOrZone": zone.name,

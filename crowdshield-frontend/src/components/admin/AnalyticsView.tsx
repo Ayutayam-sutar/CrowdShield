@@ -120,7 +120,6 @@ export const AnalyticsView: React.FC = () => {
   const loadCitizenReports = useCallback(async () => {
     setCitizenReports((s) => ({ ...s, loading: true, error: null }));
     try {
-      // Connects directly to backend citizen hazard endpoint
       const res = await api.get<CitizenReport[]>('/hazards/');
       setCitizenReports({ data: res.data, loading: false, error: null });
     } catch (err: any) {
@@ -259,6 +258,27 @@ export const AnalyticsView: React.FC = () => {
       case 'RESOLVED':
         return 'bg-emerald-50 text-emerald-600 border-emerald-200';
     }
+  };
+
+  // Helper to neatly render Gemini's Markdown output
+  const formatGeminiText = (text: string) => {
+    if (!text) return null;
+    return text.split('\n').map((line, i) => {
+      // Render horizontal rules
+      if (line.trim() === '***' || line.trim() === '---') {
+        return <hr key={i} className="my-3 border-slate-200" />;
+      }
+      return (
+        <p key={i} className="mb-2 last:mb-0">
+          {line.split(/(\*\*.*?\*\*)/g).map((part, j) => {
+            if (part.startsWith('**') && part.endsWith('**')) {
+              return <strong key={j} className="text-slate-900 font-extrabold">{part.slice(2, -2)}</strong>;
+            }
+            return <span key={j}>{part}</span>;
+          })}
+        </p>
+      );
+    });
   };
 
   return (
@@ -675,16 +695,16 @@ export const AnalyticsView: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 font-body">
           <div className="bg-white border border-slate-200 text-slate-800 rounded-2xl shadow-2xl max-w-xl w-full overflow-hidden flex flex-col gap-4 p-6">
             <div className="flex items-center justify-between border-b border-slate-200 pb-4">
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-3">
                 <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl border border-indigo-200">
                   <Sparkles className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-heading font-bold text-base text-slate-900">
-                    Gen-AI Post-Incident Summary
+                  <h3 className="font-heading font-bold text-base text-slate-900 flex items-center gap-2">
+                    Gemini AI Post-Incident Summary
                   </h3>
-                  <p className="text-[11px] text-slate-500 font-mono-num">
-                    Alert ID: {summaryModal.alertId}
+                  <p className="text-[11px] text-slate-500 font-mono-num flex items-center gap-1">
+                    Alert ID: {summaryModal.alertId} <span className="text-slate-300">•</span> Powered by Juggernaut
                   </p>
                 </div>
               </div>
@@ -696,24 +716,27 @@ export const AnalyticsView: React.FC = () => {
               </button>
             </div>
 
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col gap-3 font-mono-num text-xs leading-relaxed text-slate-700 min-h-[120px]">
-              <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-[11px] border-b border-slate-200 pb-2">
-                <FileText className="w-3.5 h-3.5" /> Sentinel Post-Action Analysis
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 flex flex-col gap-3 font-mono text-[13px] leading-relaxed text-slate-700 min-h-[120px] shadow-inner">
+              <div className="flex items-center gap-1.5 text-indigo-600 font-bold text-[11px] border-b border-slate-200 pb-2 mb-1 uppercase tracking-wider">
+                <FileText className="w-3.5 h-3.5" /> Official NDRF Executive Report
               </div>
+              
               {summaryModal.loading ? (
                 <div className="flex items-center justify-center p-8 gap-3 text-indigo-600">
                   <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                  <span className="font-heading font-bold animate-pulse">
-                    Generating via Sentinel LLM...
+                  <span className="font-heading font-bold animate-pulse text-sm">
+                    Generating via Google Gemini AI...
                   </span>
                 </div>
               ) : summaryModal.error ? (
-                <div className="flex items-start gap-2 text-rose-600 p-4">
+                <div className="flex items-start gap-2 text-rose-600 p-4 font-body">
                   <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                   <span>{summaryModal.error}</span>
                 </div>
               ) : (
-                <div className="whitespace-pre-wrap">{summaryModal.text}</div>
+                <div className="font-body text-[13px]">
+                  {formatGeminiText(summaryModal.text)}
+                </div>
               )}
             </div>
 
@@ -728,13 +751,13 @@ export const AnalyticsView: React.FC = () => {
                 ) : (
                   <Copy className="w-4 h-4" />
                 )}
-                <span>{copied ? 'Copied!' : 'Copy Summary Text'}</span>
+                <span>{copied ? 'Copied to Clipboard' : 'Copy Summary Text'}</span>
               </button>
               <button
                 onClick={() => setSummaryModal(null)}
-                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-heading font-bold text-xs border-none cursor-pointer"
+                className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-heading font-bold text-xs border-none cursor-pointer shadow-md"
               >
-                Close
+                Close Report
               </button>
             </div>
           </div>

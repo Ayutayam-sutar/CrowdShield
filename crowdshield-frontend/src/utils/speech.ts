@@ -1,6 +1,7 @@
 /**
- * Graceful fallback TTS for Bhashini multi-lingual announcements.
- * Uses the browser's native SpeechSynthesis API when Bhashini cloud APIs are unreachable.
+ * Text-to-Speech Utility for Sarvam AI multi-lingual announcements.
+ * Uses Sarvam AI's Bulbul v3 model via the backend relay.
+ * Falls back to the browser's native SpeechSynthesis API if Sarvam is unreachable.
  */
 
 import api from './api';
@@ -13,7 +14,8 @@ const LANG_CODE_MAP: Record<string, string> = {
   'en': 'en-IN'
 };
 
-export const speakAnnouncement = (text: string, langCode: string) => {
+// Internal fallback function (Native Browser TTS)
+const fallbackBrowserSpeech = (text: string, langCode: string) => {
   if (!('speechSynthesis' in window)) {
     console.warn("Speech Synthesis not supported in this browser.");
     return;
@@ -43,44 +45,46 @@ export const speakAnnouncement = (text: string, langCode: string) => {
 };
 
 /**
- * Generate and play Text-to-Speech audio using the Sarvam AI integration.
- * Falls back to local SpeechSynthesis if the API key is not present or endpoint fails.
+ * Main export used across the app to play audio.
+ * Attempts Sarvam AI first, falls back to browser TTS seamlessly.
  */
-export const speakSarvamTTS = (text: string, langCode: string): Promise<boolean> => {
-  return new Promise(async (resolve) => {
-    try {
-      const response = await api.post('/broadcast/sarvam-tts', {
-        text: text,
-        target_language: langCode
-      });
+export const speakAnnouncement = async (text: string, langCode: string): Promise<boolean> => {
+  try {
+    const response = await api.post('/broadcast/sarvam-tts', {
+      text: text,
+      target_language: langCode
+    });
 
-      if (response.data && response.data.status === 'SUCCESS' && response.data.audio_base64) {
-        console.log("🔊 [Sarvam AI] Playing synthesized speech from Bulbul v3...");
-        const audioUrl = `data:audio/wav;base64,${response.data.audio_base64}`;
-        const audio = new Audio(audioUrl);
-        
-        audio.onended = () => {
-          resolve(true);
-        };
-        
+    if (response.data && response.data.status === 'SUCCESS' && response.data.audio_base64) {
+      console.log("🔊 [Sarvam AI] Playing synthesized speech from Bulbul v3...");
+      const audioUrl = `data:audio/wav;base64,${response.data.audio_base64}`;
+      const audio = new Audio(audioUrl);
+      
+      return new Promise((resolve) => {
+        audio.onended = () => resolve(true);
         audio.onerror = () => {
+          console.warn("⚠️ [Sarvam AI] Audio playback failed. Using browser fallback.");
+          fallbackBrowserSpeech(text, langCode);
           resolve(false);
         };
-
-        await audio.play();
-        return;
-      } else if (response.data && response.data.status === 'MOCK') {
-        console.warn("⚠️ [Sarvam AI] API key missing in .env. Falling back to local SpeechSynthesis.");
-      }
-    } catch (err) {
-      console.error("🔴 [Sarvam AI] Error calling TTS backend relay:", err);
+        // Catch browser autoplay blocks
+        audio.play().catch(e => {
+          console.warn("⚠️ [Sarvam AI] Playback blocked by browser:", e);
+          fallbackBrowserSpeech(text, langCode);
+          resolve(false);
+        });
+      });
+    } else if (response.data && response.data.status === 'MOCK') {
+      console.warn("⚠️ [Sarvam AI] API key missing in .env. Falling back to local SpeechSynthesis.");
     }
+  } catch (err) {
+    console.error("🔴 [Sarvam AI] Error calling TTS backend relay:", err);
+  }
 
-    // Fallback to native Web Speech API synthesis
-    speakAnnouncement(text, langCode);
-    setTimeout(() => {
-      resolve(false);
-    }, Math.max(text.length * 75, 3000));
+  // If we reach here, Sarvam failed or returned MOCK. Use the browser fallback.
+  fallbackBrowserSpeech(text, langCode);
+  
+  return new Promise((resolve) => {
+     setTimeout(() => resolve(false), Math.max(text.length * 75, 3000));
   });
 };
-

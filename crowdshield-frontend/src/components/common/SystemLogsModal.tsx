@@ -14,7 +14,7 @@ export const SystemLogsModal: React.FC<SystemLogsModalProps> = ({ isOpen, onClos
     { time: '04:48:12', level: 'CRITICAL', msg: 'Zone Z-03 density threshold exceeded (4.8 p/m² > 4.0 p/m²).' },
     { time: '04:47:50', level: 'INFO', msg: 'YOLO11 Edge Model v11.4 processed 120 FPS across 4 CCTV channels.' },
     { time: '04:45:10', level: 'WARN', msg: 'South Concourse flow rate degraded to 22 p/min.' },
-    { time: '04:40:02', level: 'INFO', msg: 'Bhashini Audio Synthesizer initialized Hindi & Odia voice buffers.' },
+    { time: '04:40:02', level: 'INFO', msg: 'Sarvam Audio Synthesizer initialized Hindi & Odia voice buffers.' },
     { time: '04:35:00', level: 'INFO', msg: 'Local SQLite DB synced 420 telemetry records with Redis buffer.' },
   ];
 

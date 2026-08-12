@@ -31,7 +31,8 @@ export const INITIAL_CCTV_FEEDS: CCTVFeed[] = [
     status: 'online',
     fps: 30,
     personCount: 0,
-    imageUrl: 'http://localhost:5001/video_feed',
+    // {this must be changed when in production with 50001 and same goes with kalinga stadium }
+    imageUrl: 'http://localhost:5004/video_feed',  
     edgeNodeId: 'EDGE-DL-01',
     yoloDetections: [
       { id: 'd5', label: 'Person 0.98', confidence: 0.98, bbox: { x: 20, y: 40, width: 10, height: 25 }, type: 'person' },
@@ -106,7 +107,7 @@ export const INITIAL_CCTV_FEEDS: CCTVFeed[] = [
     status: 'online',
     fps: 30,
     personCount: 0,
-    imageUrl: 'http://localhost:5000/video_feed',
+    imageUrl: 'http://localhost:5001/video_feed',
     edgeNodeId: 'EDGE-KS-01',
     yoloDetections: [
       { id: 'kd1', label: 'Person 0.95', confidence: 0.95, bbox: { x: 20, y: 30, width: 12, height: 28 }, type: 'person' }
@@ -120,7 +121,7 @@ export const INITIAL_CCTV_FEEDS: CCTVFeed[] = [
     status: 'online',
     fps: 30,
     personCount: 0,
-    imageUrl: 'http://localhost:5001/video_feed',
+    imageUrl: 'http://localhost:5004/video_feed',
     edgeNodeId: 'EDGE-KS-02',
     yoloDetections: [
       { id: 'kd2', label: 'Person 0.98', confidence: 0.98, bbox: { x: 40, y: 20, width: 10, height: 22 }, type: 'person' }

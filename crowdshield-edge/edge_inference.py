@@ -32,12 +32,16 @@ parser.add_argument(
     "--zone", type=str, default="z-1", help="Target Zone ID for backend telemetry"
 )
 parser.add_argument(
+    "--venue", type=str, default="soa-iter-01", help="Target Venue ID for backend telemetry"  # 🚨 NEW: Added venue argument
+)
+parser.add_argument(
     "--port", type=int, default=5000, help="Local port to stream MJPEG video"
 )
 args = parser.parse_args()
 
 VIDEO_SOURCE = args.video
 ZONE_ID = args.zone
+VENUE_ID = args.venue  # 🚨 NEW: Variable assignment
 PORT = args.port
 
 # Load environment variables
@@ -360,6 +364,7 @@ def generate_mjpeg_stream():
 
                 payload = {
                     "zone_id": ZONE_ID,
+                    "venue_id": VENUE_ID,
                     "person_count": people_in_zone,
                     "density": round(density, 3),
                     "avg_speed": round(avg_speed, 3),

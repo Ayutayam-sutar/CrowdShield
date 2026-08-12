@@ -121,3 +121,47 @@ async def compute_evacuation_route(request: RoutingRequest, db: AsyncSession = D
         avoided_surge_zones=list(avoided_zones),
         waypoints=waypoints
     )
+# =====================================================================
+# ADD THIS TO THE VERY BOTTOM OF YOUR routing.py FILE
+# Do not change your existing /evacuate code above!
+# =====================================================================
+
+class DigitalTwinQueryRequest(BaseModel):
+    # Make all possible frontend variable names optional so FastAPI doesn't throw a 422
+    start: Optional[str] = None
+    startZoneId: Optional[str] = None
+    start_zone_id: Optional[str] = None
+    zone_id: Optional[str] = None
+    target: Optional[str] = "nearest"
+
+@router.post("/query")
+@router.post("/query/")
+async def digital_twin_query_route(request: DigitalTwinQueryRequest):
+    """
+    Dedicated endpoint for the 3D Digital Twin frontend.
+    Flexibly catches whatever variable name React is sending.
+    """
+    try:
+        # Find which variable the frontend actually sent
+        actual_start_id = request.start or request.startZoneId or request.start_zone_id or request.zone_id
+        
+        if not actual_start_id:
+            return {"status": "error", "message": "Start zone ID missing from frontend payload."}
+
+        # Use your team's existing A* pathfinder
+        evac_result = pathfinder.compute_safest_evacuation(start_zone_id=actual_start_id)
+        
+        if evac_result.get("status") != "SUCCESS":
+            return {
+                "status": "error",
+                "route": [],
+                "message": evac_result.get("message", "Route blocked.")
+            }
+            
+        return {
+            "status": "success",
+            "route": evac_result.get("path_nodes", []), # Sends the node array to the 3D map
+            "message": evac_result.get("message", "Route calculated successfully.")
+        }
+    except Exception as e:
+        return {"status": "error", "detail": str(e)}
