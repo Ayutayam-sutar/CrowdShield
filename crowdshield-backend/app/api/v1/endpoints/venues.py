@@ -10,8 +10,19 @@ from typing import List
 from app.db.session import get_db
 from app.models.venue import Venue, Zone
 from app.schemas.zone import VenueResponse
+from pydantic import BaseModel
+from app.core.websocket import ws_manager
 
 router = APIRouter()
+
+ACTIVE_VENUE_ID = None
+
+class ActiveVenueRequest(BaseModel):
+    venue_id: str
+
+class ActiveVenueResponse(BaseModel):
+    venue_id: str | None
+
 
 @router.get("/", response_model=List[VenueResponse])
 async def read_venues(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
@@ -58,6 +69,35 @@ async def read_venues(skip: int = 0, limit: int = 100, db: AsyncSession = Depend
                 ]
 
     return venues
+
+@router.get("/active", response_model=ActiveVenueResponse)
+async def get_active_venue():
+    """
+    Get the currently active venue ID.
+    """
+    return {"venue_id": ACTIVE_VENUE_ID}
+
+@router.post("/active")
+async def set_active_venue(req: ActiveVenueRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Set the currently active venue ID and broadcast to all clients.
+    """
+    global ACTIVE_VENUE_ID
+    # Validate venue exists
+    result = await db.execute(select(Venue).where(Venue.id == req.venue_id))
+    venue = result.scalars().first()
+    if not venue:
+        raise HTTPException(status_code=404, detail="Venue not found")
+        
+    ACTIVE_VENUE_ID = req.venue_id
+    
+    # Broadcast switch
+    await ws_manager.broadcast({
+        "event": "VENUE_SWITCHED",
+        "venue_id": ACTIVE_VENUE_ID
+    })
+    
+    return {"status": "success", "venue_id": ACTIVE_VENUE_ID}
 
 @router.get("/{venue_id}", response_model=VenueResponse)
 async def read_venue(venue_id: str, db: AsyncSession = Depends(get_db)):

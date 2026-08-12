@@ -13,11 +13,15 @@ from app.schemas.zone import ZoneResponse
 router = APIRouter()
 
 @router.get("/", response_model=List[ZoneResponse])
-async def read_zones(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
+async def read_zones(skip: int = 0, limit: int = 100, venue_id: str | None = None, db: AsyncSession = Depends(get_db)):
     """
     Get all zones.
     """
-    result = await db.execute(select(Zone).offset(skip).limit(limit))
+    query = select(Zone).offset(skip).limit(limit)
+    if venue_id:
+        query = query.where(Zone.venue_id == venue_id)
+        
+    result = await db.execute(query)
     zones = result.scalars().all()
     return zones
 

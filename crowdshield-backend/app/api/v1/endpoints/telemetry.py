@@ -297,6 +297,7 @@ async def create_telemetry(
           "id": zone.id,
           "name": zone.name,
           "code": zone.code,
+          "venue_id": zone.venue_id,
           "sector": zone.sector,
           "density": round(density, 2),
           "maxCapacity": zone.capacity_limit,

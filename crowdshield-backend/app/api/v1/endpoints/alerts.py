@@ -17,11 +17,15 @@ from app.api.deps import get_current_active_admin
 router = APIRouter()
 
 @router.get("/", response_model=List[AlertResponse], dependencies=[Depends(get_current_active_admin)])
-async def read_alerts(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
+async def read_alerts(skip: int = 0, limit: int = 100, venue_id: str | None = None, db: AsyncSession = Depends(get_db)):
     """
     Get all active alerts.
     """
-    result = await db.execute(select(CrowdAlert).offset(skip).limit(limit))
+    query = select(CrowdAlert).offset(skip).limit(limit)
+    if venue_id:
+        query = query.where(CrowdAlert.venue_id == venue_id)
+        
+    result = await db.execute(query)
     alerts = result.scalars().all()
     return alerts
 

@@ -46,6 +46,7 @@ class CitizenReport(Base):
     )
     description: Mapped[str] = mapped_column(Text, nullable=False)
     location_name: Mapped[str] = mapped_column(String(300), nullable=False)
+    venue_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
     latitude: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     longitude: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
 

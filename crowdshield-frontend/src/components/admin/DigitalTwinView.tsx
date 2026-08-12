@@ -166,7 +166,7 @@ const mergedNodes = useMergedNodes(zones, activeNodes);
         <div>
           <h1 className="font-heading font-bold text-2xl text-slate-800 tracking-tight flex items-center gap-2">
             <Box className="w-6 h-6 text-indigo-600" />
-            <span>Digital Twin — ITER Campus Venue</span>
+            <span>Digital Twin — {selectedVenue?.name || 'Venue'}</span>
           </h1>
           <p className="text-xs text-slate-500 mt-1">
             Real venue topology (2 gates, 4 zones) with the live A* evacuation route from the backend risk engine.

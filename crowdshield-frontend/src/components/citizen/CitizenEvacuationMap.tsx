@@ -72,6 +72,7 @@ interface CitizenEvacuationMapProps {
   userLocation: { lat: number; lng: number };
   zones: VenueZone[];
   venueId?: string;
+  venueName?: string;
 }
 
 /* ─── COMPONENT ──────────────────────────────────────── */
@@ -81,6 +82,7 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({
   userLocation,
   zones = [],
   venueId = 'soa-iter-01',
+  venueName = 'SOA ITER Campus',
 }) => {
   const [pathCoordinates, setPathCoordinates] = useState<[number, number][]>([
     [userLocation.lat, userLocation.lng],
@@ -153,7 +155,7 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({
               )}
             </h3>
             <p className="text-[10px] sm:text-[11px] text-slate-400 font-mono-num truncate">
-              A* pathing · SOA ITER Campus
+              A* pathing · {venueName}
             </p>
           </div>
         </div>
