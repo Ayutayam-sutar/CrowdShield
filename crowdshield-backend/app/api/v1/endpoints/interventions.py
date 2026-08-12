@@ -97,14 +97,14 @@ async def trigger_scenario(
         # 2. Define targets for BOTH ITER Campus and Kalinga Stadium
         target_locations = [
             {
-                "zone_id": "soa-iter-01",
-                "venue_id": "soa_iter",
+                "zone_id": "zone_library_roundabout",
+                "venue_id": "soa-iter-01",
                 "zone_name": "Central Library Roundabout (ITER Campus)",
             },
             {
-                "zone_id": "ks_gate_1",
-                "venue_id": "ks_stadium",
-                "zone_name": "Kalinga Main Gate (Gate 1)",
+                "zone_id": "ks_gate_3",
+                "venue_id": "kalinga-stadium-01",
+                "zone_name": "Kalinga Main Gate (Gate 3)",
             },
         ]
 
@@ -112,8 +112,10 @@ async def trigger_scenario(
 
         # 3. Create persistent CrowdAlert records for both venues
         for loc in target_locations:
+            import uuid
             timestamp_str = int(datetime.now(timezone.utc).timestamp())
-            alert_id = f"ALT-{timestamp_str}-{loc['zone_id']}"
+            short_uuid = str(uuid.uuid4()).replace("-", "")[:12]
+            alert_id = f"ALT-{timestamp_str}-{short_uuid}"
             
             new_alert = CrowdAlert(
                 id=alert_id,
@@ -216,3 +218,35 @@ async def trigger_scenario(
     raise HTTPException(
         status_code=400, detail="Invalid action payload. Use 'trigger' or 'reset'."
     )
+
+
+@router.get("/scenario/status")
+async def get_scenario_status(db: AsyncSession = Depends(get_db)):
+    """Check if the stampede scenario is currently active by looking for open structural alerts."""
+    alerts_result = await db.execute(
+        select(CrowdAlert)
+        .where(CrowdAlert.title == "CRITICAL: Structural Stampede Risk & Surge Flow")
+        .where(CrowdAlert.status == AlertStatus.OPEN)
+    )
+    active_alert = alerts_result.scalars().first()
+    
+    alert_dict = None
+    if active_alert:
+        alert_dict = {
+            "id": active_alert.id,
+            "zoneId": active_alert.zone_id,
+            "venueId": active_alert.venue_id,
+            "title": active_alert.title,
+            "category": active_alert.category,
+            "riskLevel": "critical",
+            "density": active_alert.density,
+            "flowRate": active_alert.flow_rate,
+            "status": "active",
+            "timestamp": "Just now",
+            "sentinelAnalysis": active_alert.sentinel_analysis,
+        }
+
+    return {
+        "active": active_alert is not None,
+        "alert": alert_dict
+    }

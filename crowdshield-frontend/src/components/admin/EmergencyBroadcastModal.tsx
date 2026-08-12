@@ -50,11 +50,7 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
   const formattedHeadcount = targetHeadcount.toLocaleString();
 
   const getDynamicScript = () => {
-    if (!highestRiskZone) return currentTranslation.announcementText;
-    if (activeLang === 'en') {
-      return `Attention visitors near ${targetZoneName}. The area is currently congested. Please move calmly towards Gate 2 (EV Charging Junction) for a safe exit.`;
-    }
-    return currentTranslation.announcementText.replace(/West Exit|Sector/gi, targetZoneName);
+    return currentTranslation.announcementText || '';
   };
 
   const handlePlayPA = async () => {

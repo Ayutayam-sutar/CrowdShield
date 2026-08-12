@@ -50,3 +50,80 @@ async def broadcast_bhashini_audio(request: BhashiniBroadcastRequest):
     result = audio_service.generate_bhashini_audio(request.text, request.target_language)
     return result
 
+
+class SarvamTTSRequest(BaseModel):
+    text: str
+    target_language: str
+
+
+@router.post("/sarvam-tts")
+async def generate_sarvam_tts(request: SarvamTTSRequest):
+    """
+    Relay request to Sarvam AI Text-to-Speech API using Bulbul v3 model and ashutosh speaker.
+    Returns base64 encoded audio. Falls back to mock if API key is not present.
+    """
+    import urllib.request
+    import urllib.error
+    import json
+    from fastapi import HTTPException
+    from app.core.config import settings
+
+    # Map target language to Sarvam BCP-47 codes
+    lang_map = {
+        "en": "en-IN",
+        "hi": "hi-IN",
+        "od": "od-IN",
+        "bn": "bn-IN",
+        "ta": "ta-IN"
+    }
+    sarvam_lang = lang_map.get(request.target_language.lower(), "en-IN")
+
+    api_key = settings.SARVAM_API_KEY
+
+    # Guard: Return MOCK warning if key is unset so frontend knows to execute local fallback
+    if not api_key or len(api_key.strip()) < 5:
+        return {
+            "status": "MOCK",
+            "message": "Sarvam API Key not found. Please set SARVAM_API_KEY in .env.",
+            "audio_base64": ""
+        }
+
+    url = "https://api.sarvam.ai/text-to-speech"
+    headers = {
+        "api-subscription-key": api_key,
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "text": request.text,
+        "language_code": sarvam_lang,
+        "speaker": "ashutosh",
+        "model": "bulbul:v3"
+    }
+
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers=headers,
+        method="POST"
+    )
+
+    try:
+        # Request audio bytes from Sarvam AI REST API
+        with urllib.request.urlopen(req, timeout=15) as response:
+            res_body = response.read().decode("utf-8")
+            data = json.loads(res_body)
+            audios = data.get("audios", [])
+            if not audios:
+                raise HTTPException(status_code=500, detail="Sarvam AI returned empty audio array.")
+            
+            return {
+                "status": "SUCCESS",
+                "audio_base64": audios[0]
+            }
+    except urllib.error.HTTPError as e:
+        err_msg = e.read().decode("utf-8") if e.fp else e.reason
+        raise HTTPException(status_code=e.code, detail=f"Sarvam AI API error: {err_msg}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Request to Sarvam AI failed: {str(e)}")
+
+

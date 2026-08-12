@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     # ─── External API Keys ───
     GEMINI_API_KEY: str = ""
     BHASHINI_API_KEY: str = ""
+    SARVAM_API_KEY: str = ""
 
     # ─── Default Venue Configuration ───
     DEFAULT_VENUE_ID: str = "v-1"

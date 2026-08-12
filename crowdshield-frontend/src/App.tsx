@@ -140,9 +140,6 @@ export default function App() {
   const [ticker, setTicker] = useState<number>(0);
 
 useEffect(() => {
-    // Ensure WebSocket is connected
-    wsService.connect();
-
     const unsubscribe = wsService.subscribe((data) => {
       if (data.event === 'NEW_ALERT' && data.alert) {
         setAlerts((prev) => {
@@ -158,9 +155,11 @@ useEffect(() => {
           });
         }
         setIsCrisisMode(true);
+        setIsScenarioActive(true);
       } else if (data.event === 'SCENARIO_RESET') {
         setAlerts([]);
         setIsCrisisMode(false);
+        setIsScenarioActive(false);
       }
     });
 
@@ -371,7 +370,24 @@ useEffect(() => {
   // WebSocket Connection & Real-Time Telemetry Subscription
   useEffect(() => {
     if (isAuthenticated) {
+      // Re-establish WebSocket to ensure we use the newly authenticated token
+      wsService.disconnect();
       wsService.connect();
+
+      // Fetch the active scenario status to sync state on page reload
+      api.get('/interventions/scenario/status').then((res) => {
+        if (res.data && res.data.active !== undefined) {
+          setIsScenarioActive(res.data.active);
+          if (res.data.alert) {
+            setAlerts((prev) => {
+              if (prev.some((a) => a.id === res.data.alert.id)) return prev;
+              return [res.data.alert, ...prev];
+            });
+          }
+        }
+      }).catch((err) => {
+        console.error('Failed to sync scenario status:', err);
+      });
 
       const unsubscribe = wsService.subscribe((data) => {
         if (data.event === 'TELEMETRY_UPDATE' && data.zone) {

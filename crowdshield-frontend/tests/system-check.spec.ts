@@ -120,8 +120,8 @@ test.describe('CrowdShield End-to-End System Check', () => {
       await mapTab.click();
     }
 
-    // Ensure drill mode renders without crashing
-    await expect(page.locator('text=Evacuation Drill Mode')).toBeVisible({ timeout: 15000 });
+    // Ensure drill mode/evacuation route renders without crashing
+    await expect(page.locator('text=Live Evacuation Route').first()).toBeVisible({ timeout: 15000 });
 
     // Ensure no blank screen crash
     expect(consoleErrors.filter(e => e.includes('React') || e.includes('Uncaught'))).toEqual([]);
