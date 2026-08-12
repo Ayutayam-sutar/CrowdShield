@@ -216,7 +216,7 @@ useEffect(() => {
   const [recentLogs, setRecentLogs] = useState<{ timestamp: string; action: string; source: string; type: 'success' | 'warning' | 'info' }[]>([
     { timestamp: new Date(Date.now() - 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), source: 'OPERATOR_01', action: 'INITIATED REMOTE UNLOCK: GATE B TURNSTILES', type: 'info' },
     { timestamp: new Date(Date.now() - 120000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), source: 'SENTINEL_AI', action: 'ESCALATED RISK LEVEL TO CRITICAL FOR SECTOR 7G', type: 'warning' },
-    { timestamp: new Date(Date.now() - 180000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), source: 'OPERATOR_02', action: 'DISPATCHED BHASHINI MULTILINGUAL ANNOUNCEMENT (HINDI/ODIA)', type: 'info' },
+    { timestamp: new Date(Date.now() - 180000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), source: 'OPERATOR_02', action: 'DISPATCHED SARVAM MULTILINGUAL ANNOUNCEMENT (HINDI/ODIA)', type: 'info' },
     { timestamp: new Date(Date.now() - 240000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), source: 'A_STAR_ROUTER', action: 'DYNAMIC REROUTE ACTIVE: DIVERTED 1,200 PAX TO AUX GATE 4', type: 'success' },
     { timestamp: new Date(Date.now() - 300000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), source: 'SYSTEM_NODE', action: 'EDGE SQLITE DB SYNC OK · 0 LOSS PACKETS', type: 'info' },
   ]);

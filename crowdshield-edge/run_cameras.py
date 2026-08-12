@@ -6,13 +6,34 @@ import time
 
 # Define your 6 camera inputs, their target zones, and streaming ports
 cameras = [
-    {"video": "passage.mp4",  "zone": "gate_1", "port": 5000},
-    {"video": "street.mp4", "zone": "zone_library_roundabout", "port": 5001},
+    # 📷 Camera 1: ITER Campus
+    {
+        "video": "passage.mp4",
+        "zone": "gate_1",             # ITER Zone ID
+        "venue": "soa-iter-01",        # ITER Venue ID
+        "port": 5000
+    },
+
+    # 📷 Camera 2: Kalinga Stadium Gate 3
+    {
+        "video": "street.mp4",
+        "zone": "ks_gate_3",           # 🚨 MATCHES mockData.ts ('ks_gate_3')
+        "venue": "kalinga-stadium-01", # Kalinga Venue ID
+        "port": 5001
+    },
     # {"video": "video3.mp4", "zone": "zone_sports_complex_rd", "port": 5002},
-    # {"video": "video4.mp4", "zone": "zone_e_block_lawn_rd", "port": 5003},
-    # {"video": "video.mp4",  "zone": "zone_admin_block_rd", "port": 5004},
-    # {"video": "exit.mp4", "zone": "gate_2", "port": 5005},
+        # {"video": "video4.mp4", "zone": "zone_e_block_lawn_rd", "port": 5003},
+        # {"video": "video.mp4",  "zone": "zone_admin_block_rd", "port": 5004},
+        # {"video": "exit.mp4", "zone": "gate_2", "port": 5005},
 ]
+# cameras = [
+#     {"video": "passage.mp4",  "zone": "gate_1", "port": 5000},
+#     {"video": "street.mp4", "zone": "zone_library_roundabout", "port": 5001},
+#     # {"video": "video3.mp4", "zone": "zone_sports_complex_rd", "port": 5002},
+#     # {"video": "video4.mp4", "zone": "zone_e_block_lawn_rd", "port": 5003},
+#     # {"video": "video.mp4",  "zone": "zone_admin_block_rd", "port": 5004},
+#     # {"video": "exit.mp4", "zone": "gate_2", "port": 5005},
+# ]
 
 processes = []
 
@@ -45,9 +66,7 @@ signal.signal(signal.SIGINT, cleanup_processes)
 signal.signal(signal.SIGTERM, cleanup_processes)
 
 if __name__ == "__main__":
-  print("🚀 Booting up CrowdShield Multi-Camera Matrix...")
-
-  # Unbuffered output environment
+  print("🚀 Booting up CrowdShield Multi-Venue Matrix...")
   env = os.environ.copy()
   env["PYTHONUNBUFFERED"] = "1"
 
@@ -56,22 +75,15 @@ if __name__ == "__main__":
     cmd = [
         sys.executable,
         "edge_inference.py",
-        "--video",
-        cam["video"],
-        "--zone",
-        cam["zone"],
-        "--port",
-        str(cam["port"]),
+        "--video", cam["video"],
+        "--zone", cam["zone"],
+        "--venue", cam["venue"],  # 🚨 NEW: Pass the venue dynamically!
+        "--port", str(cam["port"]),
     ]
 
     p = subprocess.Popen(cmd, env=env)
     processes.append(p)
-    print(
-        f"✅ [{idx}/{len(cameras)}] Started Camera: {cam['video']} -> Zone:"
-        f" {cam['zone']} (Port: {cam['port']})"
-    )
-
-    # Wait 3 seconds between launches to prevent RAM/GPU spike during load
+    print(f"✅ Started Camera: {cam['zone']} at {cam['venue']} (Port: {cam['port']})")
     time.sleep(3)
 
   print(

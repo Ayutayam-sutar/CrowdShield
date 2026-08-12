@@ -52,16 +52,32 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
   const [broadcastState, setBroadcastState] = useState<{ loading: boolean; error: string | null; result: BroadcastResult | null }>({ loading: false, error: null, result: null });
   const [historyData, setHistoryData] = useState<{ time: string; density: number }[]>([]);
 
-  // CRITICAL FIX 1: Auto-select the newest alert if none is selected or if the selected one resolves
-  useEffect(() => {
-    if (alerts.length > 0) {
-      if (!selectedAlertId || !alerts.find(a => a.id === selectedAlertId)) {
-        setSelectedAlertId(alerts[0].id);
-      }
-    }
-  }, [alerts, selectedAlertId]);
+  // 🚨 FIX: Filter alerts to strictly match the currently selected Venue/Zones
+  const activeVenueAlerts = alerts.filter(alert => {
+    return zones.some(z => {
+      const zid = (z.id || '').toLowerCase();
+      const targetId = (alert.zoneId || '').toLowerCase();
+      if (zid === targetId) return true;
 
-  const selectedAlert = alerts.find((a) => a.id === selectedAlertId) || alerts[0] || null;
+      // Fallback integer check (e.g. zone_3 vs gate_3)
+      const zNum = parseInt(zid.replace(/\D/g, ''), 10);
+      const targetNum = parseInt(targetId.replace(/\D/g, ''), 10);
+      return !isNaN(zNum) && !isNaN(targetNum) && zNum === targetNum;
+    });
+  });
+
+  // CRITICAL FIX 1: Auto-select the newest alert for the current venue
+  useEffect(() => {
+    if (activeVenueAlerts.length > 0) {
+      if (!selectedAlertId || !activeVenueAlerts.find(a => a.id === selectedAlertId)) {
+        setSelectedAlertId(activeVenueAlerts[0].id);
+      }
+    } else {
+      if (selectedAlertId !== '') setSelectedAlertId('');
+    }
+  }, [alerts, zones, selectedAlertId]);
+
+  const selectedAlert = activeVenueAlerts.find((a) => a.id === selectedAlertId) || activeVenueAlerts[0] || null;
 
   const activeZone = selectedAlert
     ? zones.find((z) => {
@@ -78,7 +94,7 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
   const displayDensity = activeZone ? activeZone.density : (selectedAlert?.density || 0);
   const displayFlowRate = activeZone ? activeZone.flowRate : (selectedAlert?.flowRate || 0);
 
-  // CRITICAL FIX 2: Dynamically look up the camera URL from the props instead of hardcoding ITER
+  // CRITICAL FIX 2: Dynamically look up the camera URL from the props
   const getStreamUrl = (zoneId?: string) => {
     if (!zoneId) return 'http://localhost:5000/video_feed';
     const feed = cctvFeeds.find(f => f.zoneId === zoneId);
@@ -135,7 +151,8 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
     };
 
     fetchHistory();
-  }, [selectedAlert?.id, displayDensity]); // Reacts instantly to live YOLO updates!
+  }, [selectedAlert?.id, displayDensity]); 
+
   const handleExecuteAction = async () => {
     if (!confirmationModalAction || !selectedAlert) return;
     setDispatchState({ loading: true, error: null });
@@ -175,7 +192,7 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
         loading: false, result: null,
         error: err?.response?.status === 401 || err?.response?.status === 403
           ? 'Admin authentication required to broadcast.'
-          : err?.response?.data?.detail || 'Broadcast failed — Bhashini service unreachable.',
+          : err?.response?.data?.detail || 'Broadcast failed — Sarvam AI service unreachable.',
       });
     }
   };
@@ -189,7 +206,7 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
             Alerts & Response Console
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Real-time incident queue integrated with Sentinel AI risk breakdown and Bhashini Multilingual PA.
+            Real-time incident queue integrated with Sentinel AI risk breakdown and Sarvam AI Multilingual PA.
           </p>
         </div>
 
@@ -208,20 +225,20 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
         <div className="lg:col-span-3 bg-white border border-slate-200 rounded-2xl p-4 shadow-xs flex flex-col gap-3 max-h-[750px] overflow-y-auto">
           <div className="flex items-center justify-between pb-2 border-b border-slate-200">
             <span className="font-heading font-bold text-xs text-slate-800 uppercase tracking-wider">
-              Active Alerts Queue ({alerts.length})
+              Active Alerts Queue ({activeVenueAlerts.length})
             </span>
-            <span className={`w-2 h-2 rounded-full ${alerts.length > 0 ? 'bg-[#FF3B5C] animate-ping' : 'bg-emerald-500'}`} />
+            <span className={`w-2 h-2 rounded-full ${activeVenueAlerts.length > 0 ? 'bg-[#FF3B5C] animate-ping' : 'bg-emerald-500'}`} />
           </div>
 
           <div className="flex flex-col gap-2.5">
-            {alerts.length === 0 ? (
+            {activeVenueAlerts.length === 0 ? (
               <div className="py-12 text-center text-xs text-slate-500 flex flex-col items-center justify-center gap-2">
                 <CheckCircle2 className="w-8 h-8 text-emerald-500" />
                 <span className="font-heading font-bold text-xs text-slate-800">No Active Crowd Alerts</span>
                 <span className="text-[10px] text-slate-400">All venue sectors currently operating within safe thresholds.</span>
               </div>
             ) : (
-              alerts.map((alert) => {
+              activeVenueAlerts.map((alert) => {
                 const isSelected = selectedAlert && alert.id === selectedAlert.id;
                 let borderClass = 'border-l-4 border-[#FF3B5C]';
                 let badgeBg = 'bg-[#FF3B5C]/15 text-[#FF3B5C] border-[#FF3B5C]/30';
@@ -284,7 +301,7 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
           </div>
         </div>
 
-        {alerts.length === 0 ? (
+        {activeVenueAlerts.length === 0 ? (
           <div className="lg:col-span-9 bg-white border border-slate-200 rounded-2xl p-12 shadow-xs flex flex-col items-center justify-center text-center gap-4">
             <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-500 border border-emerald-200 flex items-center justify-center">
               <CheckCircle2 className="w-8 h-8 text-emerald-500" />
@@ -379,7 +396,7 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
               )}
             </div>
 
-            {/* Right 4 Columns: Sentinel AI Analysis & Bhashini Multilingual Player */}
+            {/* Right 4 Columns: Sentinel AI Analysis & Sarvam Multilingual Player */}
             <div className="lg:col-span-4 bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex flex-col justify-between gap-5 relative text-slate-800">
               {/* Top Badge */}
               <div className="flex items-center justify-between border-b border-indigo-100 pb-3">
@@ -392,7 +409,7 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
                   </span>
                 </div>
                 <span className="bg-indigo-600 text-white font-mono-num text-[10px] font-bold px-2 py-0.5 rounded-full">
-                  bhashini-v2.1
+                  gemini-2.5-flash
                 </span>
               </div>
 
@@ -470,11 +487,11 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
                     )}
                   </div>
 
-                  {/* Bhashini Multilingual Audio Announcement Player */}
+                  {/* Sarvam AI Multilingual Audio Announcement Player */}
                   <div className="bg-slate-50 border border-slate-200 text-slate-800 p-4 rounded-xl flex flex-col gap-3 shadow-xs">
                     <div className="flex items-center justify-between">
                       <span className="font-heading font-bold text-xs text-indigo-600 flex items-center gap-1.5">
-                        <Volume2 className="w-4 h-4" /> Bhashini Multilingual PA Player
+                        <Volume2 className="w-4 h-4" /> Sarvam AI Multilingual PA Player
                       </span>
                       <div className="flex items-center gap-1">
                         {(['en', 'hi', 'od', 'bn', 'ta'] as SupportedLanguage[]).map((l) => (

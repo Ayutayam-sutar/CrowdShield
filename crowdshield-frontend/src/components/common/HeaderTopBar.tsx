@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { VenueInfo, NetworkMode, SupportedLanguage } from '../../types';
 import { parseVoiceCommand } from '../../utils/nlpCommandParser';
+import { VoiceAssistantModal } from './VoiceAssistantModal'; // Adjust path as needed
 import api from '../../utils/api';
 import { 
   MapPin, 
@@ -58,6 +59,7 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
 
   useEffect(() => {
     // Initialize Web Speech API
@@ -259,19 +261,19 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
             </button>
           )}
 
-          {/* Bhashini Voice Mic Assistant Button */}
+          {/* Sarvam Voice Mic Assistant Button */}
           <button
-            onClick={toggleListening}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer border ${
-              isListening 
-                ? 'bg-rose-50 text-rose-600 border-rose-300 shadow-sm' 
-                : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border-indigo-200'
-            }`}
-            title="Open Bhashini Voice Command Assistant"
-          >
-            <Mic className={`w-3.5 h-3.5 ${isListening ? 'animate-bounce' : ''}`} />
-            <span className="hidden sm:inline">{isListening ? 'Listening...' : 'Bhashini Voice'}</span>
-          </button>
+    onClick={() => setIsVoiceModalOpen(true)}
+    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer border ${
+      isListening 
+        ? 'bg-rose-50 text-rose-600 border-rose-300 shadow-sm' 
+        : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border-indigo-200'
+    }`}
+    title="Open Sarvam AI Voice Command Assistant"
+  >
+    <Mic className={`w-3.5 h-3.5 ${isListening ? 'animate-bounce' : ''}`} />
+    <span className="hidden sm:inline">{isListening ? 'Listening...' : 'Sarvam Voice'}</span>
+  </button>
 
           {/* Language Selector Dropdown */}
           <div className="relative">
@@ -350,6 +352,12 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-log-out"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" x2="9" y1="12" y2="12"></line></svg>
           </button>
+          {/* Add this at the bottom of your Header component */}
+      <VoiceAssistantModal 
+        isOpen={isVoiceModalOpen}
+        onClose={() => setIsVoiceModalOpen(false)}
+        onExecuteCommand={(cmd) => console.log("Executing:", cmd)}
+      />
         </div>
       </div>
     </header>

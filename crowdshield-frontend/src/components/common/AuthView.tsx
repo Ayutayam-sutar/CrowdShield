@@ -491,7 +491,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
               <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-[#22D3A6]/20 text-[#059669] border border-[#22D3A6]/40 flex items-center justify-center shrink-0">
                 <Volume2 className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-              <h3 className="font-heading font-bold text-base sm:text-lg text-[#151726]">Bhashini Multilingual PA</h3>
+              <h3 className="font-heading font-bold text-base sm:text-lg text-[#151726]">Sarvam Multilingual PA</h3>
               <p className="text-xs text-[#5B5F73] leading-relaxed">
                 Autonomous 1-click audio broadcast generator in Hindi, Odia, Bengali, Tamil, and English with neural speech synthesis for panic reduction.
               </p>
@@ -594,7 +594,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
           </div>
 
           {/* Col 2 */}
-          <div className="flex flex-col gap-2.5">
+         <div className="flex flex-col gap-2.5">
             <span className="font-heading font-bold text-xs text-[#151726] uppercase tracking-wider">Citizen Companion</span>
             <ul className="flex flex-col gap-2 text-xs">
               <li>
@@ -614,7 +614,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
               </li>
               <li>
                 <button onClick={() => { setAuthMode('login'); scrollToSection('login-deck'); }} className="hover:text-[#059669] transition-colors cursor-pointer bg-transparent border-none p-0 text-[#5B5F73]">
-                  Bhashini Multilingual PA
+                  Sarvam AI Multilingual PA
                 </button>
               </li>
             </ul>

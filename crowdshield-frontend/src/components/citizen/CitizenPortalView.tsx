@@ -29,7 +29,7 @@ import {
   Shield,
   Clock,
 } from 'lucide-react';
-import { speakAnnouncement, speakSarvamTTS } from '../../utils/speech';
+import { speakAnnouncement } from '../../utils/speech';
 import { VolunteerTasksView } from './VolunteerTasksView';
 import { useAuth } from '../../context/AuthContext';
 import { checkGeofenceIntersections, GeofenceZone } from '../../utils/geofence';
@@ -142,9 +142,15 @@ const [isCriticalUI, setIsCriticalUI] = useState(false);
 
   // Report form state
   const [reportCategory, setReportCategory] = useState<string>('Overcrowding');
+  const filteredZones = zones.filter((z: any) => {
+    if (!selectedVenue) return true;
+    const zVid = z.venueId || z.venue_id;
+    return !zVid || zVid === selectedVenue.id;
+  });
+
   const activeCampusZones =
-    zones.length > 0
-      ? zones
+    filteredZones.length > 0
+      ? filteredZones
       : [
           { id: 'gate_1', name: 'Main Gate', center: [20.2512, 85.8018] },
           { id: 'zone_admin_block_rd', name: 'Administrative Block Road', center: [20.2503, 85.8008] },
@@ -164,13 +170,16 @@ const [isCriticalUI, setIsCriticalUI] = useState(false);
   }, [activeCampusZones]);
 
   useEffect(() => {
-    if (activeCampusZones.length > 0 && !selectedExitZone) {
-      const firstZone = activeCampusZones[0];
-      setSelectedExitZone(firstZone.name);
-      setReportLocation(firstZone.name);
-      const lat = firstZone.center ? firstZone.center[0] : ((firstZone as any).center_lat || 20.2494);
-      const lng = firstZone.center ? firstZone.center[1] : ((firstZone as any).center_lng || 85.8);
-      setExitUserLocation({ lat, lng });
+    if (activeCampusZones.length > 0) {
+      const isCurrentZoneValid = activeCampusZones.some((z: any) => z.name === selectedExitZone);
+      if (!selectedExitZone || !isCurrentZoneValid) {
+        const firstZone = activeCampusZones[0];
+        setSelectedExitZone(firstZone.name);
+        setReportLocation(firstZone.name);
+        const lat = firstZone.center ? firstZone.center[0] : ((firstZone as any).center_lat || 20.2494);
+        const lng = firstZone.center ? firstZone.center[1] : ((firstZone as any).center_lng || 85.8);
+        setExitUserLocation({ lat, lng });
+      }
     }
   }, [activeCampusZones, selectedExitZone]);
 
@@ -179,7 +188,6 @@ const [isCriticalUI, setIsCriticalUI] = useState(false);
   const [reportSubmitted, setReportSubmitted] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [geofenceWarning, setGeofenceWarning] = useState<string | null>(null);
-  const [isReportFormExpanded, setIsReportFormExpanded] = useState(false);
 
   const [userLocation] = useState<{ lat: number; lng: number }>({ lat: 20.2494, lng: 85.8 });
   const [liveAnnouncementText, setLiveAnnouncementText] = useState<string | null>(null);
@@ -267,11 +275,18 @@ const [isCriticalUI, setIsCriticalUI] = useState(false);
     : (liveAnnouncementText || translation.announcementText);
 
   // WebSocket listener for real-time announcements, status updates & new hazards
-useEffect(() => {
+// WebSocket listener for real-time announcements, status updates & new hazards
+  useEffect(() => {
     const unsubscribe = wsService.subscribe((data: any) => {
-      // 1. Live Interventions / Audio Dispatch
-      if (data.event === 'INTERVENTION_DISPATCHED') {
-        const textToAnnounce = data.announcementText || data.message || data.actionText || '';
+      // 1. Live Interventions / Audio Dispatch (CATCHES ALL BROADCAST TYPES)
+      if (
+        data.event === 'INTERVENTION_DISPATCHED' || 
+        data.event === 'PA_BROADCAST' || 
+        data.event === 'BROADCAST_DISPATCHED' ||
+        data.event === 'EMERGENCY_BROADCAST'
+      ) {
+        // Extract the text depending on which endpoint fired the event
+        const textToAnnounce = data.announcementText || data.message || data.actionText || data.text || '';
         const langToUse = (data.language as SupportedLanguage) || selectedLang || 'en';
         
         if (textToAnnounce) {
@@ -281,16 +296,18 @@ useEffect(() => {
             ...prev,
           ]);
 
-          // ✅ NEW: Trigger Red Critical UI for SMS/Critical Alerts
+          // Trigger Red Critical UI for SMS/Critical Alerts
           if (textToAnnounce.includes('SMS') || textToAnnounce.includes('CRITICAL') || data.actionText?.includes('SMS')) {
             setIsCriticalUI(true);
             // Revert back to normal after 20 seconds
             setTimeout(() => setIsCriticalUI(false), 20000);
           }
 
+          // Play Audio! (Using finally to ensure state resets when audio ends)
           setIsPlayingAudio(true);
-          speakAnnouncement(textToAnnounce, langToUse);
-          setTimeout(() => setIsPlayingAudio(false), Math.max(textToAnnounce.length * 75, 4000));
+          speakAnnouncement(textToAnnounce, langToUse).finally(() => {
+             setIsPlayingAudio(false);
+          });
         }
       } 
       // 2. Real-time Hazard Status Update (Admin Confirms/Resolves Alert)
@@ -324,7 +341,6 @@ useEffect(() => {
     
     return () => unsubscribe();
   }, [selectedLang]);
-
   // Geofence checks
   useEffect(() => {
     if (isScenarioActive) {
@@ -354,15 +370,29 @@ useEffect(() => {
   }, [isScenarioActive, zones, activeCampusZones, userLocation.lat, userLocation.lng]);
 
   // Media handlers
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const type = file.type.startsWith('video/') ? 'video' : 'image';
+      setMediaType(type);
+      setMediaUrl(URL.createObjectURL(file));
+      setMediaFileName(file.name);
+    }
+  };
+
   const handleSimulateSampleImage = () => {
-    setMediaUrl('https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=80');
-    setMediaType('image');
-    setMediaFileName('iter_roundabout_surge.jpg');
+    if (fileInputRef.current) {
+      fileInputRef.current.accept = 'image/*';
+      fileInputRef.current.setAttribute('capture', 'environment');
+      fileInputRef.current.click();
+    }
   };
   const handleSimulateSampleVideo = () => {
-    setMediaUrl('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4');
-    setMediaType('video');
-    setMediaFileName('admin_block_bottleneck.mp4');
+    if (fileInputRef.current) {
+      fileInputRef.current.accept = 'video/*';
+      fileInputRef.current.setAttribute('capture', 'environment');
+      fileInputRef.current.click();
+    }
   };
   const removeMedia = () => {
     setMediaUrl(null);
@@ -419,13 +449,12 @@ useEffect(() => {
     setReportSubmitted(true);
     setTimeout(() => {
       setReportSubmitted(false);
-      setIsReportFormExpanded(false);
     }, 2500);
   };
 
-  const playBhashiniTTS = async () => {
+ const playSarvamTTS = async () => {
     setIsPlayingAudio(true);
-    await speakSarvamTTS(activeAnnouncementText, selectedLang);
+    await speakAnnouncement(activeAnnouncementText, selectedLang);
     setIsPlayingAudio(false);
   };
 
@@ -751,194 +780,151 @@ useEffect(() => {
               {/* Volunteer tasks */}
               {role === 'VOLUNTEER' && alerts && <VolunteerTasksView alerts={alerts} />}
 
-{/* ── EMERGENCY / ANNOUNCEMENT CARD ── */}
-              <div
-                className={`rounded-2xl p-4 flex flex-col gap-3 transition-all duration-500 ${
-                  isCriticalUI
-                    ? 'bg-red-600 text-white shadow-xl shadow-red-600/40 animate-pulse border-2 border-red-400'
-                    : isScenarioActive || liveAnnouncementText
-                    ? 'bg-rose-50 border-rose-200 border-2'
-                    : 'app-card'
-                }`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2.5">
-                    <div
-                      className={`w-8 h-8 rounded-xl flex items-center justify-center ${
-                        isCriticalUI 
-                          ? 'bg-white/20 text-white' 
-                          : isScenarioActive || liveAnnouncementText
-                          ? 'bg-red-100 text-red-500'
-                          : 'bg-indigo-50 text-indigo-500'
-                      }`}
-                    >
-                      <BellRing className={`w-4 h-4 ${isScenarioActive || isCriticalUI ? 'animate-bounce' : ''}`} />
-                    </div>
-                    <div>
-                      <span className={`font-heading font-bold text-xs uppercase tracking-wider ${isCriticalUI ? 'text-white' : 'text-slate-900'}`}>
-                        {isCriticalUI ? '🚨 CRITICAL SMS ALERT' : isScenarioActive ? '🚨 EVACUATE NOW' : liveAnnouncementText ? 'Live Dispatch' : 'Safety Update'}
-                      </span>
-                      <div className={`text-[10px] font-mono-num ${isCriticalUI ? 'text-white/80' : 'text-slate-400'}`}>Official Command Stream</div>
-                    </div>
-                  </div>
-                  {isScenarioActive && !isCriticalUI && (
-                    <span className="px-2 py-1 rounded-full bg-red-100 text-red-600 text-[10px] font-bold animate-gentle-pulse">
-                      CRITICAL
-                    </span>
-                  )}
-                </div>
-
-                <p className={`text-xs leading-relaxed p-3 rounded-xl border ${
-                  isCriticalUI 
-                    ? 'bg-red-700/50 border-red-500/50 text-white font-bold' 
-                    : 'bg-slate-50 border-slate-100 text-slate-600'
-                }`}>
-                  "{activeAnnouncementText}"
-                </p>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={playBhashiniTTS}
-                    className={`flex-1 py-2.5 rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.98] border ${
-                      isCriticalUI
-                        ? 'bg-white text-red-600 border-white hover:bg-red-50'
-                        : isScenarioActive
-                        ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
-                        : 'bg-indigo-50 border-indigo-100 text-indigo-600 hover:bg-indigo-100'
-                    }`}
-                  >
-                    <Volume2 className={`w-4 h-4 ${isPlayingAudio ? 'animate-pulse text-emerald-500' : ''}`} />
-                    {isPlayingAudio ? 'Speaking...' : `Listen (${translation.langName})`}
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('exit')}
-                    className="py-2.5 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md shadow-emerald-500/15 active:scale-[0.98]"
-                  >
-                    <Compass className="w-4 h-4" /> Safe Exit
-                  </button>
-                </div>
-              </div>
-
-              {/* ── QUICK SAFE EXIT FINDER ── */}
-              <div
-                className={`app-card-elevated p-4 flex flex-col gap-3 ${
-                  isScenarioActive ? 'border-2 border-red-200 animate-emergency-border' : ''
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center">
-                    <Navigation className="w-4 h-4 text-emerald-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-heading font-bold text-sm text-slate-900">
-                      {isScenarioActive ? '🚨 Find Safe Passage NOW' : 'Find Safe Exit'}
-                    </h3>
-                    <p className="text-[11px] text-slate-400">Select your location to check safe routes</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <select
-                    value={selectedExitZone}
-                    onChange={(e) => handleExitZoneChange(e.target.value)}
-                    className="app-input flex-1 text-xs font-bold"
-                  >
-                    {Object.keys(CAMPUS_ZONE_COORDS).map((zone) => (
-                      <option key={zone} value={zone}>{zone}</option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={handleFindSafeExit}
-                    className={`px-4 py-2.5 rounded-xl font-heading font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-[0.97] shrink-0 ${
-                      isScenarioActive
-                        ? 'bg-red-500 hover:bg-red-600 text-white shadow-red-500/20'
-                        : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/20'
-                    }`}
-                  >
-                    <Compass className="w-4 h-4" />
-                    <span className="hidden sm:inline">Go</span>
-                  </button>
-                </div>
-              </div>
-
               {/* ── LOCATION STATUS ── */}
-              <div
-                className={`app-card p-4 flex items-center justify-between gap-3 ${
-                  isScenarioActive ? 'border-red-200 bg-red-50' : ''
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                whileHover={{ scale: 1.01 }}
+                className={`app-card p-4 flex items-center justify-between gap-3 shadow-sm transition-all duration-300 relative overflow-hidden ${
+                  isScenarioActive ? 'border-red-300 bg-red-50/90 shadow-red-500/20' : 'bg-white hover:shadow-emerald-500/10 hover:border-emerald-200'
                 }`}
               >
-                <div className="flex items-center gap-3 min-w-0">
+                {/* Subtle animated background gradient */}
+                <div className={`absolute inset-0 opacity-10 bg-gradient-to-r ${isScenarioActive ? 'from-red-400 to-transparent animate-pulse' : 'from-emerald-400 to-transparent'}`} />
+
+                <div className="flex items-center gap-3 min-w-0 relative z-10">
                   <div
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                      isScenarioActive ? 'bg-red-100 text-red-500' : 'bg-emerald-50 text-emerald-600'
+                    className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-inner ${
+                      isScenarioActive ? 'bg-red-500 text-white shadow-red-600/30' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
                     }`}
                   >
                     <MapPin className="w-5 h-5" />
                   </div>
                   <div className="min-w-0">
                     <div className="text-xs font-bold text-slate-900 truncate">Near {currentZoneName}</div>
-                    <div className="text-[11px] text-slate-400 truncate">
-                      Crowd:{' '}
-                      <span className={`font-bold ${isScenarioActive ? 'text-red-500' : 'text-emerald-500'}`}>
-                        {isScenarioActive ? 'Very High — Danger' : 'Normal'}
+                    <div className="text-[11px] text-slate-500 truncate mt-0.5 flex items-center gap-1.5">
+                      Crowd Density:{' '}
+                      <span className={`font-bold flex items-center gap-1 ${isScenarioActive ? 'text-red-600' : 'text-emerald-600'}`}>
+                        {!isScenarioActive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
+                        {isScenarioActive && <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />}
+                        {isScenarioActive ? 'Critical Danger' : 'Normal'}
                       </span>
                     </div>
                   </div>
                 </div>
-                <span
-                  className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase shrink-0 ${
+                <div
+                  className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider shrink-0 relative z-10 shadow-sm ${
                     isScenarioActive
-                      ? 'bg-red-100 text-red-600 border border-red-200'
-                      : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                      ? 'bg-red-600 text-white border-none'
+                      : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                   }`}
                 >
                   {isScenarioActive ? '⚠ AVOID' : '✓ SAFE'}
-                </span>
-              </div>
+                </div>
+              </motion.div>
 
-              {/* ── MINI MAP ── */}
-              <CitizenEvacuationMap
-                isScenarioActive={isScenarioActive}
-                userLocation={userLocation}
-                zones={zones}
-                venueId={selectedVenue?.id || "soa-iter-01"}
-                venueName={selectedVenue?.name || "SOA ITER Campus"}
-              />
-
-              {/* ── REPORT HAZARD ── */}
-              <div
-                className={`app-card overflow-hidden transition-all ${
-                  isReportFormExpanded ? 'border-red-200 bg-red-50/30' : ''
+              {/* ── EMERGENCY / ANNOUNCEMENT CARD ── */}
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.1 }}
+                whileHover={{ scale: 1.01 }}
+                className={`rounded-3xl p-5 flex flex-col gap-4 transition-all duration-500 relative overflow-hidden ${
+                  isCriticalUI
+                    ? 'bg-red-600 text-white shadow-2xl shadow-red-600/40 animate-pulse border-2 border-red-400'
+                    : isScenarioActive || liveAnnouncementText
+                    ? 'bg-gradient-to-br from-rose-50 to-red-50 border-rose-200 border-2 shadow-lg shadow-rose-500/10'
+                    : 'bg-white border border-slate-200 shadow-md hover:shadow-lg hover:border-indigo-200'
                 }`}
               >
-                <button
-                  onClick={() => setIsReportFormExpanded((v) => !v)}
-                  className="w-full flex items-center justify-between p-4 cursor-pointer group"
-                >
+                {/* Decorative blob */}
+                <div className={`absolute -top-10 -right-10 w-32 h-32 rounded-full blur-3xl opacity-20 ${isScenarioActive ? 'bg-red-500' : 'bg-indigo-500'}`} />
+
+                <div className="flex items-center justify-between gap-2 relative z-10">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center shrink-0 group-hover:bg-red-100 transition-colors">
-                      <ShieldAlert className="w-4 h-4 text-red-500" />
+                    <div
+                      className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-inner ${
+                        isCriticalUI 
+                          ? 'bg-white/20 text-white' 
+                          : isScenarioActive || liveAnnouncementText
+                          ? 'bg-red-500 text-white shadow-red-600/30'
+                          : 'bg-indigo-50 text-indigo-600 border border-indigo-100'
+                      }`}
+                    >
+                      <BellRing className={`w-5 h-5 ${isScenarioActive || isCriticalUI ? 'animate-bounce' : ''}`} />
+                    </div>
+                    <div>
+                      <span className={`font-heading font-black text-xs uppercase tracking-widest ${isCriticalUI ? 'text-white' : isScenarioActive ? 'text-red-600' : 'text-slate-800'}`}>
+                        {isCriticalUI ? '🚨 CRITICAL SMS ALERT' : isScenarioActive ? '🚨 EVACUATE NOW' : liveAnnouncementText ? 'Live Dispatch' : 'Safety Update'}
+                      </span>
+                      <div className={`text-[10px] font-mono-num font-medium mt-0.5 ${isCriticalUI ? 'text-white/80' : 'text-slate-400'}`}>Official Command Stream</div>
+                    </div>
+                  </div>
+                  {isScenarioActive && !isCriticalUI && (
+                    <span className="px-2.5 py-1 rounded-lg bg-red-600 text-white text-[10px] font-black animate-gentle-pulse shadow-sm">
+                      CRITICAL
+                    </span>
+                  )}
+                </div>
+
+                <div className={`text-sm leading-relaxed p-4 rounded-2xl border relative z-10 backdrop-blur-sm ${
+                  isCriticalUI 
+                    ? 'bg-red-700/50 border-red-500/50 text-white font-bold' 
+                    : isScenarioActive
+                    ? 'bg-white/80 border-red-100 text-slate-800 font-medium'
+                    : 'bg-slate-50 border-slate-100 text-slate-600'
+                }`}>
+                  "{activeAnnouncementText}"
+                </div>
+
+                <div className="flex gap-2.5 relative z-10">
+                  <motion.button
+                    whileTap={{ scale: 0.96 }}
+                    onClick={playSarvamTTS}
+                    className={`flex-1 py-3 rounded-2xl font-heading font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm ${
+                      isCriticalUI
+                        ? 'bg-white text-red-600 border border-white hover:bg-red-50'
+                        : isScenarioActive
+                        ? 'bg-white border border-red-200 text-red-600 hover:bg-red-50'
+                        : 'bg-indigo-50 border border-indigo-100 text-indigo-700 hover:bg-indigo-100'
+                    }`}
+                  >
+                    <Volume2 className={`w-4 h-4 ${isPlayingAudio ? 'animate-pulse text-emerald-500' : ''}`} />
+                    {isPlayingAudio ? 'Speaking...' : `Listen (${translation.langName})`}
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.96 }}
+                    onClick={() => setActiveTab('exit')}
+                    className="py-3 px-5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-2xl font-heading font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-emerald-500/25"
+                  >
+                    <Compass className="w-4 h-4" /> Safe Exit
+                  </motion.button>
+                </div>
+              </motion.div>
+
+
+
+              {/* ── REPORT HAZARD ── */}
+              <motion.div 
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.2 }}
+                className="app-card overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-indigo-200 bg-white"
+              >
+                <div className="w-full flex items-center justify-between p-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center shrink-0 shadow-inner">
+                      <ShieldAlert className="w-5 h-5 text-rose-500" />
                     </div>
                     <div className="text-left">
                       <div className="font-heading font-bold text-sm text-slate-900">Report a Hazard</div>
-                      <div className="text-[11px] text-slate-400">Alert campus security instantly</div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">Alert campus security instantly</div>
                     </div>
                   </div>
-                  <div className="shrink-0 p-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-400 group-hover:border-slate-300 transition-colors">
-                    {isReportFormExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  </div>
-                </button>
+                </div>
 
-                <AnimatePresence>
-                  {isReportFormExpanded && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="border-t border-red-100 p-4 flex flex-col gap-3 bg-white">
+                <div className="p-5 flex flex-col gap-4 bg-white">
                         {reportSubmitted ? (
                           <motion.div
                             initial={{ scale: 0.9 }}
@@ -951,15 +937,15 @@ useEffect(() => {
                           </motion.div>
                         ) : (
                           <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div>
-                                <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5 block">
+                                <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5 block">
                                   Category
                                 </label>
                                 <select
                                   value={reportCategory}
                                   onChange={(e) => setReportCategory(e.target.value)}
-                                  className="app-input text-xs font-bold"
+                                  className="app-input text-xs font-bold transition-all focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
                                 >
                                   <option value="Blocked Exit">🚪 Blocked Exit</option>
                                   <option value="Medical Emergency">🚑 Medical Emergency</option>
@@ -968,13 +954,13 @@ useEffect(() => {
                                 </select>
                               </div>
                               <div>
-                                <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5 block">
+                                <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5 block">
                                   Zone
                                 </label>
                                 <select
                                   value={reportLocation}
                                   onChange={(e) => setReportLocation(e.target.value)}
-                                  className="app-input text-xs font-bold"
+                                  className="app-input text-xs font-bold transition-all focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
                                 >
                                   {activeCampusZones.map((z: any) => (
                                     <option key={z.id} value={z.name}>{z.name}</option>
@@ -984,7 +970,7 @@ useEffect(() => {
                             </div>
 
                             <div>
-                              <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5 block">
+                              <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5 block">
                                 What happened?
                               </label>
                               <textarea
@@ -992,61 +978,66 @@ useEffect(() => {
                                 value={reportDesc}
                                 onChange={(e) => setReportDesc(e.target.value)}
                                 placeholder="Describe the situation briefly..."
-                                className="app-input text-xs resize-none"
+                                className="app-input text-xs resize-none transition-all focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
                                 required
                               />
                             </div>
 
                             {mediaUrl ? (
-                              <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-900 h-28">
+                              <div className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 h-32 shadow-sm">
                                 {mediaType === 'image' ? (
-                                  <img src={mediaUrl} alt="Attached" className="w-full h-full object-cover opacity-80" />
+                                  <img src={mediaUrl} alt="Attached" className="w-full h-full object-cover opacity-90" />
                                 ) : (
-                                  <video src={mediaUrl} className="w-full h-full object-cover opacity-80" />
+                                  <video src={mediaUrl} className="w-full h-full object-cover opacity-90" />
                                 )}
                                 <button
                                   type="button"
                                   onClick={removeMedia}
-                                  className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-red-500 text-white rounded-lg transition-colors cursor-pointer"
+                                  className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-red-500 text-white rounded-xl transition-colors cursor-pointer backdrop-blur-md"
                                 >
-                                  <X className="w-3.5 h-3.5" />
+                                  <X className="w-4 h-4" />
                                 </button>
-                                <span className="absolute bottom-2 left-2 bg-black/70 text-white text-[10px] px-2 py-0.5 rounded font-mono-num">
+                                <span className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] px-2 py-1 rounded-lg font-mono-num font-medium">
                                   {mediaFileName}
                                 </span>
                               </div>
                             ) : (
-                              <div className="flex gap-2">
-                                <button
+                              <div className="flex gap-3">
+                                <motion.button
+                                  whileHover={{ y: -2 }}
+                                  whileTap={{ scale: 0.96 }}
                                   type="button"
                                   onClick={handleSimulateSampleImage}
-                                  className="flex-1 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-500 hover:text-slate-700 rounded-xl font-bold text-[11px] flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                                  className="flex-1 py-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
                                 >
-                                  <ImageIcon className="w-3.5 h-3.5" /> Photo
-                                </button>
-                                <button
+                                  <ImageIcon className="w-4 h-4 text-indigo-500" /> Photo
+                                </motion.button>
+                                <motion.button
+                                  whileHover={{ y: -2 }}
+                                  whileTap={{ scale: 0.96 }}
                                   type="button"
                                   onClick={handleSimulateSampleVideo}
-                                  className="flex-1 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-500 hover:text-slate-700 rounded-xl font-bold text-[11px] flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                                  className="flex-1 py-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
                                 >
-                                  <Video className="w-3.5 h-3.5" /> Video
-                                </button>
+                                  <Video className="w-4 h-4 text-rose-500" /> Video
+                                </motion.button>
                               </div>
                             )}
 
-                            <button
+                            <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
+
+                            <motion.button
+                              whileHover={{ scale: 1.01 }}
+                              whileTap={{ scale: 0.98 }}
                               type="submit"
-                              className="w-full py-3 bg-red-500 hover:bg-red-600 text-white rounded-2xl font-heading font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-red-500/15 active:scale-[0.99]"
+                              className="w-full py-3.5 mt-2 bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white rounded-2xl font-heading font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-red-500/25"
                             >
                               <Send className="w-4 h-4" /> Send Hazard Report
-                            </button>
+                            </motion.button>
                           </form>
                         )}
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+              </motion.div>
 
               {/* ── LIVE REPORTS FEED ── */}
               <div className="flex flex-col gap-3">
