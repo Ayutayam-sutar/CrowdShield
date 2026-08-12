@@ -104,21 +104,38 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
           throw new Error('Fallback required');
         }
       } catch (err) {
-        const curr = displayDensity;
-        setHistoryData([
-          { time: '-50m', density: Number((curr * 0.4).toFixed(1)) },
-          { time: '-40m', density: Number((curr * 0.55).toFixed(1)) },
-          { time: '-30m', density: Number((curr * 0.7).toFixed(1)) },
-          { time: '-20m', density: Number((curr * 0.85).toFixed(1)) },
-          { time: '-10m', density: Number((curr * 0.95).toFixed(1)) },
-          { time: 'Now', density: Number(curr.toFixed(2)) },
-        ]);
+        setHistoryData((prev) => {
+          const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          const newPoint = { time: nowTime, density: Number(displayDensity.toFixed(2)) };
+
+          // Don't append if the density hasn't changed (prevents rapid flatlining)
+          if (prev.length > 0 && prev[prev.length - 1].density === newPoint.density) {
+            return prev;
+          }
+
+          // If empty, initialize a smooth curve leading up to current live density
+          if (prev.length === 0 || prev[0].time.includes('m')) {
+            const curr = displayDensity;
+            return [
+              { time: '-50s', density: Math.max(0, Number((curr * 0.4).toFixed(2))) },
+              { time: '-40s', density: Math.max(0, Number((curr * 0.55).toFixed(2))) },
+              { time: '-30s', density: Math.max(0, Number((curr * 0.7).toFixed(2))) },
+              { time: '-20s', density: Math.max(0, Number((curr * 0.85).toFixed(2))) },
+              { time: '-10s', density: Math.max(0, Number((curr * 0.95).toFixed(2))) },
+              newPoint,
+            ];
+          }
+
+          // Keep a rolling window of the last 8 live YOLO frames
+          const nextData = [...prev, newPoint];
+          if (nextData.length > 8) nextData.shift();
+          return nextData;
+        });
       }
     };
 
     fetchHistory();
-  }, [selectedAlert, displayDensity]);
-
+  }, [selectedAlert?.id, displayDensity]); // Reacts instantly to live YOLO updates!
   const handleExecuteAction = async () => {
     if (!confirmationModalAction || !selectedAlert) return;
     setDispatchState({ loading: true, error: null });

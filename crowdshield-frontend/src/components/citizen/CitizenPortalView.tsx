@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CitizenReport, SupportedLanguage, VenueZone, CrowdAlert, VenueInfo } from '../../types';
-import { BHASHINI_TRANSLATIONS } from '../../data/mockData';
+import { SARVAM_TRANSLATIONS } from '../../data/mockData';
 import { EvacuationDrillMode } from './EvacuationDrillMode';
 import { CitizenEvacuationMap } from './CitizenEvacuationMap';
 import {
@@ -74,7 +74,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
   const { role } = useAuth();
   const [activeTab, setActiveTab] = useState<'feed' | 'exit'>('feed');
   const [selectedLang, setSelectedLang] = useState<SupportedLanguage>('en');
-
+const [isCriticalUI, setIsCriticalUI] = useState(false);
   // Live data
   const [liveReports, setLiveReports] = useState<CitizenReport[]>([]);
   const [notifications, setNotifications] = useState<{ time: string; msg: string }[]>([]);
@@ -195,7 +195,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
       : null;
   const currentZoneName = highestRiskZone?.name || activeCampusZones[2]?.name || 'Central Library Roundabout';
 
-  const translation = BHASHINI_TRANSLATIONS[selectedLang] || BHASHINI_TRANSLATIONS.en;
+  const translation =SARVAM_TRANSLATIONS[selectedLang] ||SARVAM_TRANSLATIONS.en;
 
   const [routeWaypoints, setRouteWaypoints] = useState<string[]>([]);
   const [isRouteLoading, setIsRouteLoading] = useState(false);
@@ -267,18 +267,27 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
     : (liveAnnouncementText || translation.announcementText);
 
   // WebSocket listener for real-time announcements, status updates & new hazards
-  useEffect(() => {
+useEffect(() => {
     const unsubscribe = wsService.subscribe((data: any) => {
       // 1. Live Interventions / Audio Dispatch
       if (data.event === 'INTERVENTION_DISPATCHED') {
         const textToAnnounce = data.announcementText || data.message || data.actionText || '';
         const langToUse = (data.language as SupportedLanguage) || selectedLang || 'en';
+        
         if (textToAnnounce) {
           setLiveAnnouncementText(textToAnnounce);
           setNotifications((prev) => [
             { time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), msg: textToAnnounce },
             ...prev,
           ]);
+
+          // ✅ NEW: Trigger Red Critical UI for SMS/Critical Alerts
+          if (textToAnnounce.includes('SMS') || textToAnnounce.includes('CRITICAL') || data.actionText?.includes('SMS')) {
+            setIsCriticalUI(true);
+            // Revert back to normal after 20 seconds
+            setTimeout(() => setIsCriticalUI(false), 20000);
+          }
+
           setIsPlayingAudio(true);
           speakAnnouncement(textToAnnounce, langToUse);
           setTimeout(() => setIsPlayingAudio(false), Math.max(textToAnnounce.length * 75, 4000));
@@ -312,6 +321,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
         setLiveReports((prev) => [formatted, ...prev.filter((r) => r.id !== formatted.id)]);
       }
     });
+    
     return () => unsubscribe();
   }, [selectedLang]);
 
@@ -444,6 +454,8 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
         isScenarioActive ? 'bg-red-50' : 'bg-[#F5F7FA]'
       }`}
     >
+
+
       {/* ── GEOFENCE WARNING ──────────────────────────── */}
       <AnimatePresence>
         {geofenceWarning && (
@@ -667,6 +679,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
 
       {/* ── MAIN CONTENT ───────────────────────────────── */}
       <main className="px-4 sm:px-6 pb-28 sm:pb-32 flex flex-col gap-4 flex-1 pt-3">
+
         <AnimatePresence mode="wait">
           {activeTab === 'exit' ? (
             <motion.div
@@ -738,11 +751,13 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
               {/* Volunteer tasks */}
               {role === 'VOLUNTEER' && alerts && <VolunteerTasksView alerts={alerts} />}
 
-              {/* ── EMERGENCY / ANNOUNCEMENT CARD ── */}
+{/* ── EMERGENCY / ANNOUNCEMENT CARD ── */}
               <div
                 className={`rounded-2xl p-4 flex flex-col gap-3 transition-all duration-500 ${
-                  isScenarioActive || liveAnnouncementText
-                    ? 'app-card-danger animate-emergency-border border-2'
+                  isCriticalUI
+                    ? 'bg-red-600 text-white shadow-xl shadow-red-600/40 animate-pulse border-2 border-red-400'
+                    : isScenarioActive || liveAnnouncementText
+                    ? 'bg-rose-50 border-rose-200 border-2'
                     : 'app-card'
                 }`}
               >
@@ -750,28 +765,34 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                   <div className="flex items-center gap-2.5">
                     <div
                       className={`w-8 h-8 rounded-xl flex items-center justify-center ${
-                        isScenarioActive || liveAnnouncementText
+                        isCriticalUI 
+                          ? 'bg-white/20 text-white' 
+                          : isScenarioActive || liveAnnouncementText
                           ? 'bg-red-100 text-red-500'
                           : 'bg-indigo-50 text-indigo-500'
                       }`}
                     >
-                      <BellRing className={`w-4 h-4 ${isScenarioActive ? 'animate-bounce' : ''}`} />
+                      <BellRing className={`w-4 h-4 ${isScenarioActive || isCriticalUI ? 'animate-bounce' : ''}`} />
                     </div>
                     <div>
-                      <span className="font-heading font-bold text-xs text-slate-900 uppercase tracking-wider">
-                        {isScenarioActive ? '🚨 EVACUATE NOW' : liveAnnouncementText ? 'Live Dispatch' : 'Safety Update'}
+                      <span className={`font-heading font-bold text-xs uppercase tracking-wider ${isCriticalUI ? 'text-white' : 'text-slate-900'}`}>
+                        {isCriticalUI ? '🚨 CRITICAL SMS ALERT' : isScenarioActive ? '🚨 EVACUATE NOW' : liveAnnouncementText ? 'Live Dispatch' : 'Safety Update'}
                       </span>
-                      <div className="text-[10px] text-slate-400 font-mono-num">Official Command Stream</div>
+                      <div className={`text-[10px] font-mono-num ${isCriticalUI ? 'text-white/80' : 'text-slate-400'}`}>Official Command Stream</div>
                     </div>
                   </div>
-                  {isScenarioActive && (
+                  {isScenarioActive && !isCriticalUI && (
                     <span className="px-2 py-1 rounded-full bg-red-100 text-red-600 text-[10px] font-bold animate-gentle-pulse">
                       CRITICAL
                     </span>
                   )}
                 </div>
 
-                <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <p className={`text-xs leading-relaxed p-3 rounded-xl border ${
+                  isCriticalUI 
+                    ? 'bg-red-700/50 border-red-500/50 text-white font-bold' 
+                    : 'bg-slate-50 border-slate-100 text-slate-600'
+                }`}>
                   "{activeAnnouncementText}"
                 </p>
 
@@ -779,7 +800,9 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                   <button
                     onClick={playBhashiniTTS}
                     className={`flex-1 py-2.5 rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.98] border ${
-                      isScenarioActive
+                      isCriticalUI
+                        ? 'bg-white text-red-600 border-white hover:bg-red-50'
+                        : isScenarioActive
                         ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
                         : 'bg-indigo-50 border-indigo-100 text-indigo-600 hover:bg-indigo-100'
                     }`}

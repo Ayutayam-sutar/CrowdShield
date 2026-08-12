@@ -1,5 +1,5 @@
-import { VenueZone, CCTVFeed, CrowdAlert, CitizenReport, VenueInfo, BhashiniTranslation, SupportedLanguage } from '../types';
-
+import { VenueZone, CCTVFeed, CrowdAlert, CitizenReport, VenueInfo} from '../types';
+import { SupportedLanguage, SarvamTranslation } from '../types';
 // These remain empty because your FastAPI backend is now serving the real Venues and Zones!
 export const INITIAL_VENUES: VenueInfo[] = [];
 export const INITIAL_ZONES: VenueZone[] = [];
@@ -176,39 +176,38 @@ export const INITIAL_CCTV_FEEDS: CCTVFeed[] = [
   }
 ];
 
-export const BHASHINI_TRANSLATIONS: Record<SupportedLanguage, BhashiniTranslation> = {
+export const SARVAM_TRANSLATIONS: Record<SupportedLanguage, SarvamTranslation> = {
   en: {
     lang: 'en',
     langName: 'English',
-    announcementText: '',
-    audioDurationSec: 0
+    announcementText: 'Attention please. High crowd density detected. Please proceed to the nearest exit calmly and safely.',
+    audioDurationSec: 5
   },
   hi: {
     lang: 'hi',
     langName: 'Hindi (हिंदी)',
-    announcementText: '',
-    audioDurationSec: 0
+    announcementText: 'कृपया ध्यान दें। अत्यधिक भीड़ का पता चला है। कृपया सुरक्षित और शांतिपूर्वक निकटतम निकास की ओर बढ़ें।',
+    audioDurationSec: 6
   },
   od: {
     lang: 'od',
     langName: 'Odia (ଓଡ଼ିଆ)',
-    announcementText: '',
-    audioDurationSec: 0
+    announcementText: 'ଦୟାକରି ଧ୍ୟାନ ଦିଅନ୍ତୁ। ପ୍ରବଳ ଭିଡ଼ ଦେଖାଦେଇଛି। ଦୟାକରି ଶାନ୍ତିରେ ନିକଟସ୍ଥ ପ୍ରସ୍ଥାନ ପଥ ଆଡକୁ ଯାଆନ୍ତୁ।',
+    audioDurationSec: 6
   },
   bn: {
     lang: 'bn',
     langName: 'Bengali (বাংলা)',
-    announcementText: '',
-    audioDurationSec: 0
+    announcementText: 'অনুগ্রহ করে মনোযোগ দিন। প্রচুর ভিড় দেখা গেছে। শান্তভাবে নিকটবর্তী প্রস্থানের দিকে এগিয়ে যান।',
+    audioDurationSec: 6
   },
   ta: {
     lang: 'ta',
     langName: 'Tamil (தமிழ்)',
-    announcementText: '',
-    audioDurationSec: 0
+    announcementText: 'தயவுசெய்து கவனிக்கவும். அதிக கூட்டம் கண்டறியப்பட்டுள்ளது. தயவுசெய்து அமைதியாக அருகிலுள்ள வெளியேறும் வழியை நோக்கி செல்லவும்.',
+    audioDurationSec: 7
   }
 };
-
 export const INITIAL_CITIZEN_REPORTS: CitizenReport[] = [
   {
     id: 'rep_101',
