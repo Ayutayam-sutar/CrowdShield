@@ -37,7 +37,6 @@ import { CamerasView } from './components/admin/CamerasView';
 import { AlertsView } from './components/admin/AlertsView';
 import { AnalyticsView } from './components/admin/AnalyticsView';
 import { DigitalTwinView } from './components/admin/DigitalTwinView';
-import { EdgeSettingsView } from './components/admin/EdgeSettingsView';
 
 // Citizen View
 import { CitizenPortalView } from './components/citizen/CitizenPortalView';
@@ -663,7 +662,6 @@ useEffect(() => {
     else if (lower.includes('cctv') || lower.includes('cam')) setAdminRoute('cameras');
     else if (lower.includes('alert')) setAdminRoute('alerts');
     else if (lower.includes('twin')) setAdminRoute('twin');
-    else if (lower.includes('edge')) setNetworkMode('edge');
     else if (lower.includes('evacuat') || lower.includes('emergency')) setIsEmergencyBroadcastOpen(true);
     else setAdminRoute('dashboard');
   };
@@ -823,12 +821,6 @@ useEffect(() => {
             />
           )}
 
-          {adminRoute === 'settings' && (
-            <EdgeSettingsView
-              networkMode={networkMode}
-              onToggleNetworkMode={handleToggleNetworkMode}
-            />
-          )}
         </main>
       </div>
 
