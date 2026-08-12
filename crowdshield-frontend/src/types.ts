@@ -6,8 +6,7 @@ export type AdminRoute =
   | 'cameras'
   | 'alerts'
   | 'analytics'
-  | 'twin'
-  | 'settings';
+  | 'twin';
 
 export type CitizenRoute =
   | 'home'

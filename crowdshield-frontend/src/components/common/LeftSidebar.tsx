@@ -7,7 +7,6 @@ import {
   Bell, 
   BarChart3, 
   Box, 
-  Settings, 
   Radio, 
   ShieldCheck,
   ChevronRight,
@@ -45,7 +44,6 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
     },
     { id: 'analytics', label: 'Analytics & Reports', icon: <BarChart3 className="w-4 h-4" /> },
     { id: 'twin', label: '3D Digital Twin', icon: <Box className="w-4 h-4" /> },
-    { id: 'settings', label: 'Edge & Settings', icon: <Settings className="w-4 h-4" /> },
   ];
 
   const handleNavClick = (route: AdminRoute) => {
