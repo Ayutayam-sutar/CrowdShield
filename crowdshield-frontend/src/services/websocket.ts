@@ -11,13 +11,15 @@ export interface TelemetryEvent {
     | 'RESOLVED_BY_VOLUNTEER'
     | 'SCENARIO_TRIGGERED'
     | 'SCENARIO_RESET'
-    | 'INTERVENTION_DISPATCHED';
+    | 'INTERVENTION_DISPATCHED'
+    | 'VENUE_SWITCHED';
 
   zone?: VenueZone;
   alert?: CrowdAlert;
   alert_id?: string;
   resolved_by?: string;
   zone_id?: string;
+  venue_id?: string;
 
   // Scenario / intervention fields
   message?: string;

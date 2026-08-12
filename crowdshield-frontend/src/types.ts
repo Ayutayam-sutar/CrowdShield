@@ -36,6 +36,7 @@ export interface VenueZone {
   name: string;
   code: string;
   sector: string;
+  venueId?: string;
   density: number; // people per sq meter
   maxCapacity: number;
   currentHeadcount: number;

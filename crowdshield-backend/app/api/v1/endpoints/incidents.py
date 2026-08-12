@@ -30,6 +30,7 @@ async def create_incident(
         category=incident.category,
         description=incident.description,
         location_name=incident.location_name,
+        venue_id=incident.venue_id,
         latitude=incident.latitude,
         longitude=incident.longitude,
         media_url=incident.media_url,
@@ -49,6 +50,7 @@ async def create_incident(
                 "id": db_incident.id,
                 "category": db_incident.category.value if hasattr(db_incident.category, "value") else str(db_incident.category),
                 "location": db_incident.location_name,
+                "venue_id": db_incident.venue_id,
                 "description": db_incident.description,
                 "imageUrl": db_incident.media_url,
                 "status": db_incident.status.value if hasattr(db_incident.status, "value") else str(db_incident.status),
@@ -65,17 +67,16 @@ async def create_incident(
 
 @router.get("/", response_model=List[IncidentResponse])
 async def read_incidents(
-    skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)
+    venue_id: str | None = None, skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)
 ):
     """
     Get all citizen SOS reports ordered newest first.
     """
-    result = await db.execute(
-        select(CitizenReport)
-        .order_by(CitizenReport.created_at.desc())
-        .offset(skip)
-        .limit(limit)
-    )
+    query = select(CitizenReport).order_by(CitizenReport.created_at.desc())
+    if venue_id:
+        query = query.where(CitizenReport.venue_id == venue_id)
+    query = query.offset(skip).limit(limit)
+    result = await db.execute(query)
     return result.scalars().all()
 
 

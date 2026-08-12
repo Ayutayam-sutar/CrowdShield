@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { CitizenReport, SupportedLanguage, VenueZone, CrowdAlert } from '../../types';
+import { CitizenReport, SupportedLanguage, VenueZone, CrowdAlert, VenueInfo } from '../../types';
 import { BHASHINI_TRANSLATIONS } from '../../data/mockData';
 import { EvacuationDrillMode } from './EvacuationDrillMode';
 import { CitizenEvacuationMap } from './CitizenEvacuationMap';
@@ -45,6 +45,8 @@ interface CitizenPortalViewProps {
   onLogout?: () => void;
   alerts?: CrowdAlert[];
   zones?: VenueZone[];
+  selectedVenue?: VenueInfo | null;
+  venues?: VenueInfo[];
 }
 
 /* ─── ZONE COORDINATE MAP ────────────────────────────── */
@@ -66,6 +68,8 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
   onLogout,
   alerts,
   zones = [],
+  selectedVenue,
+  venues = [],
 }) => {
   const { role } = useAuth();
   const [activeTab, setActiveTab] = useState<'feed' | 'exit'>('feed');
@@ -77,10 +81,8 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
   const [showNotifications, setShowNotifications] = useState(false);
 
   // Safe exit location picker
-  const [selectedExitZone, setSelectedExitZone] = useState<string>('Central Library Roundabout');
-  const [exitUserLocation, setExitUserLocation] = useState<{ lat: number; lng: number }>(
-    CAMPUS_ZONE_COORDS['Central Library Roundabout']
-  );
+  const [selectedExitZone, setSelectedExitZone] = useState<string>('');
+  const [exitUserLocation, setExitUserLocation] = useState<{ lat: number; lng: number }>({ lat: 20.2494, lng: 85.8 });
   const [exitRouteTriggered, setExitRouteTriggered] = useState(false);
 
   // Helper for status badge formatting and color styling
@@ -108,7 +110,8 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
   useEffect(() => {
     const fetchIncidents = async () => {
       try {
-        const response = await api.get('/incidents/');
+        const vid = selectedVenue?.id || 'soa-iter-01';
+        const response = await api.get(`/incidents/?venue_id=${vid}`);
         if (response.data && Array.isArray(response.data)) {
           const formattedReports: CitizenReport[] = response.data.map((inc: any) => {
             const rawStatus = (inc.status || 'PENDING').toUpperCase();
@@ -135,7 +138,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
       }
     };
     fetchIncidents();
-  }, []);
+  }, [selectedVenue?.id]);
 
   // Report form state
   const [reportCategory, setReportCategory] = useState<string>('Overcrowding');
@@ -150,7 +153,28 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
           { id: 'gate_2', name: 'EV Charging Junction (Gate 2)', center: [20.2472, 85.7983] },
         ];
 
-  const [reportLocation, setReportLocation] = useState<string>(activeCampusZones[0].name);
+  const currentZoneCoords = useMemo(() => {
+    const map: Record<string, { lat: number; lng: number }> = {};
+    activeCampusZones.forEach((z: any) => {
+      const lat = z.center ? z.center[0] : (z.center_lat || 20.2494);
+      const lng = z.center ? z.center[1] : (z.center_lng || 85.8);
+      map[z.name] = { lat, lng };
+    });
+    return map;
+  }, [activeCampusZones]);
+
+  useEffect(() => {
+    if (activeCampusZones.length > 0 && !selectedExitZone) {
+      const firstZone = activeCampusZones[0];
+      setSelectedExitZone(firstZone.name);
+      setReportLocation(firstZone.name);
+      const lat = firstZone.center ? firstZone.center[0] : ((firstZone as any).center_lat || 20.2494);
+      const lng = firstZone.center ? firstZone.center[1] : ((firstZone as any).center_lng || 85.8);
+      setExitUserLocation({ lat, lng });
+    }
+  }, [activeCampusZones, selectedExitZone]);
+
+  const [reportLocation, setReportLocation] = useState<string>('');
   const [reportDesc, setReportDesc] = useState('');
   const [reportSubmitted, setReportSubmitted] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
@@ -185,7 +209,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
       setIsRouteLoading(true);
       try {
         const response = await api.post('/routing/evacuate/', {
-          venue_id: 'soa-iter-01',
+          venue_id: selectedVenue?.id || 'soa-iter-01',
           current_lat: exitUserLocation.lat,
           current_lng: exitUserLocation.lng,
         });
@@ -347,6 +371,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
       location_name: reportLocation,
       latitude: userLocation.lat,
       longitude: userLocation.lng,
+      venue_id: selectedVenue?.id || 'soa-iter-01',
       media_url: mediaUrl || null,
       media_type: mediaType || null,
     };
@@ -397,7 +422,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
   // Handle safe exit location change
   const handleExitZoneChange = (zoneName: string) => {
     setSelectedExitZone(zoneName);
-    const coords = CAMPUS_ZONE_COORDS[zoneName];
+    const coords = currentZoneCoords[zoneName];
     if (coords) {
       setExitUserLocation(coords);
     }
@@ -405,7 +430,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
   };
 
   const handleFindSafeExit = () => {
-    const coords = CAMPUS_ZONE_COORDS[selectedExitZone];
+    const coords = currentZoneCoords[selectedExitZone];
     if (coords) {
       setExitUserLocation({ ...coords });
       setExitRouteTriggered(true);
@@ -552,7 +577,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                   isScenarioActive ? 'bg-white animate-ping' : 'bg-emerald-400 animate-pulse'
                 }`}
               />
-              {isScenarioActive ? 'Evacuate Now · ITER Campus' : 'SOA ITER Campus · Live'}
+              {isScenarioActive ? `Evacuate Now · ${selectedVenue?.name || 'Campus'}` : `${selectedVenue?.name || 'SOA ITER Campus'} · Live`}
             </span>
           </div>
         </div>
@@ -669,7 +694,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                   onChange={(e) => handleExitZoneChange(e.target.value)}
                   className="app-input font-bold"
                 >
-                  {Object.keys(CAMPUS_ZONE_COORDS).map((zone) => (
+                  {Object.keys(currentZoneCoords).map((zone) => (
                     <option key={zone} value={zone}>{zone}</option>
                   ))}
                 </select>
@@ -689,13 +714,14 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                 isScenarioActive={isScenarioActive}
                 userLocation={exitUserLocation}
                 zones={zones}
-                venueId="soa-iter-01"
+                venueId={selectedVenue?.id || "soa-iter-01"}
+                venueName={selectedVenue?.name || "SOA ITER Campus"}
                 key={`${exitUserLocation.lat}-${exitUserLocation.lng}`}
               />
 
               <EvacuationDrillMode
                 userLocation={exitUserLocation}
-                venueId="soa-iter-01"
+                venueId={selectedVenue?.id || "soa-iter-01"}
                 isScenarioActive={isScenarioActive}
                 key={`drill-${exitUserLocation.lat}-${exitUserLocation.lng}`}
               />
@@ -852,7 +878,8 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                 isScenarioActive={isScenarioActive}
                 userLocation={userLocation}
                 zones={zones}
-                venueId="soa-iter-01"
+                venueId={selectedVenue?.id || "soa-iter-01"}
+                venueName={selectedVenue?.name || "SOA ITER Campus"}
               />
 
               {/* ── REPORT HAZARD ── */}

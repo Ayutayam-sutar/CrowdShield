@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   ViewMode,
   AdminRoute,
@@ -83,6 +83,7 @@ function mapBackendZoneToFrontend(raw: any): VenueZone {
     gateStatus: (raw.gate_status ?? raw.gateStatus ?? 'open').toLowerCase() as any,
     inferenceMs: raw.inference_ms ?? 0,
     evacuationRoute: raw.evacuationRoute ?? raw.evacuation_route ?? undefined,
+    venueId: raw.venue_id ?? raw.venueId ?? undefined,
   };
 }
 
@@ -313,9 +314,17 @@ useEffect(() => {
   useEffect(() => {
     const fetchLiveData = async () => {
       try {
+        let activeVenueId: string | null = null;
+        try {
+          const activeRes = await api.get('/venues/active');
+          activeVenueId = activeRes.data?.venue_id || null;
+        } catch (e) {
+          console.warn('[API] Failed to fetch active venue:', e);
+        }
+
         const [venuesRes, zonesRes] = await Promise.all([
           api.get('/venues').catch(() => ({ data: [] })),
-          api.get('/zones').catch(() => ({ data: [] })),
+          api.get(activeVenueId ? `/zones?venue_id=${activeVenueId}` : '/zones').catch(() => ({ data: [] })),
         ]);
 
         const rawVenues = Array.isArray(venuesRes.data) ? venuesRes.data : [];
@@ -326,7 +335,8 @@ useEffect(() => {
 
         setVenues(mappedVenues);
         if (mappedVenues.length > 0) {
-          setSelectedVenue(mappedVenues[0]);
+          const activeVenue = activeVenueId ? mappedVenues.find(v => v.id === activeVenueId) : null;
+          setSelectedVenue(activeVenue || mappedVenues[0]);
         } else {
           setSelectedVenue(null);
         }
@@ -350,12 +360,19 @@ useEffect(() => {
   // Handle Venue selection and subscribe to its primary zone
   const handleSelectVenue = (venue: VenueInfo) => {
     setSelectedVenue(venue);
-    api.get('/zones').then((res) => {
+    setAlerts([]);
+    setRecentLogs([]);
+    api.post('/venues/active', { venue_id: venue.id }).catch((err) => {
+      console.error('[API] Failed to broadcast active venue switch:', err);
+    });
+    api.get(`/zones?venue_id=${venue.id}`).then((res) => {
       const rawZones = Array.isArray(res.data) ? res.data : [];
       const mappedZones = rawZones.map(mapBackendZoneToFrontend);
       if (mappedZones.length > 0) {
         setZones(mappedZones);
         wsService.subscribeToZone(mappedZones[0].id);
+      } else {
+        setZones([]);
       }
     }).catch((err) => {
       console.error('[API] Failed to fetch zones for selected venue:', err);
@@ -366,6 +383,12 @@ useEffect(() => {
   useEffect(() => {
     checkAndGenerateCrowdAlerts(processedZones);
   }, [processedZones]);
+
+  // Keep a ref to the selected venue for the WebSocket closure
+  const selectedVenueRef = useRef<VenueInfo | null>(null);
+  useEffect(() => {
+    selectedVenueRef.current = selectedVenue;
+  }, [selectedVenue]);
 
   // WebSocket Connection & Real-Time Telemetry Subscription
   useEffect(() => {
@@ -392,6 +415,11 @@ useEffect(() => {
       const unsubscribe = wsService.subscribe((data) => {
         if (data.event === 'TELEMETRY_UPDATE' && data.zone) {
           const updatedZone = mapBackendZoneToFrontend(data.zone);
+          
+          // Ignore telemetry updates for zones outside the currently viewed venue
+          if (updatedZone.venueId && selectedVenueRef.current && updatedZone.venueId !== selectedVenueRef.current.id) {
+            return;
+          }
 
           setLastTelemetryUpdate((prev) => ({
             ...prev,
@@ -404,7 +432,12 @@ useEffect(() => {
             if (exists) {
               return prevZones.map((z) => (z.id === updatedZone.id ? { ...z, ...updatedZone } : z));
             } else {
-              return [...prevZones, updatedZone];
+              // Only insert if we are absolutely sure this venue is currently active, 
+              // or if there are no prev zones but we want to dynamically load
+              if (selectedVenueRef.current && updatedZone.venueId === selectedVenueRef.current.id) {
+                return [...prevZones, updatedZone];
+              }
+              return prevZones;
             }
           });
 
@@ -454,6 +487,22 @@ useEffect(() => {
             'info',
             data.zone_id
           );
+        } else if (data.event === 'VENUE_SWITCHED' && data.venue_id) {
+          api.get(`/venues/${data.venue_id}`).then((vRes) => {
+            const mappedVenue = mapBackendVenueToFrontend(vRes.data);
+            setSelectedVenue(mappedVenue);
+            setAlerts([]);
+            setRecentLogs([]);
+          }).catch(e => console.error('[API] Failed to fetch new venue details:', e));
+          
+          api.get(`/zones?venue_id=${data.venue_id}`).then((zRes) => {
+            const rawZones = Array.isArray(zRes.data) ? zRes.data : [];
+            const mappedZones = rawZones.map(mapBackendZoneToFrontend);
+            setZones(mappedZones);
+            if (mappedZones.length > 0) {
+              wsService.subscribeToZone(mappedZones[0].id);
+            }
+          }).catch(e => console.error('[API] Failed to fetch zones for new venue:', e));
         }
       });
 
@@ -654,6 +703,8 @@ useEffect(() => {
           onLogout={logout}
           alerts={alerts}
           zones={zones} 
+          selectedVenue={selectedVenue}
+          venues={venues}
         />
         <RoleSwitcher
           currentView="citizen"
