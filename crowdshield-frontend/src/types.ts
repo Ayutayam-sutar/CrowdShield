@@ -94,13 +94,13 @@ export interface CrowdAlert {
 
 export type SupportedLanguage = 'en' | 'hi' | 'od' | 'bn' | 'ta';
 
-export interface BhashiniTranslation {
-  lang: SupportedLanguage;
+// Inside your types.ts file
+export interface SarvamTranslation {
+  lang: string;
   langName: string;
   announcementText: string;
   audioDurationSec: number;
 }
-
 export interface CitizenReport {
   id: string;
   category: string; // Widened so any category string from DB is accepted

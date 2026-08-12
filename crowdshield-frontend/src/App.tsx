@@ -254,60 +254,7 @@ useEffect(() => {
   };
 
   // Automatic Crowd Alert Generation if Zone Density Exceeds 85% Threshold
-  const checkAndGenerateCrowdAlerts = (zonesList: VenueZone[]) => {
-    zonesList.forEach((zone) => {
-      const capacityPercent = zone.maxCapacity > 0
-        ? Math.round((zone.currentHeadcount / zone.maxCapacity) * 100)
-        : Math.round((zone.density / 5.0) * 100);
 
-      const exceeds85 = capacityPercent >= 85 || zone.density >= 4.25 || zone.riskScore >= 85;
-
-      if (exceeds85) {
-        setAlerts((prevAlerts) => {
-          const existing = prevAlerts.find((a) => a.zoneId === zone.id && a.status === 'active');
-          if (existing) return prevAlerts;
-
-          const newAlert: CrowdAlert = {
-            id: `alert-auto-${zone.id}-${Date.now()}`,
-            title: `CRITICAL CROWD DENSITY: ${zone.name} (${capacityPercent}% Load)`,
-            zoneId: zone.id,
-            zoneName: zone.name,
-            riskLevel: 'critical',
-            density: zone.density,
-            flowRate: zone.flowRate,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            category: 'Overcrowding',
-            status: 'active',
-            sentinelAnalysis: `Automated Sentinel AI Threshold Alert: ${zone.name} exceeded 85% capacity safety threshold with ${zone.density.toFixed(1)} p/m² density (${capacityPercent}% headcount load). High crowd crush risk detected. Immediate diversion recommended.`,
-            recommendedActions: [
-              {
-                id: `act-1-${zone.id}`,
-                actionText: `Open Auxiliary Emergency Gates near ${zone.name}`,
-                impact: 'Immediate -40% headcount relief',
-                targetGateOrZone: zone.name,
-              },
-              {
-                id: `act-2-${zone.id}`,
-                actionText: 'Broadcast Bhashini Multilingual PA Diversion Announcement',
-                impact: 'Redirect incoming crowd to adjacent Sector 1 & 4',
-                targetGateOrZone: zone.name,
-              },
-            ],
-          };
-
-          // Display Toast Notification for Admins
-          addToastNotification(
-            `CROWD THRESHOLD ALERT (>85% Exceeded)`,
-            `Zone ${zone.name} reached ${capacityPercent}% capacity load (${zone.density.toFixed(1)} p/m²). Emergency alert logged in system.`,
-            'critical',
-            zone.id
-          );
-
-          return [newAlert, ...prevAlerts];
-        });
-      }
-    });
-  };
 
   // Fetch Live Venues and Zones from FastAPI backend
   useEffect(() => {
@@ -380,7 +327,7 @@ useEffect(() => {
 
   // Monitor zones for threshold breaches
   useEffect(() => {
-    checkAndGenerateCrowdAlerts(processedZones);
+    
   }, [processedZones]);
 
   // Keep a ref to the selected venue for the WebSocket closure

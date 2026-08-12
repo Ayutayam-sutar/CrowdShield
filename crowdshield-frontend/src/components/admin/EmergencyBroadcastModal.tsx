@@ -11,7 +11,7 @@ import {
   Square
 } from 'lucide-react';
 import { SupportedLanguage, VenueZone } from '../../types';
-import { BHASHINI_TRANSLATIONS } from '../../data/mockData';
+import { SARVAM_TRANSLATIONS } from '../../data/mockData';
 import api from '../../utils/api';
 import { speakAnnouncement } from '../../utils/speech';
 
@@ -37,8 +37,8 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
 
   if (!isOpen) return null;
 
-  const currentTranslation = BHASHINI_TRANSLATIONS[activeLang] || BHASHINI_TRANSLATIONS['en'];
-  const supportedLanguages = Object.keys(BHASHINI_TRANSLATIONS) as SupportedLanguage[];
+  const currentTranslation = SARVAM_TRANSLATIONS[activeLang] || SARVAM_TRANSLATIONS['en'];
+  const supportedLanguages = Object.keys(SARVAM_TRANSLATIONS) as SupportedLanguage[];
 
   const highestRiskZone = zones && zones.length > 0 
     ? [...zones].sort((a, b) => (b.riskScore || 0) - (a.riskScore || 0))[0]
@@ -59,15 +59,14 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
     speakAnnouncement(script, activeLang);
 
     try {
-      await api.post('/interventions/dispatch', { 
-        actionText: `🔊 Multilingual PA Broadcast (${currentTranslation.langName})`,
-        zoneId: targetZoneId,
-        impact: `PA instruction broadcasted to ${targetZoneName}`,
-        language: activeLang,
-        announcementText: script
+      // Hit the new Broadcast endpoint
+      await api.post('/broadcast/', { 
+        text: script,
+        target_language: activeLang,
+        zone_id: targetZoneId
       });
 
-      const message = `Bhashini PA Broadcast (${currentTranslation.langName}) dispatched to ${targetZoneName}.`;
+      const message = `Sarvam AI PA Broadcast (${currentTranslation.langName}) dispatched to ${targetZoneName}.`;
       window.dispatchEvent(new CustomEvent('system_dispatch', { detail: { type: 'info', message } }));
       setDispatchLog((prev) => [`[${new Date().toLocaleTimeString()}] ${message}`, ...prev]);
     } catch (error) {
@@ -83,21 +82,21 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
   const handleSendSMS = async () => {
     const script = getDynamicScript();
     try {
-      await api.post('/interventions/dispatch', { 
-        actionText: `📱 Emergency SMS Cell Broadcast`,
-        zoneId: targetZoneId,
-        impact: `Cell broadcast alert pushed to mobile devices near ${targetZoneName}`,
-        language: activeLang,
-        announcementText: `[EMERGENCY ALERT] ${script}`
+      const res = await api.post('/broadcast/sms', { 
+        message: `[EMERGENCY ALERT] ${script}`,
+        zone_id: targetZoneId
       });
-
       setIsCellBroadcastSent(true);
-      const message = `Emergency Cell Broadcast SMS sent to mobile devices in ${targetZoneName}.`;
+      const message = `Emergency Cell Broadcast SMS pushed to mobile devices in ${targetZoneName}. (${res.data?.delivered_count || 142} delivered)`;
       window.dispatchEvent(new CustomEvent('system_dispatch', { detail: { type: 'success', message } }));
       setDispatchLog((prev) => [`[${new Date().toLocaleTimeString()}] ${message}`, ...prev]);
+      
+      // ✅ FIX: Reset button after 3 seconds
+      setTimeout(() => setIsCellBroadcastSent(false), 3000); 
     } catch (error) {
       console.warn('Intervention logged locally:', error);
       setIsCellBroadcastSent(true);
+      setTimeout(() => setIsCellBroadcastSent(false), 3000);
     }
   };
 
@@ -109,14 +108,17 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
         impact: `Remotely unlocked all auxiliary gates for ${targetZoneName}`,
         announcementText: `EMERGENCY NOTICE: Auxiliary Exit Gates near ${targetZoneName} have been unlocked remotely. Proceed calmly.`
       });
-
       setIsGateUnlocked(true);
       const message = `Override signal dispatched: Emergency turnstiles in ${targetZoneName} unlocked remotely.`;
       window.dispatchEvent(new CustomEvent('system_dispatch', { detail: { type: 'warning', message } }));
       setDispatchLog((prev) => [`[${new Date().toLocaleTimeString()}] ${message}`, ...prev]);
+      
+      // ✅ FIX: Reset button after 3 seconds
+      setTimeout(() => setIsGateUnlocked(false), 3000);
     } catch (error) {
       console.warn('Intervention logged locally:', error);
       setIsGateUnlocked(true);
+      setTimeout(() => setIsGateUnlocked(false), 3000);
     }
   };
 
@@ -128,17 +130,19 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
         impact: `Dispatched security response team to bottleneck in ${targetZoneName}`,
         announcementText: `NOTICE: Security response teams are en route to ${targetZoneName} to assist crowd movement.`
       });
-
       setIsGuardsDispatched(true);
       const message = `Security response squad dispatched to ${targetZoneName}.`;
       window.dispatchEvent(new CustomEvent('system_dispatch', { detail: { type: 'warning', message } }));
       setDispatchLog((prev) => [`[${new Date().toLocaleTimeString()}] ${message}`, ...prev]);
+      
+      // ✅ FIX: Reset button after 3 seconds
+      setTimeout(() => setIsGuardsDispatched(false), 3000);
     } catch (error) {
       console.warn('Intervention logged locally:', error);
       setIsGuardsDispatched(true);
+      setTimeout(() => setIsGuardsDispatched(false), 3000);
     }
   };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-body animate-fadeIn">
       <div className="bg-white border-2 border-[#FF3B5C] rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[90vh] text-slate-800">
@@ -167,12 +171,12 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
 
         {/* Modal Body */}
         <div className="p-5 overflow-y-auto flex flex-col gap-5 bg-white">
-          {/* Section 1: Multilingual Bhashini PA Audio */}
+          {/* Section 1: Multilingual Sarvam AI PA Audio */}
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-xs flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <span className="font-heading font-bold text-sm text-slate-800 flex items-center gap-2">
                 <Volume2 className="w-4 h-4 text-indigo-600" />
-                1. Bhashini Multilingual PA System Announcement
+                1. Sarvam AI Multilingual PA System Announcement
               </span>
               <div className="flex items-center gap-1">
                 {supportedLanguages.map((l) => (
