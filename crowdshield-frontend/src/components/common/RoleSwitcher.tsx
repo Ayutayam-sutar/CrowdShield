@@ -116,20 +116,7 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
 
           {/* Reset Crisis Simulation Trigger */}
           <div className="pt-1 flex flex-col gap-2">
-            <button
-              onClick={() => {
-                onResetScenario();
-              }}
-              className={`w-full py-2.5 px-3 rounded-xl text-xs font-heading font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                isScenarioActive
-                  ? 'bg-[#FF3B5C] hover:bg-[#e0304f] text-white shadow-md'
-                  : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
-              }`}
-            >
-              <RefreshCw className={`w-4 h-4 ${isScenarioActive ? 'animate-spin' : ''}`} />
-              <span>{isScenarioActive ? 'Reset Active Crisis Test' : 'Trigger Crisis Simulation'}</span>
-            </button>
-
+           
             {/* Secure System Exit */}
             <button
               onClick={() => {
