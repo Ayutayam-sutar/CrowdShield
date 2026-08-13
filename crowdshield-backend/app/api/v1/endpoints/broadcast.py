@@ -65,7 +65,7 @@ async def broadcast_message(request: BroadcastRequest):
     )
 
 
-@router.post("/sms", dependencies=[Depends(get_current_active_admin)])
+@router.post("/sms")
 async def dispatch_sms_alert(payload: SMSRequest):
     """
     Simulates sending an SMS via cellular network and pushes a WebSocket alert to Citizen UI.
