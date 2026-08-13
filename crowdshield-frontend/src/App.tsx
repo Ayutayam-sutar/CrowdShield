@@ -701,6 +701,7 @@ useEffect(() => {
         onSearch={setSearchQuery}
         activeAlertCount={activeAlertCount}
         onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        onNotificationClick={() => setAdminRoute('alerts')}
       />
 
       <div className="flex flex-1 min-h-0 overflow-hidden relative">
