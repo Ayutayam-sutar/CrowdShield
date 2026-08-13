@@ -1,0 +1,413 @@
+/**
+ * Dashboard i18n Translation Dictionary
+ * Supports: English (en), Hindi (hi), Odia (od), Bengali (bn), Tamil (ta)
+ */
+import { SupportedLanguage } from '../types';
+
+const dashboard: Record<string, Record<SupportedLanguage, string>> = {
+  // ── Top Warning Banner ──
+  awaitingTelemetryPrefix: {
+    en: 'Awaiting camera telemetry feed across',
+    hi: 'कैमरा टेलीमेट्री फीड की प्रतीक्षा',
+    od: 'କ୍ୟାମେରା ଟେଲିମେଟ୍ରି ଫିଡ୍ ପାଇଁ ଅପେକ୍ଷା',
+    bn: 'ক্যামেরা টেলিমেট্রি ফিডের জন্য অপেক্ষা',
+    ta: 'கேமரா டெலிமெட்ரி ஊட்டத்தை எதிர்பார்க்கிறது',
+  },
+  campusZones: {
+    en: 'campus zones',
+    hi: 'कैम्पस ज़ोन',
+    od: 'କ୍ୟାମ୍ପସ୍ ଜୋନ୍',
+    bn: 'ক্যাম্পাস জোন',
+    ta: 'வளாக மண்டலங்கள்',
+  },
+  awaitingTelemetrySuffix: {
+    en: 'Running on baseline hardware telemetry until YOLO video pipelines or crisis simulations connect.',
+    hi: 'YOLO वीडियो पाइपलाइन या संकट सिमुलेशन कनेक्ट होने तक बेसलाइन हार्डवेयर टेलीमेट्री पर चल रहा है।',
+    od: 'YOLO ଭିଡିଓ ପାଇପଲାଇନ୍ ବା ସଙ୍କଟ ସିମୁଲେସନ୍ ସଂଯୋଗ ହେବା ପର୍ଯ୍ୟନ୍ତ ବେସଲାଇନ୍ ହାର୍ଡୱେୟାର ଟେଲିମେଟ୍ରିରେ ଚାଲୁଛି।',
+    bn: 'YOLO ভিডিও পাইপলাইন বা সংকট সিমুলেশন সংযোগ না হওয়া পর্যন্ত বেসলাইন হার্ডওয়্যার টেলিমেট্রিতে চলছে।',
+    ta: 'YOLO வீடியோ பைப்லைன்கள் அல்லது நெருக்கடி சிமுலேஷன்கள் இணைக்கும் வரை அடிப்படை வன்பொருள் டெலிமெட்ரியில் இயங்குகிறது.',
+  },
+
+  // ── Live Campus Footfall Card ──
+  liveCampusFootfall: {
+    en: 'Live Campus Footfall',
+    hi: 'लाइव कैम्पस फुटफॉल',
+    od: 'ଲାଇଭ୍ କ୍ୟାମ୍ପସ୍ ଫୁଟଫଲ୍',
+    bn: 'লাইভ ক্যাম্পাস ফুটফল',
+    ta: 'நேரடி வளாக பயணிகள்',
+  },
+  aggregatedAttendance: {
+    en: 'Aggregated Real-Time Attendance',
+    hi: 'समग्र रियल-टाइम उपस्थिति',
+    od: 'ସମୁଦାୟ ରିଅଲ-ଟାଇମ୍ ଉପସ୍ଥିତି',
+    bn: 'সমষ্টিগত রিয়েল-টাইম উপস্থিতি',
+    ta: 'மொத்த நிகழ்நேர வருகை',
+  },
+  nodesActive: {
+    en: 'Nodes Active',
+    hi: 'नोड्स सक्रिय',
+    od: 'ନୋଡ୍ସ ସକ୍ରିୟ',
+    bn: 'নোডস সক্রিয়',
+    ta: 'நோடுகள் செயலில்',
+  },
+  paxMax: {
+    en: 'Pax Max',
+    hi: 'अधिकतम क्षमता',
+    od: 'ସର୍ବାଧିକ କ୍ଷମତା',
+    bn: 'সর্বোচ্চ ক্ষমতা',
+    ta: 'அதிகபட்ச கொள்ளளவு',
+  },
+  overLast5m: {
+    en: 'over last 5m',
+    hi: 'पिछले 5 मिनट में',
+    od: 'ଗତ ୫ ମିନିଟ୍ ମଧ୍ୟରେ',
+    bn: 'গত ৫ মিনিটে',
+    ta: 'கடந்த 5 நிமிடத்தில்',
+  },
+  sampling5mBaseline: {
+    en: 'Sampling 5m baseline...',
+    hi: '5 मिनट बेसलाइन सैम्पलिंग...',
+    od: '୫ ମିନିଟ୍ ବେସ୍‌ଲାଇନ୍ ସ୍ୟାମ୍ପଲିଙ୍ଗ...',
+    bn: '৫ মিনিট বেসলাইন স্যাম্পলিং...',
+    ta: '5 நிமிட அடிப்படை மாதிரி...',
+  },
+  loadLevel: {
+    en: 'Load Level',
+    hi: 'लोड स्तर',
+    od: 'ଲୋଡ୍ ସ୍ତର',
+    bn: 'লোড স্তর',
+    ta: 'சுமை நிலை',
+  },
+  capacityUtilization: {
+    en: 'Capacity Utilization',
+    hi: 'क्षमता उपयोग',
+    od: 'କ୍ଷମତା ବ୍ୟବହାର',
+    bn: 'ক্ষমতা ব্যবহার',
+    ta: 'கொள்ளளவு பயன்பாடு',
+  },
+  yoloEdgeProcessing: {
+    en: 'YOLO Edge Processing Active',
+    hi: 'YOLO एज प्रोसेसिंग सक्रिय',
+    od: 'YOLO ଏଜ୍ ପ୍ରୋସେସିଂ ସକ୍ରିୟ',
+    bn: 'YOLO এজ প্রসেসিং সক্রিয়',
+    ta: 'YOLO எட்ஜ் செயலாக்கம் செயலில்',
+  },
+  refreshInterval: {
+    en: 'Refresh Interval',
+    hi: 'रीफ्रेश अंतराल',
+    od: 'ରିଫ୍ରେସ୍ ଅନ୍ତରାଳ',
+    bn: 'রিফ্রেশ ব্যবধান',
+    ta: 'புதுப்பிப்பு இடைவெளி',
+  },
+  telemetry15s: {
+    en: '15s Telemetry',
+    hi: '15 सेकंड टेलीमेट्री',
+    od: '15ସେ ଟେଲିମେଟ୍ରି',
+    bn: '15সে টেলিমেট্রি',
+    ta: '15வி டெலிமெட்ரி',
+  },
+
+  // ── Safety Status Card ──
+  safetyStatus: {
+    en: 'Safety Status',
+    hi: 'सुरक्षा स्थिति',
+    od: 'ସୁରକ୍ଷା ସ୍ଥିତି',
+    bn: 'নিরাপত্তা অবস্থা',
+    ta: 'பாதுகாப்பு நிலை',
+  },
+  critical: {
+    en: 'CRITICAL',
+    hi: 'गंभीर',
+    od: 'ଗମ୍ଭୀର',
+    bn: 'জটিল',
+    ta: 'ஆபத்தான',
+  },
+  warning: {
+    en: 'WARNING',
+    hi: 'चेतावनी',
+    od: 'ଚେତାବନୀ',
+    bn: 'সতর্কতা',
+    ta: 'எச்சரிக்கை',
+  },
+  secure: {
+    en: 'SECURE',
+    hi: 'सुरक्षित',
+    od: 'ସୁରକ୍ଷିତ',
+    bn: 'নিরাপদ',
+    ta: 'பாதுகாப்பானது',
+  },
+  highCrowdCrush: {
+    en: 'High crowd crush threat detected. Immediate dispatch required.',
+    hi: 'भीड़ में दबाव का खतरा पाया गया। तुरंत कार्रवाई आवश्यक।',
+    od: 'ଜନସମାଗମରେ ଚାପ ବିପଦ ଚିହ୍ନିତ। ତୁରନ୍ତ କାର୍ଯ୍ୟାନୁଷ୍ଠାନ ଆବଶ୍ୟକ।',
+    bn: 'জনসমাগমে চাপের হুমকি শনাক্ত হয়েছে। অবিলম্বে ব্যবস্থা নেওয়া প্রয়োজন।',
+    ta: 'கூட்ட நெருக்கடி அச்சுறுத்தல் கண்டறியப்பட்டது. உடனடி நடவடிக்கை தேவை.',
+  },
+  campusSafe: {
+    en: 'Campus density within safe operational parameters.',
+    hi: 'कैम्पस घनत्व सुरक्षित परिचालन सीमा के भीतर।',
+    od: 'କ୍ୟାମ୍ପସ ଘନତ୍ଵ ସୁରକ୍ଷିତ ପରିଚାଳନା ସୀମା ମଧ୍ୟରେ।',
+    bn: 'ক্যাম্পাসের ঘনত্ব নিরাপদ পরিচালন সীমার মধ্যে।',
+    ta: 'வளாக அடர்த்தி பாதுகாப்பான செயல்பாட்டு அளவுருக்களுக்குள் உள்ளது.',
+  },
+  inspectSentinel: {
+    en: 'Inspect Sentinel Intelligence',
+    hi: 'सेंटिनल इंटेलिजेंस देखें',
+    od: 'ସେଣ୍ଟିନେଲ୍ ଇଣ୍ଟେଲିଜେନ୍ସ ଯାଞ୍ଚ କରନ୍ତୁ',
+    bn: 'সেন্টিনেল ইন্টেলিজেন্স পরীক্ষা করুন',
+    ta: 'செண்டினல் நுண்ணறிவை ஆய்வு செய்யுங்கள்',
+  },
+
+  // ── Risk Level Badges ──
+  riskCritical: {
+    en: 'CRITICAL',
+    hi: 'गंभीर',
+    od: 'ଗମ୍ଭୀର',
+    bn: 'জটিল',
+    ta: 'ஆபத்தான',
+  },
+  riskHigh: {
+    en: 'HIGH',
+    hi: 'उच्च',
+    od: 'ଉଚ୍ଚ',
+    bn: 'উচ্চ',
+    ta: 'உயர்',
+  },
+  riskModerate: {
+    en: 'MODERATE',
+    hi: 'मध्यम',
+    od: 'ମଧ୍ୟମ',
+    bn: 'মাঝারি',
+    ta: 'மிதமான',
+  },
+  riskSafe: {
+    en: 'SAFE',
+    hi: 'सुरक्षित',
+    od: 'ସୁରକ୍ଷିତ',
+    bn: 'নিরাপদ',
+    ta: 'பாதுகாப்பு',
+  },
+
+  // ── Sector Risk Distribution Card ──
+  sectorRiskDistribution: {
+    en: 'Sector Risk Distribution',
+    hi: 'क्षेत्र जोखिम वितरण',
+    od: 'ସେକ୍ଟର ବିପଦ ବିତରଣ',
+    bn: 'সেক্টর ঝুঁকি বিতরণ',
+    ta: 'துறை ஆபத்து விநியோகம்',
+  },
+  sectors: {
+    en: 'Sectors',
+    hi: 'क्षेत्र',
+    od: 'ସେକ୍ଟର',
+    bn: 'সেক্টর',
+    ta: 'துறைகள்',
+  },
+  noActiveZones: {
+    en: 'No active zones initialized.',
+    hi: 'कोई सक्रिय ज़ोन आरंभ नहीं हुआ।',
+    od: 'କୌଣସି ସକ୍ରିୟ ଜୋନ୍ ଆରମ୍ଭ ହୋଇନାହିଁ।',
+    bn: 'কোনো সক্রিয় জোন চালু হয়নি।',
+    ta: 'செயலில் உள்ள மண்டலங்கள் எதுவும் தொடங்கப்படவில்லை.',
+  },
+  graphPathfinderActive: {
+    en: 'Graph Pathfinder: Active',
+    hi: 'ग्राफ पाथफाइंडर: सक्रिय',
+    od: 'ଗ୍ରାଫ ପାଥଫାଇଣ୍ଡର: ସକ୍ରିୟ',
+    bn: 'গ্রাফ পাথফাইন্ডার: সক্রিয়',
+    ta: 'வரைபட பாதை கண்டுபிடிப்பான்: செயலில்',
+  },
+  aStarReroutingReady: {
+    en: 'A* Rerouting Ready',
+    hi: 'A* रीरूटिंग तैयार',
+    od: 'A* ରିରାଉଟିଂ ପ୍ରସ୍ତୁତ',
+    bn: 'A* রিরাউটিং প্রস্তুত',
+    ta: 'A* மறுவழி தயார்',
+  },
+
+  // ── 5-Min Live Density Stream ──
+  fiveMinDensityStream: {
+    en: '5-Minute Live Density Stream',
+    hi: '5-मिनट लाइव घनत्व स्ट्रीम',
+    od: '5-ମିନିଟ୍ ଲାଇଭ ଘନତ୍ୱ ଷ୍ଟ୍ରିମ୍',
+    bn: '5-মিনিট লাইভ ঘনত্ব স্ট্রিম',
+    ta: '5-நிமிட நேரடி அடர்த்தி ஸ்ட்ரீம்',
+  },
+  densityUnit: {
+    en: 'p/m² Density',
+    hi: 'p/m² घनत्व',
+    od: 'p/m² ଘନତ୍ୱ',
+    bn: 'p/m² ঘনত্ব',
+    ta: 'p/m² அடர்த்தி',
+  },
+  samplingDescription: {
+    en: 'Sampling 15s updates with 4.0 p/m² critical threshold marker',
+    hi: '4.0 p/m² गंभीर सीमा मार्कर के साथ 15 सेकंड अपडेट सैम्पलिंग',
+    od: '4.0 p/m² ଗମ୍ଭୀର ସୀମା ମାର୍କର ସହ 15ସେ ଅପଡେଟ ସ୍ୟାମ୍ପଲିଙ୍ଗ',
+    bn: '4.0 p/m² জটিল সীমা মার্কার সহ 15সে আপডেট স্যাম্পলিং',
+    ta: '4.0 p/m² முக்கிய வரம்பு குறியுடன் 15வி புதுப்பிப்பு மாதிரி',
+  },
+  meanDensity: {
+    en: 'Mean Density',
+    hi: 'औसत घनत्व',
+    od: 'ହାରାହାରି ଘନତ୍ୱ',
+    bn: 'গড় ঘনত্ব',
+    ta: 'சராசரி அடர்த்தி',
+  },
+  predictedRisk: {
+    en: 'Predicted Risk',
+    hi: 'अनुमानित जोखिम',
+    od: 'ଆନୁମାନିକ ବିପଦ',
+    bn: 'পূর্বাভাসিত ঝুঁকি',
+    ta: 'கணிக்கப்பட்ட ஆபத்து',
+  },
+  criticalThreshold: {
+    en: 'CRITICAL SAFETY THRESHOLD (4.0 p/m²)',
+    hi: 'गंभीर सुरक्षा सीमा (4.0 p/m²)',
+    od: 'ଗମ୍ଭୀର ସୁରକ୍ଷା ସୀମା (4.0 p/m²)',
+    bn: 'জটিল নিরাপত্তা সীমা (4.0 p/m²)',
+    ta: 'முக்கிய பாதுகாப்பு வரம்பு (4.0 p/m²)',
+  },
+
+  // ── Sector Risk & Density Matrix Table ──
+  sectorRiskDensityMatrix: {
+    en: 'Sector Risk & Density Matrix',
+    hi: 'क्षेत्र जोखिम और घनत्व मैट्रिक्स',
+    od: 'ସେକ୍ଟର ବିପଦ ଏବଂ ଘନତ୍ୱ ମ୍ୟାଟ୍ରିକ୍ସ',
+    bn: 'সেক্টর ঝুঁকি ও ঘনত্ব ম্যাট্রিক্স',
+    ta: 'துறை ஆபத்து & அடர்த்தி அணி',
+  },
+  venueZones: {
+    en: 'Venue Zones',
+    hi: 'वेन्यू ज़ोन',
+    od: 'ଭେନ୍ୟୁ ଜୋନ୍',
+    bn: 'ভেন্যু জোন',
+    ta: 'அரங்க மண்டலங்கள்',
+  },
+  liveSpatialTelemetry: {
+    en: 'Live spatial telemetry breakdown per physical campus sector',
+    hi: 'भौतिक कैम्पस क्षेत्र के अनुसार लाइव स्थानिक टेलीमेट्री विवरण',
+    od: 'ଭୌତିକ କ୍ୟାମ୍ପସ ସେକ୍ଟର ଅନୁସାରେ ଲାଇଭ ସ୍ଥାନିକ ଟେଲିମେଟ୍ରି ବିଭାଜନ',
+    bn: 'ভৌত ক্যাম্পাস সেক্টর অনুযায়ী লাইভ স্থানিক টেলিমেট্রি বিভাজন',
+    ta: 'இயற்பியல் வளாக துறை அடிப்படையில் நேரடி இடஞ்சார் டெலிமெட்ரி பகுப்பாய்வு',
+  },
+  thCode: {
+    en: 'Code',
+    hi: 'कोड',
+    od: 'କୋଡ୍',
+    bn: 'কোড',
+    ta: 'குறியீடு',
+  },
+  thCampusSector: {
+    en: 'Campus Sector',
+    hi: 'कैम्पस क्षेत्र',
+    od: 'କ୍ୟାମ୍ପସ ସେକ୍ଟର',
+    bn: 'ক্যাম্পাস সেক্টর',
+    ta: 'வளாக துறை',
+  },
+  thDensity: {
+    en: 'Density',
+    hi: 'घनत्व',
+    od: 'ଘନତ୍ୱ',
+    bn: 'ঘনত্ব',
+    ta: 'அடர்த்தி',
+  },
+  thHeadcountLoad: {
+    en: 'Headcount Load',
+    hi: 'सिरगणना भार',
+    od: 'ମୁଣ୍ଡ ଗଣନା ଭାର',
+    bn: 'মাথা গণনা ভার',
+    ta: 'எண்ணிக்கை சுமை',
+  },
+  thFlowTrend: {
+    en: 'Flow Trend',
+    hi: 'प्रवाह रुझान',
+    od: 'ପ୍ରବାହ ରୁଝାନ',
+    bn: 'প্রবাহ প্রবণতা',
+    ta: 'ஓட்ட போக்கு',
+  },
+  thThreatStatus: {
+    en: 'Threat Status',
+    hi: 'खतरे की स्थिति',
+    od: 'ବିପଦ ସ୍ଥିତି',
+    bn: 'হুমকি অবস্থা',
+    ta: 'அச்சுறுத்தல் நிலை',
+  },
+  thAction: {
+    en: 'Action',
+    hi: 'कार्रवाई',
+    od: 'କାର୍ଯ୍ୟାନୁଷ୍ଠାନ',
+    bn: 'পদক্ষেপ',
+    ta: 'நடவடிக்கை',
+  },
+  awaitingEdgeTelemetry: {
+    en: 'Awaiting Edge Telemetry...',
+    hi: 'एज टेलीमेट्री की प्रतीक्षा...',
+    od: 'ଏଜ୍ ଟେଲିମେଟ୍ରି ପାଇଁ ଅପେକ୍ଷା...',
+    bn: 'এজ টেলিমেট্রির জন্য অপেক্ষা...',
+    ta: 'எட்ஜ் டெலிமெட்ரிக்கு காத்திருக்கிறது...',
+  },
+  noActiveDbZones: {
+    en: 'No active database zones loaded yet. Telemetry from YOLO pipeline will auto-populate live zones here.',
+    hi: 'अभी तक कोई सक्रिय डेटाबेस ज़ोन लोड नहीं हुआ। YOLO पाइपलाइन से टेलीमेट्री स्वचालित रूप से लाइव ज़ोन यहाँ भरेगी।',
+    od: 'ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି ସକ୍ରିୟ ଡାଟାବେସ ଜୋନ ଲୋଡ ହୋଇନାହିଁ। YOLO ପାଇପଲାଇନରୁ ଟେଲିମେଟ୍ରି ସ୍ଵୟଂକ୍ରିୟ ଭାବରେ ଲାଇଭ ଜୋନ ଭରିବ।',
+    bn: 'এখনও কোনো সক্রিয় ডেটাবেস জোন লোড হয়নি। YOLO পাইপলাইন থেকে টেলিমেট্রি স্বয়ংক্রিয়ভাবে লাইভ জোন পূরণ করবে।',
+    ta: 'செயலில் உள்ள தரவுத்தள மண்டலங்கள் எதுவும் ஏற்றப்படவில்லை. YOLO பைப்லைனிலிருந்து டெலிமெட்ரி தானாகவே நேரடி மண்டலங்களை இங்கே நிரப்பும்.',
+  },
+  reverseFlow: {
+    en: '⚠ Reverse Flow',
+    hi: '⚠ विपरीत प्रवाह',
+    od: '⚠ ବିପରୀତ ପ୍ରବାହ',
+    bn: '⚠ বিপরীত প্রবাহ',
+    ta: '⚠ தலைகீழ் ஓட்டம்',
+  },
+  flowConflict: {
+    en: '⚠ Flow Conflict',
+    hi: '⚠ प्रवाह विरोध',
+    od: '⚠ ପ୍ରବାହ ବିରୋଧ',
+    bn: '⚠ প্রবাহ দ্বন্দ্ব',
+    ta: '⚠ ஓட்ட முரண்பாடு',
+  },
+  inspectNode: {
+    en: 'Inspect Node ➔',
+    hi: 'नोड देखें ➔',
+    od: 'ନୋଡ୍ ଯାଞ୍ଚ କରନ୍ତୁ ➔',
+    bn: 'নোড পরীক্ষা করুন ➔',
+    ta: 'நோடை ஆய்வு செய்யுங்கள் ➔',
+  },
+
+  // ── Terminal Audit Feed ──
+  operationsAuditFeed: {
+    en: 'Operations & Command Audit Feed',
+    hi: 'संचालन और कमांड ऑडिट फीड',
+    od: 'ପରିଚାଳନା ଏବଂ କମାଣ୍ଡ ଅଡିଟ୍ ଫିଡ୍',
+    bn: 'অপারেশন ও কমান্ড অডিট ফিড',
+    ta: 'செயல்பாடுகள் & கட்டளை தணிக்கை ஊட்டம்',
+  },
+  liveEdgeLogging: {
+    en: 'Live Edge Logging',
+    hi: 'लाइव एज लॉगिंग',
+    od: 'ଲାଇଭ ଏଜ୍ ଲଗିଂ',
+    bn: 'লাইভ এজ লগিং',
+    ta: 'நேரடி எட்ஜ் பதிவு',
+  },
+  listeningForEvents: {
+    en: 'Listening for inbound edge events...',
+    hi: 'आने वाले एज इवेंट्स की प्रतीक्षा...',
+    od: 'ଆସୁଥିବା ଏଜ୍ ଇଭେଣ୍ଟ ପାଇଁ ଅପେକ୍ଷା...',
+    bn: 'ইনবাউন্ড এজ ইভেন্টের জন্য শোনা হচ্ছে...',
+    ta: 'உள்வரும் எட்ஜ் நிகழ்வுகளுக்கு காத்திருக்கிறது...',
+  },
+};
+
+/**
+ * Returns the translated string for a given key and language.
+ * Falls back to English if a translation is missing.
+ */
+export function t(key: string, lang: SupportedLanguage): string {
+  const entry = dashboard[key];
+  if (!entry) return key;
+  return entry[lang] || entry['en'] || key;
+}
+
+export default dashboard;
