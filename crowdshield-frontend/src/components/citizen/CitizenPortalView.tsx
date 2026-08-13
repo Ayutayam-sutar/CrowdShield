@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CitizenReport, SupportedLanguage, VenueZone, CrowdAlert, VenueInfo } from '../../types';
 import { SARVAM_TRANSLATIONS } from '../../data/mockData';
+import { tc } from '../../i18n/citizen';
 import { EvacuationDrillMode } from './EvacuationDrillMode';
 import { CitizenEvacuationMap } from './CitizenEvacuationMap';
 import {
@@ -90,20 +91,30 @@ const [isCriticalUI, setIsCriticalUI] = useState(false);
     const upper = (status || '').toUpperCase();
     if (upper === 'RESOLVED') {
       return {
-        label: 'RESOLVED',
+        label: tc('resolved', selectedLang),
         className: 'bg-emerald-50 text-emerald-600 border-emerald-200 font-bold',
       };
     }
     if (upper === 'CONFIRMED' || upper === 'VERIFIED') {
       return {
-        label: 'CONFIRMED',
+        label: tc('confirmedBadge', selectedLang),
         className: 'bg-rose-50 text-rose-600 border-rose-200 font-bold',
       };
     }
     return {
-      label: 'PENDING',
+      label: tc('pending', selectedLang),
       className: 'bg-amber-50 text-amber-600 border-amber-200 font-bold',
     };
+  };
+
+  // Helper for category translation in safety feed
+  const getCategoryTranslation = (cat: string, lang: SupportedLanguage) => {
+    const c = (cat || '').trim();
+    if (c.toLowerCase().includes('blocked') || c === 'Blocked Exit') return tc('blockedExitOpt', lang);
+    if (c.toLowerCase().includes('medical') || c === 'Medical Emergency') return tc('medicalEmergencyOpt', lang);
+    if (c.toLowerCase().includes('overcrowd') || c === 'Overcrowding') return tc('overcrowdingOpt', lang);
+    if (c.toLowerCase().includes('hazard') || c === 'Hazard') return tc('hazardOpt', lang);
+    return cat;
   };
 
   // Fetch real incidents from backend DB
@@ -658,6 +669,8 @@ const [isCriticalUI, setIsCriticalUI] = useState(false);
               <option value="en" className="text-slate-900 bg-white">EN</option>
               <option value="hi" className="text-slate-900 bg-white">हिं</option>
               <option value="od" className="text-slate-900 bg-white">ଓ</option>
+              <option value="bn" className="text-slate-900 bg-white">বা</option>
+              <option value="ta" className="text-slate-900 bg-white">த</option>
             </select>
           </div>
 
@@ -680,8 +693,8 @@ const [isCriticalUI, setIsCriticalUI] = useState(false);
       <div className="px-4 sm:px-6 pt-3 pb-1">
         <div className="bg-slate-100 rounded-2xl p-1 flex gap-1">
           {[
-            { key: 'feed' as const, label: 'Safety Feed & Report', icon: <ShieldAlert className="w-3.5 h-3.5" /> },
-            { key: 'exit' as const, label: 'Safe Exit Guide', icon: <Navigation className="w-3.5 h-3.5" /> },
+            { key: 'feed' as const, label: tc('safetyFeedReport', selectedLang), icon: <ShieldAlert className="w-3.5 h-3.5" /> },
+            { key: 'exit' as const, label: tc('safeExitGuide', selectedLang), icon: <Navigation className="w-3.5 h-3.5" /> },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -726,8 +739,8 @@ const [isCriticalUI, setIsCriticalUI] = useState(false);
                     <Search className="w-4 h-4 text-emerald-600" />
                   </div>
                   <div>
-                    <h3 className="font-heading font-bold text-sm text-slate-900">Where are you right now?</h3>
-                    <p className="text-[11px] text-slate-400">Select your zone to find the nearest safe exit</p>
+                    <h3 className="font-heading font-bold text-sm text-slate-900">{tc('whereAreYou', selectedLang)}</h3>
+                    <p className="text-[11px] text-slate-400">{tc('selectZoneDesc', selectedLang)}</p>
                   </div>
                 </div>
 
@@ -746,7 +759,7 @@ const [isCriticalUI, setIsCriticalUI] = useState(false);
                   className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-heading font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-emerald-500/20 active:scale-[0.98]"
                 >
                   <Compass className="w-4 h-4" />
-                  Find My Safe Exit Route
+                  {tc('findSafeExitRoute', selectedLang)}
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
@@ -759,6 +772,7 @@ const [isCriticalUI, setIsCriticalUI] = useState(false);
                 venueId={selectedVenue?.id || "soa-iter-01"}
                 venueName={selectedVenue?.name || "SOA ITER Campus"}
                 key={`${exitUserLocation.lat}-${exitUserLocation.lng}`}
+                language={selectedLang}
               />
 
               <EvacuationDrillMode
@@ -766,7 +780,7 @@ const [isCriticalUI, setIsCriticalUI] = useState(false);
                 venueId={selectedVenue?.id || "soa-iter-01"}
                 isScenarioActive={isScenarioActive}
                 key={`drill-${exitUserLocation.lat}-${exitUserLocation.lng}`}
-                
+                language={selectedLang}
               />
             </motion.div>
           ) : (
@@ -803,13 +817,15 @@ const [isCriticalUI, setIsCriticalUI] = useState(false);
                     <MapPin className="w-5 h-5" />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-xs font-bold text-slate-900 truncate">Near {currentZoneName}</div>
+                    <div className="text-xs font-bold text-slate-900 truncate">
+                      {selectedLang === 'en' ? `Near ${currentZoneName}` : `${currentZoneName} ${tc('near', selectedLang)}`}
+                    </div>
                     <div className="text-[11px] text-slate-500 truncate mt-0.5 flex items-center gap-1.5">
-                      Crowd Density:{' '}
+                      {tc('crowdDensityLabel', selectedLang)}{' '}
                       <span className={`font-bold flex items-center gap-1 ${isScenarioActive ? 'text-red-600' : 'text-emerald-600'}`}>
                         {!isScenarioActive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
                         {isScenarioActive && <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />}
-                        {isScenarioActive ? 'Critical Danger' : 'Normal'}
+                        {isScenarioActive ? tc('criticalDanger', selectedLang) : tc('normal', selectedLang)}
                       </span>
                     </div>
                   </div>
@@ -821,7 +837,7 @@ const [isCriticalUI, setIsCriticalUI] = useState(false);
                       : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                   }`}
                 >
-                  {isScenarioActive ? '⚠ AVOID' : '✓ SAFE'}
+                  {isScenarioActive ? tc('avoid', selectedLang) : tc('safe', selectedLang)}
                 </div>
               </motion.div>
 
@@ -857,14 +873,14 @@ const [isCriticalUI, setIsCriticalUI] = useState(false);
                     </div>
                     <div>
                       <span className={`font-heading font-black text-xs uppercase tracking-widest ${isCriticalUI ? 'text-white' : isScenarioActive ? 'text-red-600' : 'text-slate-800'}`}>
-                        {isCriticalUI ? '🚨 CRITICAL SMS ALERT' : isScenarioActive ? '🚨 EVACUATE NOW' : liveAnnouncementText ? 'Live Dispatch' : 'Safety Update'}
+                        {isCriticalUI ? tc('criticalSmsAlert', selectedLang) : isScenarioActive ? tc('evacuateNow', selectedLang) : liveAnnouncementText ? tc('liveDispatch', selectedLang) : tc('safetyUpdate', selectedLang)}
                       </span>
-                      <div className={`text-[10px] font-mono-num font-medium mt-0.5 ${isCriticalUI ? 'text-white/80' : 'text-slate-400'}`}>Official Command Stream</div>
+                      <div className={`text-[10px] font-mono-num font-medium mt-0.5 ${isCriticalUI ? 'text-white/80' : 'text-slate-400'}`}>{tc('officialCommandStream', selectedLang)}</div>
                     </div>
                   </div>
                   {isScenarioActive && !isCriticalUI && (
                     <span className="px-2.5 py-1 rounded-lg bg-red-600 text-white text-[10px] font-black animate-gentle-pulse shadow-sm">
-                      CRITICAL
+                      {tc('criticalStatus', selectedLang)}
                     </span>
                   )}
                 </div>
@@ -892,14 +908,14 @@ const [isCriticalUI, setIsCriticalUI] = useState(false);
                     }`}
                   >
                     <Volume2 className={`w-4 h-4 ${isPlayingAudio ? 'animate-pulse text-emerald-500' : ''}`} />
-                    {isPlayingAudio ? 'Speaking...' : `Listen (${translation.langName})`}
+                    {isPlayingAudio ? tc('speaking', selectedLang) : `${tc('listen', selectedLang)} (${translation.langName})`}
                   </motion.button>
                   <motion.button
                     whileTap={{ scale: 0.96 }}
                     onClick={() => setActiveTab('exit')}
                     className="py-3 px-5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-2xl font-heading font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-emerald-500/25"
                   >
-                    <Compass className="w-4 h-4" /> Safe Exit
+                    <Compass className="w-4 h-4" /> {tc('safeExitBtn', selectedLang)}
                   </motion.button>
                 </div>
               </motion.div>
@@ -919,8 +935,8 @@ const [isCriticalUI, setIsCriticalUI] = useState(false);
                       <ShieldAlert className="w-5 h-5 text-rose-500" />
                     </div>
                     <div className="text-left">
-                      <div className="font-heading font-bold text-sm text-slate-900">Report a Hazard</div>
-                      <div className="text-[11px] text-slate-500 mt-0.5">Alert campus security instantly</div>
+                      <div className="font-heading font-bold text-sm text-slate-900">{tc('reportHazard', selectedLang)}</div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">{tc('alertCampusSecurity', selectedLang)}</div>
                     </div>
                   </div>
                 </div>
@@ -933,30 +949,30 @@ const [isCriticalUI, setIsCriticalUI] = useState(false);
                             className="bg-emerald-50 border border-emerald-200 p-5 rounded-xl flex flex-col items-center gap-3 text-center"
                           >
                             <CheckCircle2 className="w-10 h-10 text-emerald-500" />
-                            <p className="font-heading font-bold text-sm text-slate-900">Report Submitted!</p>
-                            <p className="text-[11px] text-slate-500">Security team has been notified.</p>
+                            <p className="font-heading font-bold text-sm text-slate-900">{tc('reportSubmitted', selectedLang)}</p>
+                            <p className="text-[11px] text-slate-500">{tc('securityNotified', selectedLang)}</p>
                           </motion.div>
                         ) : (
                           <form onSubmit={handleSubmit} className="flex flex-col gap-3">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div>
                                 <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5 block">
-                                  Category
+                                  {tc('category', selectedLang)}
                                 </label>
                                 <select
                                   value={reportCategory}
                                   onChange={(e) => setReportCategory(e.target.value)}
                                   className="app-input text-xs font-bold transition-all focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
                                 >
-                                  <option value="Blocked Exit">🚪 Blocked Exit</option>
-                                  <option value="Medical Emergency">🚑 Medical Emergency</option>
-                                  <option value="Overcrowding">👥 Overcrowding</option>
-                                  <option value="Hazard">⚠ Hazard</option>
+                                  <option value="Blocked Exit">{tc('blockedExitOpt', selectedLang)}</option>
+                                  <option value="Medical Emergency">{tc('medicalEmergencyOpt', selectedLang)}</option>
+                                  <option value="Overcrowding">{tc('overcrowdingOpt', selectedLang)}</option>
+                                  <option value="Hazard">{tc('hazardOpt', selectedLang)}</option>
                                 </select>
                               </div>
                               <div>
                                 <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5 block">
-                                  Zone
+                                  {tc('zone', selectedLang)}
                                 </label>
                                 <select
                                   value={reportLocation}
@@ -972,13 +988,13 @@ const [isCriticalUI, setIsCriticalUI] = useState(false);
 
                             <div>
                               <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5 block">
-                                What happened?
+                                {tc('whatHappened', selectedLang)}
                               </label>
                               <textarea
                                 rows={2}
                                 value={reportDesc}
                                 onChange={(e) => setReportDesc(e.target.value)}
-                                placeholder="Describe the situation briefly..."
+                                placeholder={tc('describeSituation', selectedLang)}
                                 className="app-input text-xs resize-none transition-all focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
                                 required
                               />
@@ -1011,7 +1027,7 @@ const [isCriticalUI, setIsCriticalUI] = useState(false);
                                   onClick={handleSimulateSampleImage}
                                   className="flex-1 py-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
                                 >
-                                  <ImageIcon className="w-4 h-4 text-indigo-500" /> Photo
+                                  <ImageIcon className="w-4 h-4 text-indigo-500" /> {tc('photo', selectedLang)}
                                 </motion.button>
                                 <motion.button
                                   whileHover={{ y: -2 }}
@@ -1020,7 +1036,7 @@ const [isCriticalUI, setIsCriticalUI] = useState(false);
                                   onClick={handleSimulateSampleVideo}
                                   className="flex-1 py-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
                                 >
-                                  <Video className="w-4 h-4 text-rose-500" /> Video
+                                  <Video className="w-4 h-4 text-rose-500" /> {tc('video', selectedLang)}
                                 </motion.button>
                               </div>
                             )}
@@ -1033,7 +1049,7 @@ const [isCriticalUI, setIsCriticalUI] = useState(false);
                               type="submit"
                               className="w-full py-3.5 mt-2 bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white rounded-2xl font-heading font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-red-500/25"
                             >
-                              <Send className="w-4 h-4" /> Send Hazard Report
+                              <Send className="w-4 h-4" /> {tc('sendHazardReport', selectedLang)}
                             </motion.button>
                           </form>
                         )}
@@ -1044,17 +1060,17 @@ const [isCriticalUI, setIsCriticalUI] = useState(false);
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <h3 className="font-heading font-bold text-xs uppercase tracking-wider text-slate-400">
-                    Nearby Reports ({liveReports.length})
+                    {tc('nearbyReports', selectedLang)} ({liveReports.length})
                   </h3>
                   <span className="text-[10px] font-mono-num font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
-                    ● Live
+                    ● {tc('live', selectedLang)}
                   </span>
                 </div>
 
                 <div className="flex flex-col gap-3 max-h-[480px] overflow-y-auto pr-0.5 smooth-scroll">
                   {liveReports.length === 0 ? (
                     <div className="text-center p-8 app-card text-slate-400 text-sm">
-                      No active hazards reported.
+                      {tc('noActiveHazards', selectedLang)}
                     </div>
                   ) : (
                     liveReports.map((rep, idx) => {
@@ -1070,7 +1086,7 @@ const [isCriticalUI, setIsCriticalUI] = useState(false);
                           <div className="flex items-center justify-between gap-2">
                             <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5 truncate">
                               <ShieldAlert className="w-3.5 h-3.5 text-red-400 shrink-0" />
-                              <span className="truncate">{rep.category}</span>
+                              <span className="truncate">{getCategoryTranslation(rep.category, selectedLang)}</span>
                             </span>
                             <span className="text-[10px] font-mono-num text-slate-400 shrink-0 flex items-center gap-1">
                               <Clock className="w-3 h-3" />
@@ -1101,7 +1117,7 @@ const [isCriticalUI, setIsCriticalUI] = useState(false);
                             </span>
                             <span className="text-slate-400 font-mono-num flex items-center gap-1 font-semibold">
                               <ThumbsUp className="w-3 h-3 text-indigo-400" />
-                              {rep.upvotes || 0} Confirmed
+                              {rep.upvotes || 0} {tc('confirmed', selectedLang)}
                             </span>
                           </div>
                         </motion.div>

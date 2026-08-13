@@ -727,6 +727,7 @@ useEffect(() => {
               onNavigateToAlerts={() => setAdminRoute('alerts')}
               onOpenEmergencyBroadcast={() => setIsEmergencyBroadcastOpen(true)}
               recentLogs={recentLogs}
+              language={language}
             />
           )}
 

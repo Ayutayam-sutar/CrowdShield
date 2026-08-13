@@ -20,6 +20,8 @@ import {
   Route,
 } from 'lucide-react';
 import api from '../../utils/api';
+import { SupportedLanguage } from '../../types';
+import { tc } from '../../i18n/citizen';
 
 // ─── TYPES ──────────────────────────────────────────────────
 
@@ -40,6 +42,7 @@ interface EvacuationDrillModeProps {
   userLocation: { lat: number; lng: number };
   venueId?: string;
   isScenarioActive?: boolean;
+  language?: SupportedLanguage;
 }
 
 // ─── UTILS ──────────────────────────────────────────────────
@@ -63,6 +66,7 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
   userLocation,
   venueId = 'soa-iter-01',
   isScenarioActive = false,
+  language = 'en',
 }) => {
   const [dynamicSteps, setDynamicSteps] = useState<EvacuationStep[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -252,10 +256,10 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
           <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
         </div>
         <span className="font-heading font-bold text-sm text-slate-700">
-          Computing Safe Evacuation Path...
+          {tc('computingOptimalRoute', language)}
         </span>
         <span className="text-[11px] text-slate-400 font-mono-num">
-          Analyzing campus telemetry data
+          {tc('analyzingTelemetry', language)}
         </span>
       </div>
     );
@@ -270,10 +274,10 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
           <ShieldAlert className="w-6 h-6 text-red-500" />
         </div>
         <span className="font-heading font-bold text-sm text-slate-900">
-          No valid route found
+          {tc('noRouteFound', language)}
         </span>
         <span className="text-[11px] text-slate-500 font-mono-num">
-          Await further instructions from command
+          {tc('awaitInstructions', language)}
         </span>
       </div>
     );
@@ -301,7 +305,7 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
           </div>
           <div className="min-w-0 flex flex-col">
             <h2 className={`font-heading font-bold text-sm sm:text-base tracking-tight flex items-center gap-2 truncate ${isScenarioActive ? 'text-slate-900' : 'text-slate-900'}`}>
-              <span>Live Evacuation Route</span>
+              <span>{tc('liveEvacuationRoute', language)}</span>
               <span
                 className={`px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-mono-num font-bold uppercase shrink-0 ${
                   isScenarioActive
@@ -309,11 +313,11 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
                     : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
                 }`}
               >
-                Interactive GPS
+                {tc('interactiveGps', language)}
               </span>
             </h2>
             <p className="text-[10px] sm:text-[11px] text-slate-400 truncate font-mono-num">
-              Turn-by-turn guidance · Real-time crowd data
+              {tc('guidanceSubtitle', language)}
             </p>
           </div>
         </div>
@@ -327,7 +331,7 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
           }`}
         >
           <Volume2 className="w-4 h-4" />
-          <span className="hidden sm:inline">{isVoiceGuidanceActive ? 'Voice ON' : 'Voice OFF'}</span>
+          <span className="hidden sm:inline">{isVoiceGuidanceActive ? tc('voiceOn', language) : tc('voiceOff', language)}</span>
         </button>
       </div>
 
@@ -336,10 +340,10 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
         <div className="flex items-center justify-between text-xs font-mono-num gap-2">
           <span className="flex items-center gap-1.5 font-bold text-indigo-500 truncate">
             <Route className="w-4 h-4 text-indigo-500 shrink-0" />
-            <span className="truncate">Active Evacuation Route</span>
+            <span className="truncate">{tc('activeEvacuationRoute', language)}</span>
           </span>
           <span className="bg-slate-50 border border-slate-200 px-2.5 py-0.5 rounded-full text-[10px] text-slate-500 shrink-0">
-            {totalSteps} Waypoints
+            {totalSteps} {tc('waypoints', language)}
           </span>
         </div>
 
@@ -431,19 +435,19 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
         <div className="grid grid-cols-3 gap-2 text-center">
           {[
             {
-              label: 'Remaining',
+              label: tc('remaining', language),
               value: drillCompleted ? '0m' : `${remainingDistance}m`,
               icon: <MapPin className="w-3 h-3" />,
               color: 'text-slate-800',
             },
             {
-              label: 'Elapsed',
+              label: tc('elapsed', language),
               value: formatTime(elapsedSeconds),
               icon: <Timer className="w-3 h-3" />,
               color: 'text-emerald-600',
             },
             {
-              label: 'Pace',
+              label: tc('pace', language),
               value: '1.2 m/s',
               icon: <Gauge className="w-3 h-3" />,
               color: 'text-indigo-600',
@@ -467,7 +471,7 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
       {/* ── Progress Bar ── */}
       <div className="app-card rounded-2xl p-4 flex flex-col gap-2">
         <div className="flex items-center justify-between text-xs font-bold">
-          <span className="text-slate-500">Evacuation Progress</span>
+          <span className="text-slate-500">{tc('evacuationProgress', language)}</span>
           <span className="font-mono-num text-indigo-500">{progressPercent}%</span>
         </div>
         <div className="w-full h-2 bg-slate-100 border border-slate-200 rounded-full overflow-hidden">
@@ -491,22 +495,22 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
             <Award className="w-7 h-7" />
           </div>
           <div>
-            <h3 className="font-heading font-bold text-lg text-emerald-900">EVACUATION COMPLETED!</h3>
+            <h3 className="font-heading font-bold text-lg text-emerald-900">{tc('evacuationCompleted', language)}</h3>
             <p className="text-xs text-emerald-700 mt-1.5 max-w-xs leading-relaxed">
-              You navigated the optimal safe route in{' '}
+              {tc('navigatedOptimalRoute', language)}{' '}
               <strong className="text-emerald-900 font-mono-num">{formatTime(elapsedSeconds)}</strong>.
             </p>
           </div>
 
           <div className="w-full bg-white rounded-xl p-3 flex items-center justify-around text-xs font-mono-num gap-2 shadow-sm border border-emerald-100">
             <div className="text-center">
-              <span className="block text-[10px] text-slate-400">RATING</span>
-              <strong className="text-emerald-600 text-sm">A+ OPTIMAL</strong>
+              <span className="block text-[10px] text-slate-400">{tc('rating', language)}</span>
+              <strong className="text-emerald-600 text-sm">{tc('optimalRating', language)}</strong>
             </div>
             <div className="h-6 w-px bg-slate-200" />
             <div className="text-center">
-              <span className="block text-[10px] text-slate-400">WAYPOINTS</span>
-              <strong className="text-slate-800 text-sm">{totalSteps} Nodes</strong>
+              <span className="block text-[10px] text-slate-400">{tc('waypoints', language)}</span>
+              <strong className="text-slate-800 text-sm">{totalSteps} {tc('nodes', language)}</strong>
             </div>
           </div>
 
@@ -515,7 +519,7 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
             className="w-full py-3 bg-white hover:bg-slate-50 text-slate-700 rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] transition-all border border-slate-200 shadow-sm"
           >
             <RotateCcw className="w-4 h-4 text-emerald-500" />
-            <span>Restart Simulation</span>
+            <span>{tc('restartSimulation', language)}</span>
           </button>
         </motion.div>
       ) : (
@@ -523,9 +527,9 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <span className="text-[11px] font-bold font-mono-num text-indigo-600 uppercase tracking-wider flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse shrink-0" />
-              Step {currentStep.stepNumber} of {totalSteps}
+              {tc('stepLabel', language)} {currentStep.stepNumber} {tc('of', language)} {totalSteps}
             </span>
-            <span className="text-[10px] text-slate-400 font-mono-num">~{currentStep.distanceMeter}m ahead</span>
+            <span className="text-[10px] text-slate-400 font-mono-num">~{currentStep.distanceMeter}m {tc('ahead', language)}</span>
           </div>
 
           <div>
@@ -549,7 +553,7 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
               }`}
             >
               <ChevronLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">Prev</span>
+              <span className="hidden sm:inline">{tc('prevBtn', language)}</span>
             </button>
 
             {isAutoSimulating ? (
@@ -558,7 +562,7 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
                 className="flex-1 py-2.5 sm:py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-amber-500/20 active:scale-[0.99]"
               >
                 <Pause className="w-4 h-4" />
-                <span>Pause</span>
+                <span>{tc('pauseBtn', language)}</span>
               </button>
             ) : (
               <button
@@ -566,7 +570,7 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
                 className="flex-1 py-2.5 sm:py-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-indigo-500/20 active:scale-[0.99]"
               >
                 <Play className="w-4 h-4 fill-current" />
-                <span>Start Simulation</span>
+                <span>{tc('startSimulation', language)}</span>
               </button>
             )}
 
@@ -574,7 +578,7 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
               onClick={handleNextStep}
               className="py-2.5 px-3 sm:px-4 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-[0.99]"
             >
-              <span>Next</span>
+              <span>{tc('nextBtn', language)}</span>
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
@@ -585,8 +589,7 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
       <div className="bg-white rounded-xl p-3 flex items-start gap-2.5 text-xs border border-slate-200 shadow-sm">
         <Info className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
         <div className="text-[11px] leading-relaxed text-slate-600">
-          <strong className="text-slate-900">Safety Tip:</strong> Practice this drill before campus events. Follow
-          computed waypoints and remain calm during real evacuations.
+          {tc('safetyTip', language)}
         </div>
       </div>
     </div>

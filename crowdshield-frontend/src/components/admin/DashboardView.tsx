@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { VenueZone, CrowdAlert, RiskLevel, VenueInfo } from '../../types'; // <-- Add VenueInfo here
+import { VenueZone, CrowdAlert, RiskLevel, VenueInfo, SupportedLanguage } from '../../types'; // <-- Add VenueInfo here
 import {
   Users,
   AlertTriangle,
@@ -18,6 +18,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { t } from '../../i18n/dashboard';
 
 const isLegacyPhantomZone = (id: string): boolean => /^z-0?\d$/i.test(id || '');
 
@@ -30,6 +31,7 @@ interface DashboardViewProps {
   onNavigateToAlerts: () => void;
   onOpenEmergencyBroadcast: () => void;
   recentLogs?: { timestamp: string; action: string; source: string; type: 'success' | 'warning' | 'info' }[];
+  language?: SupportedLanguage;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -41,7 +43,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onNavigateToAlerts,
   onOpenEmergencyBroadcast,
   recentLogs,
+  language = 'en',
 }) => {
+  // Convenience alias
+  const L = language;
+
   // Real zones only — legacy mock zones filtered out
  // Filter cleanZones strictly by active venue (ITER vs Kalinga)
   const cleanZones = React.useMemo(() => {
@@ -138,21 +144,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold font-mono-num bg-[#FF3B5C]/15 text-[#FF3B5C] border border-[#FF3B5C]/30 shadow-xs">
             <span className="w-1.5 h-1.5 rounded-full bg-[#FF3B5C] animate-ping" />
-            CRITICAL · {score}%
+            {t('riskCritical', L)} · {score}%
           </span>
         );
       case 'warning':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold font-mono-num bg-[#FF7A45]/15 text-[#FF7A45] border border-[#FF7A45]/30">
             <span className="w-1.5 h-1.5 rounded-full bg-[#FF7A45]" />
-            HIGH · {score}%
+            {t('riskHigh', L)} · {score}%
           </span>
         );
       case 'caution':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold font-mono-num bg-[#FFB627]/15 text-[#D97706] border border-[#FFB627]/40">
             <span className="w-1.5 h-1.5 rounded-full bg-[#FFB627]" />
-            MODERATE · {score}%
+            {t('riskModerate', L)} · {score}%
           </span>
         );
       case 'safe':
@@ -160,7 +166,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold font-mono-num bg-[#22D3A6]/20 text-[#059669] border border-[#22D3A6]/40">
             <span className="w-1.5 h-1.5 rounded-full bg-[#059669]" />
-            SAFE · {score}%
+            {t('riskSafe', L)} · {score}%
           </span>
         );
     }
@@ -174,7 +180,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="bg-[#FFB627]/15 border border-[#FFB627]/40 rounded-2xl p-3.5 flex items-center gap-3 text-[#B45309] text-xs font-mono-num shadow-xs">
           <Radio className="w-4 h-4 animate-pulse flex-shrink-0 text-[#D97706]" />
           <span>
-            Awaiting camera telemetry feed across <strong>{cleanZones.length} campus zones</strong>. Running on baseline hardware telemetry until YOLO video pipelines or crisis simulations connect.
+            {t('awaitingTelemetryPrefix', L)} <strong>{cleanZones.length} {t('campusZones', L)}</strong>. {t('awaitingTelemetrySuffix', L)}
           </span>
         </div>
       )}
@@ -190,14 +196,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <Users className="w-5 h-5" />
               </div>
               <div>
-                <span className="text-[11px] font-bold font-mono-num text-[#5B5F73] uppercase tracking-wider">Live Campus Footfall</span>
-                <h2 className="text-sm font-heading font-bold text-[#151726]">Aggregated Real-Time Attendance</h2>
+                <span className="text-[11px] font-bold font-mono-num text-[#5B5F73] uppercase tracking-wider">{t('liveCampusFootfall', L)}</span>
+                <h2 className="text-sm font-heading font-bold text-[#151726]">{t('aggregatedAttendance', L)}</h2>
               </div>
             </div>
 
             <div className="flex items-center gap-2 font-mono-num text-xs">
               <span className="w-2 h-2 rounded-full bg-[#059669] animate-ping" />
-              <span className="text-[#5B5F73] font-bold">{reportingZonesCount} / {cleanZones.length} Nodes Active</span>
+              <span className="text-[#5B5F73] font-bold">{reportingZonesCount} / {cleanZones.length} {t('nodesActive', L)}</span>
             </div>
           </div>
 
@@ -207,7 +213,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <span className="text-5xl sm:text-6xl font-black font-mono-num tracking-tight text-[#151726]">
                   {totalHeadcount.toLocaleString()}
                 </span>
-                <span className="text-xs font-mono-num text-[#5B5F73]">/ {totalMaxCapacity.toLocaleString()} Pax Max</span>
+                <span className="text-xs font-mono-num text-[#5B5F73]">/ {totalMaxCapacity.toLocaleString()} {t('paxMax', L)}</span>
               </div>
 
               <div className="mt-2 flex items-center gap-3">
@@ -220,13 +226,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       : 'bg-[#FAFAF7] text-[#5B5F73] border border-[#E7E5DD]'
                   }`}>
                     {headcountPercentChange > 0 ? <TrendingUp className="w-3.5 h-3.5" /> : headcountPercentChange < 0 ? <TrendingDown className="w-3.5 h-3.5" /> : <Minus className="w-3.5 h-3.5" />}
-                    {headcountPercentChange > 0 ? '+' : ''}{headcountPercentChange}% over last 5m
+                    {headcountPercentChange > 0 ? '+' : ''}{headcountPercentChange}% {t('overLast5m', L)}
                   </span>
                 ) : (
-                  <span className="text-xs font-mono-num text-[#5B5F73]">Sampling 5m baseline...</span>
+                  <span className="text-xs font-mono-num text-[#5B5F73]">{t('sampling5mBaseline', L)}</span>
                 )}
                 <span className="text-xs font-mono-num text-[#5B5F73]">
-                  Load Level: <strong className="text-[#151726]">{campusLoadPercent}%</strong>
+                  {t('loadLevel', L)}: <strong className="text-[#151726]">{campusLoadPercent}%</strong>
                 </span>
               </div>
             </div>
@@ -234,7 +240,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {/* Capacity Utilization Progress Bar */}
             <div className="w-full sm:w-48 flex flex-col gap-1.5 self-end">
               <div className="flex justify-between text-[11px] font-mono-num font-bold">
-                <span className="text-[#5B5F73]">Capacity Utilization</span>
+                <span className="text-[#5B5F73]">{t('capacityUtilization', L)}</span>
                 <span className={campusLoadPercent >= 80 ? 'text-[#FF3B5C]' : campusLoadPercent >= 50 ? 'text-[#D97706]' : 'text-[#059669]'}>
                   {campusLoadPercent}%
                 </span>
@@ -252,10 +258,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           <div className="pt-3 border-t border-[#E7E5DD] flex items-center justify-between text-xs font-mono-num text-[#5B5F73]">
             <span className="flex items-center gap-1.5">
-              <Cpu className="w-3.5 h-3.5 text-[#2C7BE5]" /> YOLO Edge Processing Active
+              <Cpu className="w-3.5 h-3.5 text-[#2C7BE5]" /> {t('yoloEdgeProcessing', L)}
             </span>
             <span>
-              Refresh Interval: <strong className="text-[#151726]">15s Telemetry</strong>
+              {t('refreshInterval', L)}: <strong className="text-[#151726]">{t('telemetry15s', L)}</strong>
             </span>
           </div>
         </div>
@@ -263,7 +269,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* AI Safety Index Gauge Card */}
         <div className="bg-white border border-[#E7E5DD] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between border-b border-[#E7E5DD] pb-3.5">
-            <span className="text-[11px] font-bold font-mono-num text-[#5B5F73] uppercase tracking-wider">Safety Status</span>
+            <span className="text-[11px] font-bold font-mono-num text-[#5B5F73] uppercase tracking-wider">{t('safetyStatus', L)}</span>
             <span className="px-2 py-0.5 rounded bg-[#FAFAF7] text-[#151726] border border-[#E7E5DD] font-mono-num text-[10px] font-bold">
               Sentinel Engine v3.4
             </span>
@@ -277,14 +283,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             }`}>
               <span className="font-mono-num font-black text-3xl">{venueRiskScore}%</span>
               <span className="text-[9px] font-bold uppercase tracking-wider mt-0.5">
-                {venueRiskScore >= 80 ? 'CRITICAL' : venueRiskScore >= 50 ? 'WARNING' : 'SECURE'}
+                {venueRiskScore >= 80 ? t('critical', L) : venueRiskScore >= 50 ? t('warning', L) : t('secure', L)}
               </span>
             </div>
 
             <p className="text-xs font-mono-num text-[#5B5F73] mt-2 max-w-xs">
               {venueRiskScore >= 80 
-                ? 'High crowd crush threat detected. Immediate dispatch required.' 
-                : 'Campus density within safe operational parameters.'}
+                ? t('highCrowdCrush', L) 
+                : t('campusSafe', L)}
             </p>
           </div>
 
@@ -293,7 +299,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             className="w-full py-2.5 bg-[#FAFAF7] hover:bg-[#E7E5DD] text-[#151726] rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-[#E7E5DD]"
           >
             <Sparkles className="w-3.5 h-3.5 text-[#2C7BE5]" />
-            <span>Inspect Sentinel Intelligence</span>
+            <span>{t('inspectSentinel', L)}</span>
           </button>
         </div>
 
@@ -307,9 +313,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div>
             <div className="flex items-center justify-between border-b border-[#E7E5DD] pb-3">
               <span className="text-xs font-bold font-mono-num text-[#5B5F73] uppercase tracking-wider flex items-center gap-1.5">
-                <Layers className="w-4 h-4 text-[#2C7BE5]" /> Sector Risk Distribution
+                <Layers className="w-4 h-4 text-[#2C7BE5]" /> {t('sectorRiskDistribution', L)}
               </span>
-              <span className="text-[10px] font-mono-num text-[#5B5F73]">{cleanZones.length} Sectors</span>
+              <span className="text-[10px] font-mono-num text-[#5B5F73]">{cleanZones.length} {t('sectors', L)}</span>
             </div>
 
             <div className="mt-4 flex flex-col gap-2.5">
@@ -335,14 +341,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   );
                 })
               ) : (
-                <div className="text-center py-6 text-xs text-[#5B5F73] font-mono-num">No active zones initialized.</div>
+                <div className="text-center py-6 text-xs text-[#5B5F73] font-mono-num">{t('noActiveZones', L)}</div>
               )}
             </div>
           </div>
 
           <div className="mt-4 pt-3 border-t border-[#E7E5DD] text-[11px] font-mono-num text-[#5B5F73] flex justify-between">
-            <span>Graph Pathfinder: Active</span>
-            <span className="text-[#059669] font-bold">A* Rerouting Ready</span>
+            <span>{t('graphPathfinderActive', L)}</span>
+            <span className="text-[#059669] font-bold">{t('aStarReroutingReady', L)}</span>
           </div>
         </div>
 
@@ -351,22 +357,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#E7E5DD] pb-3 gap-2">
             <div>
               <h3 className="text-[#151726] font-heading font-bold text-sm sm:text-base flex items-center gap-2">
-                <span>5-Minute Live Density Stream</span>
+                <span>{t('fiveMinDensityStream', L)}</span>
                 <span className="px-2 py-0.5 rounded bg-sky-50 text-sky-600 border border-sky-200 text-[10px] font-mono-num font-bold uppercase">
-                  p/m² Density
+                  {t('densityUnit', L)}
                 </span>
               </h3>
               <p className="text-xs text-[#5B5F73] font-mono-num mt-0.5">
-                Sampling 15s updates with 4.0 p/m² critical threshold marker
+                {t('samplingDescription', L)}
               </p>
             </div>
             
             <div className="flex items-center gap-3 text-xs font-mono-num">
               <span className="flex items-center gap-1.5 text-sky-600">
-                <span className="w-2.5 h-2.5 rounded-full bg-sky-500" /> Mean Density
+                <span className="w-2.5 h-2.5 rounded-full bg-sky-500" /> {t('meanDensity', L)}
               </span>
               <span className="flex items-center gap-1.5 text-[#FF3B5C]">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#FF3B5C]" /> Predicted Risk
+                <span className="w-2.5 h-2.5 rounded-full bg-[#FF3B5C]" /> {t('predictedRisk', L)}
               </span>
             </div>
           </div>
@@ -390,9 +396,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   contentStyle={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E7E5DD', color: '#151726', fontSize: '11px', fontFamily: 'monospace', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                   itemStyle={{ color: '#151726' }}
                 />
-                <ReferenceLine y={4.0} stroke="#FF3B5C" strokeDasharray="4 4" label={{ value: 'CRITICAL SAFETY THRESHOLD (4.0 p/m²)', fill: '#FF3B5C', fontSize: 10, position: 'insideTopRight' }} />
-                <Area type="monotone" dataKey="meanDensity" stroke="#2C7BE5" strokeWidth={2.5} fillOpacity={1} fill="url(#currentGrad)" name="Mean Density" isAnimationActive={false} />
-                <Area type="monotone" dataKey="predicted" stroke="#FF3B5C" strokeWidth={2.5} strokeDasharray="5 5" fillOpacity={1} fill="url(#predictedGrad)" name="Predicted Risk" isAnimationActive={false} />
+                <ReferenceLine y={4.0} stroke="#FF3B5C" strokeDasharray="4 4" label={{ value: t('criticalThreshold', L), fill: '#FF3B5C', fontSize: 10, position: 'insideTopRight' }} />
+                <Area type="monotone" dataKey="meanDensity" stroke="#2C7BE5" strokeWidth={2.5} fillOpacity={1} fill="url(#currentGrad)" name={t('meanDensity', L)} isAnimationActive={false} />
+                <Area type="monotone" dataKey="predicted" stroke="#FF3B5C" strokeWidth={2.5} strokeDasharray="5 5" fillOpacity={1} fill="url(#predictedGrad)" name={t('predictedRisk', L)} isAnimationActive={false} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -405,13 +411,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#E7E5DD] pb-3 gap-2">
           <div>
             <h3 className="text-[#151726] font-heading font-bold text-base flex items-center gap-2">
-              <span>Sector Risk & Density Matrix</span>
+              <span>{t('sectorRiskDensityMatrix', L)}</span>
               <span className="px-2 py-0.5 rounded bg-[#FAFAF7] text-[#151726] border border-[#E7E5DD] text-[10px] font-mono-num font-bold">
-                {cleanZones.length} Venue Zones
+                {cleanZones.length} {t('venueZones', L)}
               </span>
             </h3>
             <p className="text-xs text-[#5B5F73] font-mono-num mt-0.5">
-              Live spatial telemetry breakdown per physical campus sector
+              {t('liveSpatialTelemetry', L)}
             </p>
           </div>
         </div>
@@ -420,13 +426,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <table className="w-full text-left text-xs font-body table-fixed">
             <thead>
               <tr className="border-b border-[#E7E5DD] text-[#5B5F73] font-mono-num font-bold uppercase tracking-wider text-[10px] bg-[#FAFAF7]">
-                <th className="py-3 px-3 w-24">Code</th>
-                <th className="py-3 px-3 w-64">Campus Sector</th>
-                <th className="py-3 px-3 w-32">Density</th>
-                <th className="py-3 px-3 w-40">Headcount Load</th>
-                <th className="py-3 px-3 w-28">Flow Trend</th>
-                <th className="py-3 px-3 w-40">Threat Status</th>
-                <th className="py-3 px-3 w-28 text-right">Action</th>
+                <th className="py-3 px-3 w-24">{t('thCode', L)}</th>
+                <th className="py-3 px-3 w-64">{t('thCampusSector', L)}</th>
+                <th className="py-3 px-3 w-32">{t('thDensity', L)}</th>
+                <th className="py-3 px-3 w-40">{t('thHeadcountLoad', L)}</th>
+                <th className="py-3 px-3 w-28">{t('thFlowTrend', L)}</th>
+                <th className="py-3 px-3 w-40">{t('thThreatStatus', L)}</th>
+                <th className="py-3 px-3 w-28 text-right">{t('thAction', L)}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E7E5DD] font-mono-num">
@@ -435,9 +441,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <td colSpan={7} className="py-8 text-center text-xs text-[#5B5F73]">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <Radio className="w-6 h-6 text-[#2C7BE5] animate-pulse" />
-                      <span className="font-heading font-bold text-sm text-[#151726]">Awaiting Edge Telemetry...</span>
+                      <span className="font-heading font-bold text-sm text-[#151726]">{t('awaitingEdgeTelemetry', L)}</span>
                       <span className="text-[11px] text-[#5B5F73]">
-                        No active database zones loaded yet. Telemetry from YOLO pipeline will auto-populate live zones here.
+                        {t('noActiveDbZones', L)}
                       </span>
                     </div>
                   </td>
@@ -463,12 +469,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                             <span>{zone.name}</span>
                             {reverseFlow && (
                               <span className="px-1.5 py-0.5 rounded bg-[#FF3B5C]/15 text-[#FF3B5C] text-[9px] font-bold border border-[#FF3B5C]/30 animate-pulse whitespace-nowrap">
-                                ⚠ Reverse Flow
+                                {t('reverseFlow', L)}
                               </span>
                             )}
                             {flowConflict && !reverseFlow && (
                               <span className="px-1.5 py-0.5 rounded bg-[#FFB627]/15 text-[#D97706] text-[9px] font-bold border border-[#FFB627]/30 whitespace-nowrap">
-                                ⚠ Flow Conflict
+                                {t('flowConflict', L)}
                               </span>
                             )}
                           </div>
@@ -501,7 +507,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           onClick={onNavigateToMap}
                           className="px-2.5 py-1 rounded-lg bg-[#FAFAF7] hover:bg-[#E7E5DD] border border-[#E7E5DD] text-[11px] font-bold text-sky-600 cursor-pointer whitespace-nowrap transition-colors"
                         >
-                          Inspect Node ➔
+                          {t('inspectNode', L)}
                         </button>
                       </td>
                     </tr>
@@ -519,10 +525,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="flex items-center gap-2">
             <Terminal className="w-4 h-4 text-sky-600" />
             <span className="font-bold text-xs uppercase tracking-wider text-[#151726]">
-              Operations & Command Audit Feed
+              {t('operationsAuditFeed', L)}
             </span>
           </div>
-          <span className="text-[10px] text-[#5B5F73]">Live Edge Logging</span>
+          <span className="text-[10px] text-[#5B5F73]">{t('liveEdgeLogging', L)}</span>
         </div>
 
         <div className="bg-slate-50 border border-slate-200 text-slate-800 rounded-xl p-3.5 h-36 overflow-y-auto space-y-1.5 text-[11px] select-text">
@@ -538,7 +544,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
             ))
           ) : (
-            <div className="text-slate-500 italic">Listening for inbound edge events...</div>
+            <div className="text-slate-500 italic">{t('listeningForEvents', L)}</div>
           )}
         </div>
       </div>

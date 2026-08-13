@@ -4,7 +4,8 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Navigation, Footprints, Clock, AlertTriangle, Maximize2, Minimize2, Route } from 'lucide-react';
 import api from '../../utils/api';
-import { VenueZone } from '../../types';
+import { VenueZone, SupportedLanguage } from '../../types';
+import { tc } from '../../i18n/citizen';
 
 /* ─── MAP HELPERS ────────────────────────────────────── */
 
@@ -54,12 +55,12 @@ const createBlueDotIcon = () =>
     iconAnchor: [12, 12],
   });
 
-const createExitIcon = () =>
+const createExitIcon = (label: string) =>
   L.divIcon({
     className: 'custom-exit-icon',
     html: `
       <div style="background:#10B981;color:#fff;font-weight:700;font-size:10px;padding:5px 10px;border-radius:10px;border:2px solid #fff;box-shadow:0 3px 12px rgba(16,185,129,0.3);display:flex;align-items:center;gap:4px;white-space:nowrap;">
-        ✓ SAFE EXIT
+        ${label}
       </div>`,
     iconSize: [85, 28],
     iconAnchor: [42, 14],
@@ -73,6 +74,7 @@ interface CitizenEvacuationMapProps {
   zones: VenueZone[];
   venueId?: string;
   venueName?: string;
+  language?: SupportedLanguage;
 }
 
 /* ─── COMPONENT ──────────────────────────────────────── */
@@ -83,6 +85,7 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({
   zones = [],
   venueId = 'soa-iter-01',
   venueName = 'SOA ITER Campus',
+  language = 'en',
 }) => {
   const [pathCoordinates, setPathCoordinates] = useState<[number, number][]>([
     [userLocation.lat, userLocation.lng],
@@ -147,10 +150,10 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({
           </div>
           <div className="min-w-0 flex flex-col">
             <h3 className="font-heading font-bold text-xs sm:text-sm text-slate-900 tracking-tight truncate flex items-center gap-2">
-              Evacuation Route Map
+              {isScenarioActive ? tc('safePathActive', language) : tc('drillPathMap', language)}
               {isScenarioActive && (
                 <span className="px-2 py-0.5 rounded-full bg-red-50 text-red-500 text-[10px] font-mono-num font-bold uppercase border border-red-100">
-                  Active
+                  {tc('live', language)}
                 </span>
               )}
             </h3>
@@ -169,7 +172,7 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({
             }`}
           >
             <Clock className="w-3 h-3" />
-            {estimatedTime} min walk
+            {estimatedTime > 0 ? `${estimatedTime} ${tc('minWalk', language)}` : tc('calculating', language)}
           </span>
           <button
             onClick={() => setIsExpanded(!isExpanded)}
@@ -242,15 +245,15 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({
           {/* User marker */}
           <Marker position={[userLocation.lat, userLocation.lng]} icon={createBlueDotIcon()}>
             <Popup>
-              <div className="p-1 font-heading font-bold text-xs text-indigo-600">● You Are Here</div>
+              <div className="p-1 font-heading font-bold text-xs text-indigo-600">{tc('youAreHere', language)}</div>
             </Popup>
           </Marker>
 
           {/* Exit marker */}
           {pathCoordinates.length > 1 && (
-            <Marker position={pathCoordinates[pathCoordinates.length - 1]} icon={createExitIcon()}>
+            <Marker position={pathCoordinates[pathCoordinates.length - 1]} icon={createExitIcon(tc('safeExitMarker', language))}>
               <Popup>
-                <div className="p-1 font-heading font-bold text-xs text-emerald-600">✓ Safe Exit</div>
+                <div className="p-1 font-heading font-bold text-xs text-emerald-600">{tc('safeExitMarker', language)}</div>
               </Popup>
             </Marker>
           )}
@@ -260,19 +263,19 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({
         <div className="absolute bottom-2.5 left-2.5 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2 z-[1000] text-[10px] font-mono-num flex items-center gap-3 border border-slate-200 shadow-md">
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 border border-white shadow-sm" />
-            <span className="font-bold text-slate-600">You</span>
+            <span className="font-bold text-slate-600">{tc('youLegend', language)}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-4 h-0.5 rounded bg-indigo-400" />
-            <span className="font-bold text-indigo-500">Route</span>
+            <span className="font-bold text-indigo-500">{tc('routeLegend', language)}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded bg-red-400/40 border border-red-400" />
-            <span className="font-bold text-red-500">Risk</span>
+            <span className="font-bold text-red-500">{tc('riskLegend', language)}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded bg-emerald-400/40 border border-emerald-400" />
-            <span className="font-bold text-emerald-500">Safe</span>
+            <span className="font-bold text-emerald-500">{tc('safeLegend', language)}</span>
           </div>
         </div>
       </div>
@@ -282,7 +285,7 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({
         <div className="bg-slate-50 rounded-2xl p-4 flex flex-col gap-2.5 border border-slate-100 mt-1">
           <span className="font-heading font-bold text-xs text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
             <Route className="w-3.5 h-3.5 text-indigo-400" />
-            Turn-by-Turn Directions
+            {tc('turnByTurnNavigation', language)}
           </span>
 
           <div className="space-y-2 text-xs">
@@ -303,7 +306,7 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({
                 </div>
               ))
             ) : (
-              <div className="text-center p-3 text-slate-400">Computing optimal route...</div>
+              <div className="text-center p-3 text-slate-400">{tc('computingOptimalRoute', language)}</div>
             )}
           </div>
         </div>
