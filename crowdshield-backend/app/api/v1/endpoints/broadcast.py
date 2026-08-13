@@ -33,6 +33,10 @@ class SarvamTTSRequest(BaseModel):
     text: str
     target_language: str
 
+class SocialMediaRequest(BaseModel):
+    message: str
+    platforms: list[str] = ["twitter"]
+
 
 @router.post("/", response_model=BroadcastResponse, dependencies=[Depends(get_current_active_admin)])
 async def broadcast_message(request: BroadcastRequest):
@@ -151,3 +155,28 @@ async def generate_sarvam_tts(request: SarvamTTSRequest):
         raise HTTPException(status_code=e.code, detail=f"Sarvam AI API error: {err_msg}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Request to Sarvam AI failed: {str(e)}")
+
+
+@router.post("/social", dependencies=[Depends(get_current_active_admin)])
+async def dispatch_to_twitter(payload: SocialMediaRequest):
+    """
+    Simulates posting an emergency alert to social media channels (e.g. Twitter/X).
+    """
+    if not payload.message.strip():
+        raise HTTPException(status_code=400, detail="Social media message cannot be empty.")
+
+    # Simulate network processing time
+    await asyncio.sleep(0.8)
+
+    # Broadcast internal WebSocket event that social media was updated
+    await ws_manager.broadcast({
+        "event": "SOCIAL_MEDIA_DISPATCHED",
+        "actionText": f"Broadcasted to {', '.join(payload.platforms)}",
+        "announcementText": f"📢 PUBLIC ALERT: {payload.message}",
+    })
+
+    return {
+        "status": "success",
+        "message": f"Alert successfully dispatched to {', '.join(payload.platforms)}.",
+        "platforms": payload.platforms
+    }
