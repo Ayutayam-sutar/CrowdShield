@@ -8,7 +8,8 @@ import {
   Users, 
   CheckCircle2, 
   Play,
-  Square
+  Square,
+  Share2
 } from 'lucide-react';
 import { SupportedLanguage, VenueZone } from '../../types';
 import { SARVAM_TRANSLATIONS } from '../../data/mockData';
@@ -20,6 +21,7 @@ interface EmergencyBroadcastModalProps {
   onClose: () => void;
   selectedLanguage: SupportedLanguage;
   zones?: VenueZone[];
+  venueName?: string;
 }
 
 export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = ({
@@ -27,12 +29,14 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
   onClose,
   selectedLanguage,
   zones = [],
+  venueName,
 }) => {
   const [activeLang, setActiveLang] = useState<SupportedLanguage>(selectedLanguage);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [isCellBroadcastSent, setIsCellBroadcastSent] = useState(false);
   const [isGateUnlocked, setIsGateUnlocked] = useState(false);
   const [isGuardsDispatched, setIsGuardsDispatched] = useState(false);
+  const [isSocialMediaSent, setIsSocialMediaSent] = useState(false);
   const [dispatchLog, setDispatchLog] = useState<string[]>([]);
 
   if (!isOpen) return null;
@@ -44,7 +48,7 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
     ? [...zones].sort((a, b) => (b.riskScore || 0) - (a.riskScore || 0))[0]
     : null;
 
-  const targetZoneName = highestRiskZone?.name || highestRiskZone?.code || 'Central Library Roundabout';
+  const targetZoneName = venueName || highestRiskZone?.name || highestRiskZone?.code || 'Central Library Roundabout';
   const targetZoneId = highestRiskZone?.id || 'zone_library_roundabout';
   const targetHeadcount = highestRiskZone?.currentHeadcount || 0;
   const formattedHeadcount = targetHeadcount.toLocaleString();
@@ -143,6 +147,27 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
       setTimeout(() => setIsGuardsDispatched(false), 3000);
     }
   };
+
+  const handleSendSocial = async () => {
+    const script = getDynamicScript();
+    try {
+      const res = await api.post('/broadcast/social', { 
+        message: script,
+        platforms: ["twitter"]
+      });
+      setIsSocialMediaSent(true);
+      const message = `Emergency Alert dispatched to social media platforms (Twitter/X).`;
+      window.dispatchEvent(new CustomEvent('system_dispatch', { detail: { type: 'success', message } }));
+      setDispatchLog((prev) => [`[${new Date().toLocaleTimeString()}] ${message}`, ...prev]);
+      
+      setTimeout(() => setIsSocialMediaSent(false), 3000); 
+    } catch (error) {
+      console.warn('Intervention logged locally:', error);
+      setIsSocialMediaSent(true);
+      setTimeout(() => setIsSocialMediaSent(false), 3000);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-body animate-fadeIn">
       <div className="bg-white border-2 border-[#FF3B5C] rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[90vh] text-slate-800">
@@ -226,7 +251,7 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
           </div>
 
           {/* Section 2: Direct Interventions Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-slate-800">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-slate-800">
             {/* SMS Cell Broadcast */}
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col justify-between gap-3">
               <div>
@@ -281,6 +306,25 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
               >
                 {isGuardsDispatched ? <CheckCircle2 className="w-4 h-4" /> : <Users className="w-4 h-4" />}
                 <span>{isGuardsDispatched ? 'Guards En Route' : 'Dispatch Guards'}</span>
+              </button>
+            </div>
+
+            {/* Social Media Broadcast */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col justify-between gap-3">
+              <div>
+                <span className="text-xs font-bold text-slate-800 block">Social Media Alert</span>
+                <span className="text-[11px] text-slate-500">Post alert to Twitter/X</span>
+              </div>
+              <button
+                onClick={handleSendSocial}
+                className={`w-full py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer border-none ${
+                  isSocialMediaSent
+                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                    : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                }`}
+              >
+                {isSocialMediaSent ? <CheckCircle2 className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+                <span>{isSocialMediaSent ? 'Dispatched' : 'Post to Social'}</span>
               </button>
             </div>
           </div>

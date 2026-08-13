@@ -793,6 +793,7 @@ useEffect(() => {
         onClose={() => setIsEmergencyBroadcastOpen(false)}
         selectedLanguage={language}
         zones={zones}
+        venueName={selectedVenue?.name}
       />
 
       <VoiceAssistantModal
