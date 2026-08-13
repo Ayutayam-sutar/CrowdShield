@@ -35,6 +35,7 @@ interface HeaderTopBarProps {
   activeAlertCount: number;
   onToggleMobileMenu?: () => void;
   isCloudSyncLost: boolean; // real connection state, from App.tsx's network_status event
+  onNotificationClick: () => void;
 }
 
 export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
@@ -53,6 +54,7 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
   activeAlertCount,
   onToggleMobileMenu,
   isCloudSyncLost,
+  onNotificationClick,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isVenueDropdownOpen, setIsVenueDropdownOpen] = useState(false);
@@ -207,41 +209,6 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
 
         {/* Right Controls: Mode Toggle, Crisis Trigger, Voice, Language */}
         <div className="flex items-center gap-2 flex-wrap justify-end">
-          {/* Network Resilience Toggle */}
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={onToggleNetworkMode}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
-                networkMode === 'edge'
-                  ? 'bg-amber-50 border-amber-200 text-amber-800'
-                  : 'bg-sky-50 border-sky-200 text-sky-700'
-              }`}
-              title="Toggle Cloud vs Edge Local Mode"
-            >
-              {networkMode === 'cloud' ? (
-                <>
-                  <Cloud className="w-3.5 h-3.5 text-sky-600" />
-                  <span className="hidden xl:inline">Mode:</span>
-                  <span className="font-bold">Cloud Sync</span>
-                </>
-              ) : (
-                <>
-                  <HardDrive className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
-                  <span className="hidden xl:inline">Mode:</span>
-                  <span className="font-bold text-amber-700">Edge Isolated</span>
-                </>
-              )}
-            </button>
-
-            {networkMode === 'edge' && (
-              <span className="hidden md:inline-flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-mono-num px-2.5 py-1 rounded-md">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
-                <span className="hidden xl:inline">Running on Local Edge Laptop (SQLite + Redis Active)</span>
-                <span className="inline xl:hidden">Local Edge Active</span>
-              </span>
-            )}
-          </div>
-
           {/* Crisis Demo Trigger */}
           {isScenarioActive ? (
             <button
@@ -308,7 +275,10 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
 
           {/* Alert Notification Bell */}
           <div className="relative">
-            <button className="p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-400 hover:text-slate-700 transition-colors">
+            <button 
+              onClick={onNotificationClick}
+              className="p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+            >
               <Bell className="w-4 h-4" />
               {activeAlertCount > 0 && (
                 <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-600 text-white text-[10px] font-bold flex items-center justify-center font-mono-num">
@@ -322,20 +292,7 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
       </div>
 
       {/* Row 2: Operator Session Info & Logout */}
-      <div className="flex items-center justify-between text-xs text-slate-500 px-1 border-t border-slate-100 pt-1.5 mt-0.5 w-full">
-        {/* Left Side: Session status */}
-        <div className="flex items-center gap-2">
-          <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isCloudSyncLost ? 'bg-amber-500' : 'bg-emerald-600'}`} />
-          <span>
-            Active Command Session ·{' '}
-            {isCloudSyncLost
-              ? 'Cloud Sync Lost — Local Edge Cache Only'
-              : networkMode === 'cloud'
-              ? 'Connected to Cloud DB'
-              : 'Local Edge Session (SQLite)'}
-          </span>
-        </div>
-        
+      <div className="flex items-center justify-end text-xs text-slate-500 px-1 border-t border-slate-100 pt-1.5 mt-0.5 w-full">
         {/* Right Side: Operator profile & logout button */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
