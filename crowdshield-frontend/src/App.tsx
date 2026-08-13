@@ -635,11 +635,12 @@ useEffect(() => {
     return (
       <div className="min-h-screen bg-[#FAFAF7]">
         {/* ADD THIS SO CITIZENS SEE WEBSOCKET ALERTS */}
-        <ToastContainer
-          toasts={toasts}
-          onDismiss={handleDismissToast}
-          onInspectAlert={(zoneId) => setViewMode('admin')} 
-        />
+       <ToastContainer
+  userRole={viewMode === 'citizen' ? 'citizen' : 'admin'} 
+  toasts={toasts}
+  onDismiss={handleDismissToast}
+  onInspectAlert={(zoneId) => setViewMode('admin')} 
+/>
         
         <CitizenPortalView
           reports={citizenReports}

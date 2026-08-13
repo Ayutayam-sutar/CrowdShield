@@ -210,7 +210,7 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
         {/* Right Controls: Mode Toggle, Crisis Trigger, Voice, Language */}
         <div className="flex items-center gap-2 flex-wrap justify-end">
           {/* Crisis Demo Trigger */}
-          {isScenarioActive ? (
+          {/* {isScenarioActive ? (
             <button
               onClick={onResetScenario}
               className="flex items-center gap-1.5 bg-slate-50 hover:bg-slate-100 text-rose-600 border border-rose-200 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm cursor-pointer"
@@ -226,7 +226,7 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
               <Zap className="w-3.5 h-3.5 fill-current" />
               <span className="font-heading tracking-wide">⚡ Trigger Stampede Scenario</span>
             </button>
-          )}
+          )} */}
 
           {/* Sarvam Voice Mic Assistant Button */}
           <button

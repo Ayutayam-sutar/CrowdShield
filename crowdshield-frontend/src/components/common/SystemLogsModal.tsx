@@ -1,5 +1,7 @@
-import React from 'react';
-import { X, Terminal, Cpu, CheckCircle2, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Terminal, Cpu, Loader2 } from 'lucide-react';
+import api from '../../utils/api';
+import { wsService } from '../../services/websocket';
 
 interface SystemLogsModalProps {
   isOpen: boolean;
@@ -7,24 +9,94 @@ interface SystemLogsModalProps {
   isScenarioActive: boolean;
 }
 
+interface LogEntry {
+  time: string;
+  level: 'CRITICAL' | 'WARN' | 'INFO' | 'CRITICAL_EVENT';
+  msg: string;
+}
+
 export const SystemLogsModal: React.FC<SystemLogsModalProps> = ({ isOpen, onClose, isScenarioActive }) => {
-  if (!isOpen) return null;
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  const logs = [
-    { time: '04:48:12', level: 'CRITICAL', msg: 'Zone Z-03 density threshold exceeded (4.8 p/m² > 4.0 p/m²).' },
-    { time: '04:47:50', level: 'INFO', msg: 'YOLO11 Edge Model v11.4 processed 120 FPS across 4 CCTV channels.' },
-    { time: '04:45:10', level: 'WARN', msg: 'South Concourse flow rate degraded to 22 p/min.' },
-    { time: '04:40:02', level: 'INFO', msg: 'Sarvam Audio Synthesizer initialized Hindi & Odia voice buffers.' },
-    { time: '04:35:00', level: 'INFO', msg: 'Local SQLite DB synced 420 telemetry records with Redis buffer.' },
-  ];
+  // 1. Fetch live system logs from backend on modal open
+  useEffect(() => {
+    if (!isOpen) return;
 
-  if (isScenarioActive) {
-    logs.unshift({
-      time: new Date().toLocaleTimeString(),
-      level: 'CRITICAL_EVENT',
-      msg: 'STAMPEDE SIMULATION INJECTED: Predictive surge spike in Zone Z-03 (92% Risk Score).'
+    const fetchLiveLogs = async () => {
+      setIsLoading(true);
+      try {
+        // Fetch recent system alerts/history from your backend
+        const response = await api.get('/analytics/history');
+        if (response.data && Array.isArray(response.data)) {
+          const fetchedLogs: LogEntry[] = response.data.slice(-10).map((item: any) => ({
+            time: item.timestamp ? new Date(item.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString(),
+            level: item.risk_level === 'CRITICAL' || item.severity === 'HIGH' ? 'CRITICAL' : 'INFO',
+            msg: item.message || item.description || `Telemetry update for zone ${item.zone_id || 'unknown'}`,
+          }));
+          setLogs(fetchedLogs.reverse());
+        }
+      } catch (err) {
+        console.error('Failed to fetch backend logs, using live stream buffer:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchLiveLogs();
+  }, [isOpen]);
+
+  // 2. Listen to real-time WebSockets to push live daemon logs instantly
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const unsubscribe = wsService.subscribe((data: any) => {
+      const newLogTime = new Date().toLocaleTimeString();
+      let newEntry: LogEntry | null = null;
+
+      if (data.event === 'TELEMETRY_UPDATE' || data.type === 'telemetry') {
+        newEntry = {
+          time: newLogTime,
+          level: data.density > 3.5 ? 'WARN' : 'INFO',
+          msg: `Live Edge Telemetry: Zone ${data.zone_id || 'Campus'} density at ${data.density || 0} p/m² (${data.headcount || 0} pax).`,
+        };
+      } else if (data.event === 'INTERVENTION_DISPATCHED' || data.event === 'PA_BROADCAST') {
+        newEntry = {
+          time: newLogTime,
+          level: 'WARN',
+          msg: `PA Broadcast Dispatched: "${data.announcementText || data.message || 'Emergency voice broadcast'}"`,
+        };
+      } else if (data.event === 'HAZARD_SUBMITTED' || data.event === 'STAMPEDE_ALERT') {
+        newEntry = {
+          time: newLogTime,
+          level: 'CRITICAL',
+          msg: `CRITICAL ALERT: High density or hazard flag reported in ${data.location || 'Zone'}!`,
+        };
+      }
+
+      if (newEntry) {
+        setLogs((prev) => [newEntry!, ...prev.slice(0, 19)]); // Keep last 20 logs
+      }
     });
-  }
+
+    return () => unsubscribe();
+  }, [isOpen]);
+
+  // 3. Inject scenario alert if active
+  useEffect(() => {
+    if (isScenarioActive && isOpen) {
+      setLogs((prev) => [
+        {
+          time: new Date().toLocaleTimeString(),
+          level: 'CRITICAL_EVENT',
+          msg: 'STAMPEDE SIMULATION INJECTED: Predictive surge spike detected across active campus zones.',
+        },
+        ...prev,
+      ]);
+    }
+  }, [isScenarioActive, isOpen]);
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-body animate-fadeIn">
@@ -34,28 +106,45 @@ export const SystemLogsModal: React.FC<SystemLogsModalProps> = ({ isOpen, onClos
             <Terminal className="w-5 h-5" />
             <span>Edge Daemon System Logs (Live Stream)</span>
           </div>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700">
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 cursor-pointer">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl font-mono-num text-xs flex flex-col gap-2 max-h-72 overflow-y-auto">
-          {logs.map((log, idx) => (
-            <div key={idx} className="flex items-start gap-2 border-b border-slate-100 pb-1.5 last:border-0">
-              <span className="text-slate-400 text-[11px] shrink-0">{log.time}</span>
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 text-white ${
-                log.level.includes('CRITICAL') ? 'bg-rose-600' : log.level === 'WARN' ? 'bg-amber-500' : 'bg-sky-600'
-              }`}>
-                {log.level}
-              </span>
-              <span className="text-slate-700">{log.msg}</span>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8 text-slate-400 gap-2">
+              <Loader2 className="w-4 h-4 animate-spin text-sky-600" />
+              <span>Connecting to live edge telemetry stream...</span>
             </div>
-          ))}
+          ) : logs.length === 0 ? (
+            <div className="text-center py-6 text-slate-400">
+              No live daemon events recorded yet. Awaiting camera telemetry...
+            </div>
+          ) : (
+            logs.map((log, idx) => (
+              <div key={idx} className="flex items-start gap-2 border-b border-slate-100 pb-1.5 last:border-0">
+                <span className="text-slate-400 text-[11px] shrink-0">{log.time}</span>
+                <span
+                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 text-white ${
+                    log.level.includes('CRITICAL')
+                      ? 'bg-rose-600'
+                      : log.level === 'WARN'
+                      ? 'bg-amber-500'
+                      : 'bg-sky-600'
+                  }`}
+                >
+                  {log.level}
+                </span>
+                <span className="text-slate-700 leading-snug">{log.msg}</span>
+              </div>
+            ))
+          )}
         </div>
 
         <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono-num">
           <span className="flex items-center gap-1 text-emerald-600 font-semibold">
-            <Cpu className="w-3.5 h-3.5" /> Edge CPU: 14% · RAM: 1.2GB / 8GB
+            <Cpu className="w-3.5 h-3.5" /> Edge Engine: Active · Sync: WebSockets + Redis
           </span>
           <button
             onClick={onClose}

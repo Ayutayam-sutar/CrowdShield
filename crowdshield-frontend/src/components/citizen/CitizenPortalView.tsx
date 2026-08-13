@@ -599,95 +599,99 @@ const [isCriticalUI, setIsCriticalUI] = useState(false);
 
       {/* ── HEADER ─────────────────────────────────────── */}
       <header
-        className={`sticky top-0 z-40 px-4 sm:px-6 py-3 flex items-center justify-between border-b transition-colors duration-500 ${
-          isScenarioActive
-            ? 'bg-red-500 text-white border-red-400 shadow-lg shadow-red-500/15'
-            : 'bg-white text-slate-900 border-slate-100 shadow-sm'
+  className={`sticky top-0 z-40 px-4 sm:px-6 py-3 flex items-center justify-between border-b transition-colors duration-500 ${
+    isScenarioActive
+      ? 'bg-red-500 text-white border-red-400 shadow-lg shadow-red-500/15'
+      : 'bg-white text-slate-900 border-slate-100 shadow-sm'
+  }`}
+>
+  <div className="flex items-center gap-3 min-w-0">
+    {/* Custom Logo Container */}
+  
+      {isScenarioActive ? (
+        <AlertTriangle className="w-5 h-5 text-white animate-pulse" />
+      ) : (
+        <img 
+          src="/photos/crowdshieldlogo.png" 
+          alt="CrowdShield Logo" 
+          className="w-13 h-13 object-contain rounded-xl" 
+        />
+      )}
+    
+
+    <div className="min-w-0 flex flex-col">
+      <h1 className="font-heading font-bold text-sm sm:text-base tracking-tight truncate">
+        {isScenarioActive ? '⚠ EMERGENCY ACTIVE' : 'CrowdShield'}
+      </h1>
+      <span
+        className={`text-[10px] font-mono-num flex items-center gap-1.5 truncate ${
+          isScenarioActive ? 'text-white/70' : 'text-slate-400'
         }`}
       >
-        <div className="flex items-center gap-3 min-w-0">
-          <div
-            className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 ${
-              isScenarioActive
-                ? 'bg-white/20 text-white'
-                : 'bg-indigo-500 text-white shadow-md shadow-indigo-500/25'
-            }`}
-          >
-            {isScenarioActive ? <AlertTriangle className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
-          </div>
-          <div className="min-w-0 flex flex-col">
-            <h1 className="font-heading font-bold text-sm sm:text-base tracking-tight truncate">
-              {isScenarioActive ? '⚠ EMERGENCY ACTIVE' : 'CrowdShield'}
-            </h1>
-            <span
-              className={`text-[10px] font-mono-num flex items-center gap-1.5 truncate ${
-                isScenarioActive ? 'text-white/70' : 'text-slate-400'
-              }`}
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                  isScenarioActive ? 'bg-white animate-ping' : 'bg-emerald-400 animate-pulse'
-                }`}
-              />
-              {isScenarioActive ? `Evacuate Now · ${selectedVenue?.name || 'Campus'}` : `${selectedVenue?.name || 'SOA ITER Campus'} · Live`}
-            </span>
-          </div>
-        </div>
+        <span
+          className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+            isScenarioActive ? 'bg-white animate-ping' : 'bg-emerald-400 animate-pulse'
+          }`}
+        />
+        {isScenarioActive ? `Evacuate Now · ${selectedVenue?.name || 'Campus'}` : `${selectedVenue?.name || 'SOA ITER Campus'} · Live`}
+      </span>
+    </div>
+  </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
-          <button
-            onClick={() => setShowNotifications(true)}
-            className={`relative p-2 rounded-xl transition-colors cursor-pointer ${
-              isScenarioActive ? 'hover:bg-white/15 text-white' : 'hover:bg-slate-100 text-slate-500'
-            }`}
-          >
-            <BellRing className="w-4 h-4" />
-            {notifications.length > 0 && (
-              <span
-                className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 animate-gentle-pulse ${
-                  isScenarioActive
-                    ? 'bg-white border-red-500'
-                    : 'bg-red-500 border-white'
-                }`}
-              />
-            )}
-          </button>
+  <div className="flex items-center gap-1.5 shrink-0">
+    <button
+      onClick={() => setShowNotifications(true)}
+      className={`relative p-2 rounded-xl transition-colors cursor-pointer ${
+        isScenarioActive ? 'hover:bg-white/15 text-white' : 'hover:bg-slate-100 text-slate-500'
+      }`}
+    >
+      <BellRing className="w-4 h-4" />
+      {notifications.length > 0 && (
+        <span
+          className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 animate-gentle-pulse ${
+            isScenarioActive
+              ? 'bg-white border-red-500'
+              : 'bg-red-500 border-white'
+          }`}
+        />
+      )}
+    </button>
 
-          <div
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-bold ${
-              isScenarioActive
-                ? 'bg-white/15 text-white'
-                : 'bg-slate-50 border border-slate-200 text-slate-600'
-            }`}
-          >
-            <Languages className="w-3.5 h-3.5 shrink-0" />
-            <select
-              value={selectedLang}
-              onChange={(e) => setSelectedLang(e.target.value as SupportedLanguage)}
-              className="bg-transparent focus:outline-none cursor-pointer"
-            >
-              <option value="en" className="text-slate-900 bg-white">EN</option>
-              <option value="hi" className="text-slate-900 bg-white">हिं</option>
-              <option value="od" className="text-slate-900 bg-white">ଓ</option>
-              <option value="bn" className="text-slate-900 bg-white">বা</option>
-              <option value="ta" className="text-slate-900 bg-white">த</option>
-            </select>
-          </div>
+    <div
+      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-bold ${
+        isScenarioActive
+          ? 'bg-white/15 text-white'
+          : 'bg-slate-50 border border-slate-200 text-slate-600'
+      }`}
+    >
+      <Languages className="w-3.5 h-3.5 shrink-0" />
+      <select
+        value={selectedLang}
+        onChange={(e) => setSelectedLang(e.target.value as SupportedLanguage)}
+        className="bg-transparent focus:outline-none cursor-pointer"
+      >
+        <option value="en" className="text-slate-900 bg-white">ENGLISH</option>
+        <option value="hi" className="text-slate-900 bg-white">हिन्दी</option>
+        <option value="od" className="text-slate-900 bg-white">ଓଡ଼ିଆ</option>
+        <option value="bn" className="text-slate-900 bg-white">বাংলা</option>
+        <option value="ta" className="text-slate-900 bg-white">தமிழ்</option>
+      </select>
+    </div>
 
-          {onLogout && (
-            <button
-              onClick={onLogout}
-              className={`p-2 rounded-xl transition-colors cursor-pointer active:scale-95 ${
-                isScenarioActive
-                  ? 'hover:bg-white/15 text-white/80'
-                  : 'hover:bg-red-50 text-slate-400 hover:text-red-500'
-              }`}
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-      </header>
+    {onLogout && (
+      <button
+        onClick={onLogout}
+        className={`p-2 rounded-xl transition-colors cursor-pointer active:scale-95 ${
+          isScenarioActive
+            ? 'hover:bg-white/15 text-white/80'
+            : 'hover:bg-red-50 text-slate-400 hover:text-red-500'
+        }`}
+      >
+        <LogOut className="w-4 h-4" />
+      </button>
+    )}
+  </div>
+</header>
 
       {/* ── TAB NAVIGATION ─────────────────────────────── */}
       <div className="px-4 sm:px-6 pt-3 pb-1">
@@ -923,209 +927,255 @@ const [isCriticalUI, setIsCriticalUI] = useState(false);
 
 
               {/* ── REPORT HAZARD ── */}
-              <motion.div 
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: 0.2 }}
-                className="app-card overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-indigo-200 bg-white"
+<motion.div 
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.4, delay: 0.1, ease: "easeOut" }}
+  className="bg-white rounded-3xl shadow-sm border border-slate-200/80 overflow-hidden transition-all duration-300 hover:shadow-md"
+>
+  {/* Header */}
+  <div className="w-full flex items-center gap-3 p-4 border-b border-red-100/50 bg-gradient-to-br from-red-50/50 to-white">
+    <div className="w-12 h-12 rounded-2xl bg-red-100/80 border border-red-200 flex items-center justify-center shrink-0 shadow-inner">
+      <ShieldAlert className="w-6 h-6 text-red-500" />
+    </div>
+    <div className="text-left">
+      <h2 className="font-heading font-bold text-base text-slate-900 tracking-tight">{tc('reportHazard', selectedLang)}</h2>
+      <p className="text-[11px] text-slate-500 font-medium mt-0.5">{tc('alertCampusSecurity', selectedLang)}</p>
+    </div>
+  </div>
+
+  <div className="p-4 sm:p-5 flex flex-col gap-4 bg-white">
+    {reportSubmitted ? (
+      /* Success State */
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="bg-emerald-50 border border-emerald-100 py-8 px-5 rounded-2xl flex flex-col items-center gap-3 text-center my-2"
+      >
+        <div className="w-14 h-14 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center shadow-inner mb-1">
+          <CheckCircle2 className="w-8 h-8" />
+        </div>
+        <div>
+          <p className="font-heading font-bold text-base text-emerald-900">{tc('reportSubmitted', selectedLang)}</p>
+          <p className="text-xs text-emerald-600/80 mt-1">{tc('securityNotified', selectedLang)}</p>
+        </div>
+      </motion.div>
+    ) : (
+      /* Reporting Form */
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        
+        {/* Mobile-optimized Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Category Dropdown */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">
+              {tc('category', selectedLang)}
+            </label>
+            <div className="relative">
+              <select
+                value={reportCategory}
+                onChange={(e) => setReportCategory(e.target.value)}
+                className="w-full appearance-none bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-400 transition-all shadow-inner"
               >
-                <div className="w-full flex items-center justify-between p-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center shrink-0 shadow-inner">
-                      <ShieldAlert className="w-5 h-5 text-rose-500" />
-                    </div>
-                    <div className="text-left">
-                      <div className="font-heading font-bold text-sm text-slate-900">{tc('reportHazard', selectedLang)}</div>
-                      <div className="text-[11px] text-slate-500 mt-0.5">{tc('alertCampusSecurity', selectedLang)}</div>
-                    </div>
-                  </div>
-                </div>
+                <option value="Blocked Exit">{tc('blockedExitOpt', selectedLang)}</option>
+                <option value="Medical Emergency">{tc('medicalEmergencyOpt', selectedLang)}</option>
+                <option value="Overcrowding">{tc('overcrowdingOpt', selectedLang)}</option>
+                <option value="Hazard">{tc('hazardOpt', selectedLang)}</option>
+              </select>
+              <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none">
+                <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+              </div>
+            </div>
+          </div>
 
-                <div className="p-5 flex flex-col gap-4 bg-white">
-                        {reportSubmitted ? (
-                          <motion.div
-                            initial={{ scale: 0.9 }}
-                            animate={{ scale: 1 }}
-                            className="bg-emerald-50 border border-emerald-200 p-5 rounded-xl flex flex-col items-center gap-3 text-center"
-                          >
-                            <CheckCircle2 className="w-10 h-10 text-emerald-500" />
-                            <p className="font-heading font-bold text-sm text-slate-900">{tc('reportSubmitted', selectedLang)}</p>
-                            <p className="text-[11px] text-slate-500">{tc('securityNotified', selectedLang)}</p>
-                          </motion.div>
-                        ) : (
-                          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                              <div>
-                                <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5 block">
-                                  {tc('category', selectedLang)}
-                                </label>
-                                <select
-                                  value={reportCategory}
-                                  onChange={(e) => setReportCategory(e.target.value)}
-                                  className="app-input text-xs font-bold transition-all focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
-                                >
-                                  <option value="Blocked Exit">{tc('blockedExitOpt', selectedLang)}</option>
-                                  <option value="Medical Emergency">{tc('medicalEmergencyOpt', selectedLang)}</option>
-                                  <option value="Overcrowding">{tc('overcrowdingOpt', selectedLang)}</option>
-                                  <option value="Hazard">{tc('hazardOpt', selectedLang)}</option>
-                                </select>
-                              </div>
-                              <div>
-                                <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5 block">
-                                  {tc('zone', selectedLang)}
-                                </label>
-                                <select
-                                  value={reportLocation}
-                                  onChange={(e) => setReportLocation(e.target.value)}
-                                  className="app-input text-xs font-bold transition-all focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
-                                >
-                                  {activeCampusZones.map((z: any) => (
-                                    <option key={z.id} value={z.name}>{z.name}</option>
-                                  ))}
-                                </select>
-                              </div>
-                            </div>
+          {/* Zone Dropdown */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">
+              {tc('zone', selectedLang)}
+            </label>
+            <div className="relative">
+              <select
+                value={reportLocation}
+                onChange={(e) => setReportLocation(e.target.value)}
+                className="w-full appearance-none bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-400 transition-all shadow-inner"
+              >
+                {activeCampusZones.map((z: any) => (
+                  <option key={z.id} value={z.name}>{z.name}</option>
+                ))}
+              </select>
+              <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none">
+                <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+              </div>
+            </div>
+          </div>
+        </div>
 
-                            <div>
-                              <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5 block">
-                                {tc('whatHappened', selectedLang)}
-                              </label>
-                              <textarea
-                                rows={2}
-                                value={reportDesc}
-                                onChange={(e) => setReportDesc(e.target.value)}
-                                placeholder={tc('describeSituation', selectedLang)}
-                                className="app-input text-xs resize-none transition-all focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
-                                required
-                              />
-                            </div>
+        {/* Description Textarea */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">
+            {tc('whatHappened', selectedLang)}
+          </label>
+          <textarea
+            rows={3}
+            value={reportDesc}
+            onChange={(e) => setReportDesc(e.target.value)}
+            placeholder={tc('describeSituation', selectedLang)}
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm text-slate-800 placeholder:text-slate-400 resize-none focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-400 transition-all shadow-inner"
+            required
+          />
+        </div>
 
-                            {mediaUrl ? (
-                              <div className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 h-32 shadow-sm">
-                                {mediaType === 'image' ? (
-                                  <img src={mediaUrl} alt="Attached" className="w-full h-full object-cover opacity-90" />
-                                ) : (
-                                  <video src={mediaUrl} className="w-full h-full object-cover opacity-90" />
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={removeMedia}
-                                  className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-red-500 text-white rounded-xl transition-colors cursor-pointer backdrop-blur-md"
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                                <span className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] px-2 py-1 rounded-lg font-mono-num font-medium">
-                                  {mediaFileName}
-                                </span>
-                              </div>
-                            ) : (
-                              <div className="flex gap-3">
-                                <motion.button
-                                  whileHover={{ y: -2 }}
-                                  whileTap={{ scale: 0.96 }}
-                                  type="button"
-                                  onClick={handleSimulateSampleImage}
-                                  className="flex-1 py-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
-                                >
-                                  <ImageIcon className="w-4 h-4 text-indigo-500" /> {tc('photo', selectedLang)}
-                                </motion.button>
-                                <motion.button
-                                  whileHover={{ y: -2 }}
-                                  whileTap={{ scale: 0.96 }}
-                                  type="button"
-                                  onClick={handleSimulateSampleVideo}
-                                  className="flex-1 py-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
-                                >
-                                  <Video className="w-4 h-4 text-rose-500" /> {tc('video', selectedLang)}
-                                </motion.button>
-                              </div>
-                            )}
+        {/* Media Attachments Section */}
+        {mediaUrl ? (
+          <div className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 h-40 shadow-sm mt-1">
+            {mediaType === 'image' ? (
+              <img src={mediaUrl} alt="Attached" className="w-full h-full object-cover opacity-90" />
+            ) : (
+              <video src={mediaUrl} className="w-full h-full object-cover opacity-90" />
+            )}
+            <button
+              type="button"
+              onClick={removeMedia}
+              className="absolute top-3 right-3 p-2 bg-black/50 hover:bg-red-500 text-white rounded-full transition-colors cursor-pointer backdrop-blur-md"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <span className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-lg font-mono-num font-medium truncate max-w-[80%]">
+              {mediaFileName}
+            </span>
+          </div>
+        ) : (
+          <div className="flex gap-3 mt-1">
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              type="button"
+              onClick={handleSimulateSampleImage}
+              className="flex-1 py-4 bg-slate-50 border border-dashed border-slate-300 hover:border-indigo-400 hover:bg-indigo-50/50 text-slate-600 rounded-2xl font-bold text-xs flex flex-col items-center justify-center gap-2 transition-all cursor-pointer shadow-sm group"
+            >
+              <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
+                <ImageIcon className="w-4 h-4 text-indigo-600" />
+              </div>
+              <span>{tc('photo', selectedLang)}</span>
+            </motion.button>
+            
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              type="button"
+              onClick={handleSimulateSampleVideo}
+              className="flex-1 py-4 bg-slate-50 border border-dashed border-slate-300 hover:border-rose-400 hover:bg-rose-50/50 text-slate-600 rounded-2xl font-bold text-xs flex flex-col items-center justify-center gap-2 transition-all cursor-pointer shadow-sm group"
+            >
+              <div className="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center group-hover:bg-rose-200 transition-colors">
+                <Video className="w-4 h-4 text-rose-600" />
+              </div>
+              <span>{tc('video', selectedLang)}</span>
+            </motion.button>
+          </div>
+        )}
 
-                            <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
+        {/* Hidden File Input */}
+        <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
 
-                            <motion.button
-                              whileHover={{ scale: 1.01 }}
-                              whileTap={{ scale: 0.98 }}
-                              type="submit"
-                              className="w-full py-3.5 mt-2 bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white rounded-2xl font-heading font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-red-500/25"
-                            >
-                              <Send className="w-4 h-4" /> {tc('sendHazardReport', selectedLang)}
-                            </motion.button>
-                          </form>
-                        )}
-                      </div>
-              </motion.div>
+        {/* Submit Button */}
+        <motion.button
+          whileTap={{ scale: 0.97 }}
+          type="submit"
+          className="w-full py-4 mt-3 bg-[#FF3B5C] hover:bg-[#E63553] text-white rounded-2xl font-heading font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-red-500/30"
+        >
+          <Send className="w-4 h-4" /> {tc('sendHazardReport', selectedLang)}
+        </motion.button>
+        
+      </form>
+    )}
+  </div>
+</motion.div>
 
               {/* ── LIVE REPORTS FEED ── */}
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-heading font-bold text-xs uppercase tracking-wider text-slate-400">
-                    {tc('nearbyReports', selectedLang)} ({liveReports.length})
-                  </h3>
-                  <span className="text-[10px] font-mono-num font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
-                    ● {tc('live', selectedLang)}
-                  </span>
+<div className="flex flex-col gap-4 font-body">
+  {/* Header Section */}
+  <div className="flex items-center justify-between bg-slate-50 border border-slate-200/80 px-4 py-3 rounded-2xl">
+    <div className="flex flex-col gap-0.5">
+      <h3 className="font-heading font-bold text-m uppercase tracking-wider text-slate-700 flex items-center gap-2">
+        <span>{tc('nearbyReports', selectedLang)}</span>
+        <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-mono-num text-[10px]">
+          {liveReports.length}
+        </span>
+      </h3>
+      <span className="text-[14px] text-slate-400 font-medium">Real-time crowdsourced safety feed</span>
+    </div>
+    <span className="text-[10px] font-mono-num font-bold px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center gap-1.5 shadow-xs">
+      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+      {tc('live', selectedLang)}
+    </span>
+  </div>
+
+  {/* Reports Stream Container */}
+  <div className="flex flex-col gap-3 max-h-[500px] overflow-y-auto pr-1 smooth-scroll">
+    {liveReports.length === 0 ? (
+      <div className="text-center py-12 px-6 bg-white border border-dashed border-slate-200 rounded-2xl flex flex-col items-center gap-2">
+        <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400">
+          <ShieldAlert className="w-5 h-5 opacity-60" />
+        </div>
+        <p className="text-sm font-semibold text-slate-600">{tc('noActiveHazards', selectedLang)}</p>
+        <p className="text-xs text-slate-400 max-w-xs">All sectors are currently reporting normal operating conditions.</p>
+      </div>
+    ) : (
+      liveReports.map((rep, idx) => {
+        const badgeStyle = getStatusBadgeStyle(rep.status);
+        return (
+          <motion.div
+            key={rep.id || idx}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: idx * 0.04, duration: 0.3 }}
+            className="bg-white border border-slate-200/80 rounded-2xl p-4 flex flex-col gap-3 shadow-xs hover:shadow-md hover:border-slate-300 transition-all duration-200 group"
+          >
+            {/* Card Header */}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-7 h-7 rounded-xl bg-red-50 text-red-500 flex items-center justify-center shrink-0 border border-red-100">
+                  <ShieldAlert className="w-4 h-4" />
                 </div>
-
-                <div className="flex flex-col gap-3 max-h-[480px] overflow-y-auto pr-0.5 smooth-scroll">
-                  {liveReports.length === 0 ? (
-                    <div className="text-center p-8 app-card text-slate-400 text-sm">
-                      {tc('noActiveHazards', selectedLang)}
-                    </div>
-                  ) : (
-                    liveReports.map((rep, idx) => {
-                      const badgeStyle = getStatusBadgeStyle(rep.status);
-                      return (
-                        <motion.div
-                          key={rep.id || idx}
-                          initial={{ opacity: 0, y: 8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: idx * 0.03 }}
-                          className="app-card p-3.5 flex flex-col gap-2.5 hover:shadow-md transition-shadow"
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5 truncate">
-                              <ShieldAlert className="w-3.5 h-3.5 text-red-400 shrink-0" />
-                              <span className="truncate">{getCategoryTranslation(rep.category, selectedLang)}</span>
-                            </span>
-                            <span className="text-[10px] font-mono-num text-slate-400 shrink-0 flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              {rep.timestamp}
-                            </span>
-                          </div>
-
-                          <div className="text-xs text-slate-500 leading-relaxed">
-                            <strong className="text-slate-700">{rep.location}:</strong> {rep.description}
-                          </div>
-
-                          {rep.photoUrl && (
-                            <div className="rounded-xl overflow-hidden border border-slate-100 max-h-36">
-                              <img src={rep.photoUrl} alt="Report" className="w-full h-36 object-cover" />
-                            </div>
-                          )}
-
-                          {rep.videoUrl && (
-                            <div className="rounded-xl overflow-hidden border border-slate-100">
-                              <video src={rep.videoUrl} controls className="w-full max-h-36 object-cover" />
-                            </div>
-                          )}
-
-                          <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px]">
-                            {/* DYNAMIC BADGE STYLING */}
-                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${badgeStyle.className}`}>
-                              {badgeStyle.label}
-                            </span>
-                            <span className="text-slate-400 font-mono-num flex items-center gap-1 font-semibold">
-                              <ThumbsUp className="w-3 h-3 text-indigo-400" />
-                              {rep.upvotes || 0} {tc('confirmed', selectedLang)}
-                            </span>
-                          </div>
-                        </motion.div>
-                      );
-                    })
-                  )}
-                </div>
+                <span className="text-xs font-bold text-slate-900 truncate tracking-tight">
+                  {getCategoryTranslation(rep.category, selectedLang)}
+                </span>
               </div>
+              <span className="text-[10px] font-mono-num text-slate-400 shrink-0 flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">
+                <Clock className="w-3 h-3 text-slate-400" />
+                {rep.timestamp}
+              </span>
+            </div>
+
+            {/* Description / Location */}
+            <div className="text-sm text-slate-600 leading-relaxed bg-slate-50/70 p-3 rounded-xl border border-slate-100">
+              <strong className="text-slate-900 font-semibold">{rep.location}:</strong> {rep.description}
+            </div>
+
+            {/* Media Attachment: Photo */}
+            {rep.photoUrl && (
+              <div className="rounded-xl overflow-hidden border border-slate-200 shadow-xs max-h-40 bg-slate-900">
+                <img src={rep.photoUrl} alt="Report Incident" className="w-full h-40 object-cover group-hover:scale-102 transition-transform duration-300" />
+              </div>
+            )}
+
+            {/* Media Attachment: Video */}
+            {rep.videoUrl && (
+              <div className="rounded-xl overflow-hidden border border-slate-200 shadow-xs bg-slate-900">
+                <video src={rep.videoUrl} controls className="w-full max-h-40 object-cover" />
+              </div>
+            )}
+
+            {/* Card Footer: Status Badge & Upvotes */}
+            <div className="flex items-center justify-between pt-2.5 border-t border-slate-100 text-[11px]">
+              <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border shadow-xs ${badgeStyle.className}`}>
+                {badgeStyle.label}
+              </span>
+            </div>
+          </motion.div>
+        );
+      })
+    )}
+  </div>
+</div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -1155,28 +1205,28 @@ const [isCriticalUI, setIsCriticalUI] = useState(false);
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <a
-            href="tel:112"
-            className={`px-3 sm:px-4 py-2 rounded-xl font-heading font-bold text-xs transition-all active:scale-95 flex items-center gap-1.5 ${
-              isScenarioActive
-                ? 'bg-white/20 text-white border border-white/30 hover:bg-white/30'
-                : 'bg-red-500 text-white hover:bg-red-600 shadow-md shadow-red-500/15'
-            }`}
-          >
-            📞 112 <span className="hidden sm:inline">Police</span>
-          </a>
-          <a
-            href="tel:108"
-            className={`px-3 sm:px-4 py-2 rounded-xl font-heading font-bold text-xs transition-all active:scale-95 flex items-center gap-1.5 ${
-              isScenarioActive
-                ? 'bg-white/20 text-white border border-white/30 hover:bg-white/30'
-                : 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-md shadow-indigo-500/15'
-            }`}
-          >
-            🚑 108 <span className="hidden sm:inline">Ambulance</span>
-          </a>
-        </div>
+       <div className="flex items-center gap-2 shrink-0">
+  <a
+    href="tel:112"
+    className={`px-3 sm:px-4 py-2 rounded-xl font-heading font-bold text-xs transition-all active:scale-95 flex items-center gap-1.5 ${
+      isScenarioActive
+        ? 'bg-white/20 text-white border border-white/30 hover:bg-white/30'
+        : 'bg-gradient-to-r from-[#9bdadf] to-[#9ddba7] hover:opacity-90 text-black/60 shadow-md shadow-[#67b2b9]/20'
+    }`}
+  >
+    📞 112 <span className="hidden sm:inline">Police</span>
+  </a>
+  <a
+    href="tel:108"
+    className={`px-3 sm:px-4 py-2 rounded-xl font-heading font-bold text-xs transition-all active:scale-95 flex items-center gap-1.5 ${
+      isScenarioActive
+        ? 'bg-white/20 text-white border border-white/30 hover:bg-white/30'
+        : 'bg-gradient-to-r from-[#93d5db] to-[#acddb2] hover:opacity-90 text-black/60 shadow-md shadow-[#67b2b9]/20'
+    }`}
+  >
+    🚑 108 <span className="hidden sm:inline">Ambulance</span>
+  </a>
+</div>
       </div>
     </div>
   );
