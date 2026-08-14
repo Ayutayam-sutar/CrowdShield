@@ -132,7 +132,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl shadow-md shrink-0 overflow-hidden">
   <img 
-    src="/photos/crowdshieldlogo.png" 
+    src="/photos/crowdshieldlogo1.png" 
     alt="CrowdShield Logo" 
     className="w-full h-full object-cover" 
   />
