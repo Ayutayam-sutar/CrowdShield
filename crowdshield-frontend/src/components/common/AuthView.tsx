@@ -464,7 +464,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
               <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-[#2C7BE5]/10 text-[#2C7BE5] border border-[#2C7BE5]/30 flex items-center justify-center shrink-0">
                 <Cpu className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-              <h3 className="font-heading font-bold text-base sm:text-lg text-[#151726]">YOLO v8 Vision Engine</h3>
+              <h3 className="font-heading font-bold text-base sm:text-lg text-[#151726]">YOLO v11 Vision Engine</h3>
               <p className="text-xs text-[#5B5F73] leading-relaxed">
                 Sub-50ms person counting, crowd density heatmaps, bounding box annotations, and velocity anomaly detection on edge camera nodes.
               </p>
