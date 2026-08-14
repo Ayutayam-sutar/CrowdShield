@@ -545,7 +545,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
             </div>
           ) : (
             <img 
-              src="/photos/crowdshieldlogo.png" 
+              src="/photos/crowdshieldlogo1.png" 
               alt="CrowdShield Logo" 
               className="w-10 h-10 object-contain rounded-xl shadow-sm bg-white" 
             />

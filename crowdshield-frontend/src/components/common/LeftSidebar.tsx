@@ -64,7 +64,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
 
       {/* ── Sidebar / Mobile Drawer Container ── */}
       <aside className={`
-        bg-white border-r border-slate-200/80 flex flex-col justify-between shrink-0 font-body select-none
+        bg-white flex flex-col justify-between shrink-0 font-body select-none
         lg:w-72 lg:flex lg:h-full lg:z-20 overflow-hidden shadow-sm
         ${isMobileOpen 
           ? 'fixed inset-y-0 left-0 w-[280px] sm:w-80 z-50 h-full shadow-2xl animate-in slide-in-from-left duration-300 flex' 
@@ -80,12 +80,10 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
            <div className="relative w-12 h-12 shrink-0">
   {/* Put your logo image here */}
   <img 
-    src="/photos/crowdshieldlogo.png" 
+    src="/photos/crowdshieldlogo1.png" 
     alt="Logo" 
     className="w-full h-full object-contain" 
   />
-  {/* The green status dot */}
-  <span className="w-3 h-3 rounded-full bg-emerald-400 absolute -top-1 -right-1 ring-2 ring-white shadow-sm" />
 </div>
               <div className="flex flex-col">
                 <span className="font-heading font-black text-xl text-slate-900 tracking-tight leading-tight">

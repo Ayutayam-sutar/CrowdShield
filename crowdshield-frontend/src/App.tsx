@@ -669,7 +669,7 @@ useEffect(() => {
   if (role !== 'ADMIN') return null; // Safety check
 
   return (
-    <div className="h-screen bg-brand-bg flex flex-col font-body text-slate-800 overflow-hidden relative">
+    <div className="h-screen bg-brand-bg flex flex-row font-body text-slate-800 overflow-hidden relative">
       {/* Toast Notifications */}
       <ToastContainer
         toasts={toasts}
@@ -677,51 +677,52 @@ useEffect(() => {
         onInspectAlert={(zoneId) => setAdminRoute('alerts')}
       />
 
-      {/* Cloud Sync Lost Amber Banner */}
-      {isCloudSyncLost && (
-        <div className="w-full bg-amber-500 text-amber-950 px-4 py-2 text-center text-sm font-bold font-heading shadow-md z-40 relative flex items-center justify-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
-          Cloud Sync Lost. Operating on Local Edge Cache.
-        </div>
-      )}
-
-      {/* Top Header Bar */}
-      <HeaderTopBar
-        venues={venues}
-        selectedVenue={selectedVenue}
-        onSelectVenue={(v) => handleSelectVenue(v)}
-        isCloudSyncLost={isCloudSyncLost}
-        networkMode={networkMode}
-        onToggleNetworkMode={handleToggleNetworkMode}
-        language={language}
-        onChangeLanguage={(lang) => setLanguage(lang)}
-        isScenarioActive={isScenarioActive}
-        onTriggerScenario={handleTriggerScenario}
-        onResetScenario={handleResetScenario}
-        onOpenVoiceModal={() => setIsVoiceModalOpen(true)}
-        onSearch={setSearchQuery}
+      {/* Left Sticky Sidebar / Mobile Drawer */}
+      <LeftSidebar
+        currentRoute={adminRoute}
+        onNavigate={(route) => setAdminRoute(route)}
+        onOpenEmergencyBroadcast={() => setIsEmergencyBroadcastOpen(true)}
         activeAlertCount={activeAlertCount}
-        onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        onNotificationClick={() => setAdminRoute('alerts')}
+        isScenarioActive={isScenarioActive}
+        isMobileOpen={isMobileMenuOpen}
+        onCloseMobile={() => setIsMobileMenuOpen(false)}
       />
 
-      <div className="flex flex-1 min-h-0 overflow-hidden relative">
-        {/* Left Sticky Sidebar / Mobile Drawer */}
-        <LeftSidebar
-          currentRoute={adminRoute}
-          onNavigate={(route) => setAdminRoute(route)}
-          onOpenEmergencyBroadcast={() => setIsEmergencyBroadcastOpen(true)}
-          activeAlertCount={activeAlertCount}
+      {/* Main Layout Area containing Header + Content */}
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
+        {/* Cloud Sync Lost Amber Banner */}
+        {isCloudSyncLost && (
+          <div className="w-full bg-amber-500 text-amber-950 px-4 py-2 text-center text-sm font-bold font-heading shadow-md z-40 relative flex items-center justify-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+            Cloud Sync Lost. Operating on Local Edge Cache.
+          </div>
+        )}
+
+        {/* Top Header Bar */}
+        <HeaderTopBar
+          venues={venues}
+          selectedVenue={selectedVenue}
+          onSelectVenue={(v) => handleSelectVenue(v)}
+          isCloudSyncLost={isCloudSyncLost}
+          networkMode={networkMode}
+          onToggleNetworkMode={handleToggleNetworkMode}
+          language={language}
+          onChangeLanguage={(lang) => setLanguage(lang)}
           isScenarioActive={isScenarioActive}
-          isMobileOpen={isMobileMenuOpen}
-          onCloseMobile={() => setIsMobileMenuOpen(false)}
+          onTriggerScenario={handleTriggerScenario}
+          onResetScenario={handleResetScenario}
+          onOpenVoiceModal={() => setIsVoiceModalOpen(true)}
+          onSearch={setSearchQuery}
+          activeAlertCount={activeAlertCount}
+          onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          onNotificationClick={() => setAdminRoute('alerts')}
         />
 
         {/* Dynamic Route Content Area */}
         <main className={`flex-1 min-w-0 h-full ${adminRoute === 'map' ? 'overflow-hidden flex flex-col' : 'overflow-y-auto p-4 sm:p-6 pb-28'}`}>
           {adminRoute === 'dashboard' && (
             <DashboardView
-            selectedVenue={selectedVenue}
+              selectedVenue={selectedVenue}
               zones={displayedZones}
               alerts={alerts}
               isScenarioActive={isScenarioActive}
@@ -744,11 +745,11 @@ useEffect(() => {
           )}
 
           {adminRoute === 'cameras' && (
-           <CamerasView 
-  cctvFeeds={displayedCctvFeeds} 
-  zones={displayedZones} 
-  selectedVenue={selectedVenue} 
-/>
+            <CamerasView 
+              cctvFeeds={displayedCctvFeeds} 
+              zones={displayedZones} 
+              selectedVenue={selectedVenue} 
+            />
           )}
 
           {adminRoute === 'alerts' && (
@@ -766,7 +767,7 @@ useEffect(() => {
 
           {adminRoute === 'twin' && (
             <DigitalTwinView
-            selectedVenue={selectedVenue}
+              selectedVenue={selectedVenue}
               zones={displayedZones}
             />
           )}
