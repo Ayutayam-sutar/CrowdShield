@@ -1,22 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { VenueInfo, NetworkMode, SupportedLanguage } from '../../types';
 import { parseVoiceCommand } from '../../utils/nlpCommandParser';
-import { VoiceAssistantModal } from './VoiceAssistantModal'; // Adjust path as needed
+import { VoiceAssistantModal } from './VoiceAssistantModal';
 import api from '../../utils/api';
 import { 
   MapPin, 
   Search, 
   Mic, 
   Globe2, 
-  Cloud, 
-  HardDrive, 
-  Zap, 
-  User, 
   Bell, 
   ChevronDown,
   AlertTriangle,
-  RefreshCw,
-  Menu
+  Menu,
+  LogOut 
 } from 'lucide-react';
 
 interface HeaderTopBarProps {
@@ -34,7 +30,7 @@ interface HeaderTopBarProps {
   onSearch: (query: string) => void;
   activeAlertCount: number;
   onToggleMobileMenu?: () => void;
-  isCloudSyncLost: boolean; // real connection state, from App.tsx's network_status event
+  isCloudSyncLost: boolean;
   onNotificationClick: () => void;
 }
 
@@ -63,8 +59,8 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
   const recognitionRef = useRef<any>(null);
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
 
+  // ─── TEAM'S CORE BACKEND LOGIC (100% UNTOUCHED) ───
   useEffect(() => {
-    // Initialize Web Speech API
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
       const recognition = new SpeechRecognition();
@@ -72,9 +68,7 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
       recognition.interimResults = false;
       recognition.lang = 'en-US';
 
-      recognition.onstart = () => {
-        setIsListening(true);
-      };
+      recognition.onstart = () => setIsListening(true);
 
       recognition.onresult = async (event: any) => {
         const transcript = event.results[0][0].transcript;
@@ -82,13 +76,11 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
         const parsed = parseVoiceCommand(transcript);
         
         if (parsed) {
-          // Execute the action automatically
           try {
             await api.post('/interventions/execute', {
               actionId: parsed.action,
               zoneId: parsed.target
             });
-            // Dispatch custom event for Toast in App.tsx
             window.dispatchEvent(new CustomEvent('voice_command_executed', { detail: parsed.message }));
           } catch (err) {
             console.error('Failed to execute voice command intervention', err);
@@ -101,20 +93,15 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
         setIsListening(false);
       };
 
-      recognition.onend = () => {
-        setIsListening(false);
-      };
+      recognition.onend = () => setIsListening(false);
 
       recognitionRef.current = recognition;
     }
   }, []);
 
   const toggleListening = () => {
-    if (isListening) {
-      recognitionRef.current?.stop();
-    } else {
-      recognitionRef.current?.start();
-    }
+    if (isListening) recognitionRef.current?.stop();
+    else recognitionRef.current?.start();
   };
 
   const languages: { code: SupportedLanguage; label: string; name: string }[] = [
@@ -129,86 +116,175 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
     setSearchQuery(e.target.value);
     onSearch(e.target.value);
   };
+  // ──────────────────────────────────────────────────
 
   return (
-    <header className="bg-white border-b border-slate-200 px-3 sm:px-4 py-2 sticky top-0 z-30 shadow-sm font-body flex flex-col gap-2">
-      {/* Row 1: Main Control Row */}
-      <div className="flex items-center justify-between gap-3 w-full">
-        {/* Left: Mobile Drawer Button, Venue Selector & Search */}
-        <div className="flex items-center gap-2 sm:gap-3 flex-1">
-          {/* Mobile Menu Toggle */}
-          {onToggleMobileMenu && (
-            <button
-              onClick={onToggleMobileMenu}
-              className="lg:hidden p-2 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 transition-colors cursor-pointer"
-              title="Toggle Command Menu"
-            >
-              <Menu className="w-4 h-4" />
-            </button>
-          )}
-
-          {/* Venue Selector Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setIsVenueDropdownOpen(!isVenueDropdownOpen)}
-              className="flex items-center gap-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
-            >
-              <MapPin className="w-4 h-4 text-sky-600" />
-              <span className="truncate max-w-[180px] sm:max-w-[240px] font-heading">
-                {selectedVenue ? selectedVenue.name : 'Loading venue...'}
-              </span>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-            </button>
-
-            {isVenueDropdownOpen && (
-              <div className="absolute top-full left-0 mt-1 w-72 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 py-1">
-                <div className="px-3 py-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200">
-                  Active Command Venues
-                </div>
-                {venues.length === 0 ? (
-                  <div className="px-3 py-4 text-xs text-slate-400 flex flex-col items-center gap-1.5 text-center">
-                    <AlertTriangle className="w-4 h-4 text-amber-600" />
-                    <span>No venues loaded from backend yet.</span>
-                    <span className="text-[10px]">Check API connectivity or backend seed data.</span>
-                  </div>
-                ) : (
-                  venues.map((venue) => (
-                    <button
-                      key={venue.id}
-                      onClick={() => {
-                        onSelectVenue(venue);
-                        setIsVenueDropdownOpen(false);
-                      }}
-                      className={`w-full text-left px-3 py-2 text-xs flex flex-col gap-0.5 hover:bg-slate-50 transition-colors ${
-                        selectedVenue && venue.id === selectedVenue.id ? 'bg-sky-50 font-bold border-l-4 border-sky-500' : ''
-                      }`}
-                    >
-                      <span className="text-slate-800">{venue.name}</span>
-                      <span className="text-[11px] text-slate-500 font-mono-num">
-                        {venue.location} · {(venue.currentTotalHeadcount ?? 0).toLocaleString()} active
-                      </span>
-                    </button>
-                  ))
-                )}
-              </div>
+    <>
+      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-slate-200/80 shadow-sm w-full font-body px-3 sm:px-6 py-2.5 sm:py-3 flex flex-col gap-2.5 sm:gap-3 transition-all duration-300">
+        
+        <div className="flex items-center justify-between gap-1.5 sm:gap-4 w-full min-w-0">
+          
+          {/* ── LEFT: Mobile Menu & Venue Dropdown ── */}
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 min-w-0">
+            {onToggleMobileMenu && (
+              <button
+                onClick={onToggleMobileMenu}
+                className="lg:hidden w-9 h-9 sm:w-auto sm:h-auto sm:p-2.5 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 transition-colors cursor-pointer active:scale-95 shadow-sm shrink-0"
+              >
+                <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
             )}
+
+            <div className="relative min-w-0 shrink-0">
+              <button
+                onClick={() => setIsVenueDropdownOpen(!isVenueDropdownOpen)}
+                className="flex items-center gap-1.5 sm:gap-2.5 bg-white hover:bg-slate-50 border border-slate-200 px-2 sm:px-3.5 py-1.5 sm:py-2.5 rounded-xl text-xs sm:text-sm font-heading font-bold text-slate-800 transition-all shadow-sm cursor-pointer active:scale-95 shrink-0"
+              >
+                <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-500 shrink-0" />
+                <span className="truncate max-w-[80px] sm:max-w-[220px]">
+                  {selectedVenue ? selectedVenue.name : 'Loading venue...'}
+                </span>
+                <ChevronDown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 shrink-0" />
+              </button>
+
+              {isVenueDropdownOpen && (
+                <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-slate-200/80 rounded-2xl shadow-xl z-50 py-2 animate-in fade-in zoom-in-95">
+                  <div className="px-5 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                    Active Command Venues
+                  </div>
+                  {venues.length === 0 ? (
+                    <div className="px-5 py-8 text-xs text-slate-500 flex flex-col items-center gap-2 text-center bg-slate-50/50 m-2 rounded-xl border border-slate-100">
+                      <AlertTriangle className="w-6 h-6 text-amber-500" />
+                      <span className="font-bold text-slate-800 text-sm">No venues loaded</span>
+                      <span className="text-[11px] leading-relaxed">Check API connectivity or backend seed data.</span>
+                    </div>
+                  ) : (
+                    <div className="p-1.5 flex flex-col gap-1">
+                      {venues.map((venue) => (
+                        <button
+                          key={venue.id}
+                          onClick={() => {
+                            onSelectVenue(venue);
+                            setIsVenueDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-4 py-3 rounded-xl flex flex-col gap-1 transition-all cursor-pointer ${
+                            selectedVenue && venue.id === selectedVenue.id 
+                              ? 'bg-indigo-50/80 border border-indigo-100' 
+                              : 'bg-transparent hover:bg-slate-50 border border-transparent'
+                          }`}
+                        >
+                          <span className={`font-bold text-sm ${selectedVenue && venue.id === selectedVenue.id ? 'text-indigo-700' : 'text-slate-800'}`}>
+                            {venue.name}
+                          </span>
+                          <span className="text-[10px] text-slate-500 font-mono-num font-semibold flex items-center gap-1.5">
+                            <span className="truncate">{venue.location}</span>
+                            <span className="w-1 h-1 rounded-full bg-slate-300 shrink-0" />
+                            <span className="shrink-0">{(venue.currentTotalHeadcount ?? 0).toLocaleString()} pax</span>
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Global Search Bar */}
-          <div className="relative flex-1 max-w-md hidden md:block">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          {/* ── MIDDLE: Search Bar (Desktop) ── */}
+          <div className="hidden md:flex flex-1 max-w-2xl mx-4 relative group">
+            <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
             <input
               type="text"
               value={searchQuery}
               onChange={handleSearchChange}
               placeholder="Search zones, CCTV cameras, alerts, staff ID..."
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+              className="w-full bg-slate-100 hover:bg-slate-200/60 focus:bg-white border border-transparent focus:border-indigo-300 rounded-2xl pl-11 pr-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-inner"
             />
+          </div>
+
+          {/* ── RIGHT: Voice, Controls, & Profile ── */}
+          <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
+            
+            {/* Sarvam Voice Mic */}
+            <button
+              onClick={() => setIsVoiceModalOpen(true)}
+              className={`flex items-center justify-center gap-2 w-9 h-9 p-0 sm:w-auto sm:px-3.5 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-heading font-bold transition-all cursor-pointer shadow-sm active:scale-95 shrink-0 ${
+                isListening 
+                  ? 'bg-rose-50 text-rose-600 border border-rose-200 shadow-[0_0_15px_rgba(244,63,94,0.4)]' 
+                  : 'bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-md shadow-indigo-500/25 border border-transparent'
+              }`}
+              title="Open Sarvam AI Voice Assistant"
+            >
+              <Mic className={`w-4 h-4 ${isListening ? 'animate-pulse text-rose-500' : ''}`} />
+              <span className="hidden sm:inline tracking-wide">{isListening ? 'Listening...' : 'Sarvam Voice'}</span>
+            </button>
+
+            {/* Language & Notifications Wrap */}
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              <div className="relative shrink-0">
+                <button
+                  onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
+                  className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl transition-colors cursor-pointer shadow-sm active:scale-95 text-slate-600 hover:text-indigo-600"
+                  title="Change Language"
+                >
+                  <Globe2 className="w-4 h-4" />
+                </button>
+
+                {isLangDropdownOpen && (
+                  <div className="absolute top-full right-0 mt-2 w-48 bg-white border border-slate-200/80 rounded-2xl shadow-xl z-50 py-2 animate-in fade-in zoom-in-95">
+                    {languages.map((lang) => (
+                      <button
+                        key={lang.code}
+                        onClick={() => {
+                          onChangeLanguage(lang.code);
+                          setIsLangDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-4 py-2.5 text-xs flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer ${
+                          language === lang.code ? 'font-bold text-indigo-600 bg-indigo-50/50' : 'font-medium text-slate-700'
+                        }`}
+                      >
+                        <span>{lang.name}</span>
+                        <span className="font-mono-num text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">{lang.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <button 
+                onClick={onNotificationClick}
+                className="relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl text-slate-600 hover:text-indigo-600 transition-colors cursor-pointer shadow-sm active:scale-95 shrink-0"
+              >
+                <Bell className="w-4 h-4" />
+                {activeAlertCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4.5 h-4.5 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center font-mono-num animate-in zoom-in shadow-sm border-2 border-white">
+                    {activeAlertCount}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {/* Operator Profile */}
+            <div className="flex items-center gap-2 sm:gap-3 pl-1.5 sm:pl-4 border-l border-slate-200 shrink-0">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 text-white font-bold text-[10px] sm:text-xs flex items-center justify-center font-heading shadow-md shrink-0">
+                OP
+              </div>
+              <div className="hidden sm:flex flex-col min-w-[100px]">
+                <span className="font-heading font-bold text-sm text-slate-900 tracking-tight">operator_01</span>
+                <span className="text-[9px] font-mono-num font-bold text-indigo-500 uppercase tracking-widest mt-0.5">Chief Controller</span>
+              </div>
+              <button 
+                onClick={() => window.dispatchEvent(new Event('unauthorized'))}
+                className="hidden sm:flex p-2 rounded-xl hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
+                title="Secure Logout"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+            
           </div>
         </div>
 
-        {/* Right Controls: Mode Toggle, Crisis Trigger, Voice, Language */}
-        <div className="flex items-center gap-2 flex-wrap justify-end">
           {/* Crisis Demo Trigger */}
           {/* {isScenarioActive ? (
             <button
@@ -228,95 +304,26 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
             </button>
           )} */}
 
-          {/* Sarvam Voice Mic Assistant Button */}
-          <button
-    onClick={() => setIsVoiceModalOpen(true)}
-    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer border ${
-      isListening 
-        ? 'bg-rose-50 text-rose-600 border-rose-300 shadow-sm' 
-        : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border-indigo-200'
-    }`}
-    title="Open Sarvam AI Voice Command Assistant"
-  >
-    <Mic className={`w-3.5 h-3.5 ${isListening ? 'animate-bounce' : ''}`} />
-    <span className="hidden sm:inline">{isListening ? 'Listening...' : 'Sarvam Voice'}</span>
-  </button>
 
-          {/* Language Selector Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
-              className="flex items-center gap-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-2.5 py-1.5 rounded-lg text-xs font-mono-num font-semibold text-slate-700 transition-colors cursor-pointer"
-            >
-              <Globe2 className="w-3.5 h-3.5 text-slate-400" />
-              <span>{language.toUpperCase()}</span>
-            </button>
-
-            {isLangDropdownOpen && (
-              <div className="absolute top-full right-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl z-50 py-1">
-                {languages.map((lang) => (
-                  <button
-                    key={lang.code}
-                    onClick={() => {
-                      onChangeLanguage(lang.code);
-                      setIsLangDropdownOpen(false);
-                    }}
-                    className={`w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-slate-50 ${
-                      language === lang.code ? 'bg-sky-50 font-bold text-sky-600' : 'text-slate-700'
-                    }`}
-                  >
-                    <span>{lang.name}</span>
-                    <span className="font-mono text-[10px] text-slate-400">{lang.label}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Alert Notification Bell */}
-          <div className="relative">
-            <button 
-              onClick={onNotificationClick}
-              className="p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
-            >
-              <Bell className="w-4 h-4" />
-              {activeAlertCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-600 text-white text-[10px] font-bold flex items-center justify-center font-mono-num">
-                  {activeAlertCount}
-                </span>
-              )}
-            </button>
-          </div>
-
+        {/* ── MOBILE ONLY: Search Bar ── */}
+        <div className="md:hidden w-full relative mt-0.5 group">
+          <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={handleSearchChange}
+            placeholder="Search zones, alerts, staff ID..."
+            className="w-full bg-slate-100 hover:bg-slate-200/60 focus:bg-white border border-transparent focus:border-indigo-300 rounded-xl pl-11 pr-4 py-2.5 text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-inner"
+          />
         </div>
-      </div>
+      </header>
 
-      {/* Row 2: Operator Session Info & Logout */}
-      <div className="flex items-center justify-end text-xs text-slate-500 px-1 border-t border-slate-100 pt-1.5 mt-0.5 w-full">
-        {/* Right Side: Operator profile & logout button */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-full bg-sky-500 text-white font-bold text-[10px] flex items-center justify-center font-heading">
-              OP
-            </div>
-            <span className="font-bold text-slate-700">operator_01</span>
-            <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">Chief Controller</span>
-          </div>
-          <button 
-            onClick={() => window.dispatchEvent(new Event('unauthorized'))}
-            className="p-1 rounded hover:bg-red-50 text-rose-600 transition-colors cursor-pointer bg-transparent border-none flex items-center justify-center"
-            title="Logout"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-log-out"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" x2="9" y1="12" y2="12"></line></svg>
-          </button>
-          {/* Add this at the bottom of your Header component */}
+      {/* 🚨 FIX APPLIED: Modal is rendered OUTSIDE the sticky header to prevent stacking context clipping bugs! */}
       <VoiceAssistantModal 
         isOpen={isVoiceModalOpen}
         onClose={() => setIsVoiceModalOpen(false)}
         onExecuteCommand={(cmd) => console.log("Executing:", cmd)}
       />
-        </div>
-      </div>
-    </header>
+    </>
   );
 };

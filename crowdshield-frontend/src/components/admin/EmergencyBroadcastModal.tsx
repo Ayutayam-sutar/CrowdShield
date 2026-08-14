@@ -9,7 +9,9 @@ import {
   CheckCircle2, 
   Play,
   Square,
-  Share2
+  Share2,
+  Sparkles,
+  ShieldAlert
 } from 'lucide-react';
 import { SupportedLanguage, VenueZone } from '../../types';
 import { SARVAM_TRANSLATIONS } from '../../data/mockData';
@@ -57,13 +59,13 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
     return currentTranslation.announcementText || '';
   };
 
+  // ─── TEAM'S BACKEND LOGIC (100% UNTOUCHED) ───
   const handlePlayPA = async () => {
     const script = getDynamicScript();
     setIsPlayingAudio(true);
     speakAnnouncement(script, activeLang);
 
     try {
-      // Hit the new Broadcast endpoint
       await api.post('/broadcast/', { 
         text: script,
         target_language: activeLang,
@@ -95,7 +97,6 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
       window.dispatchEvent(new CustomEvent('system_dispatch', { detail: { type: 'success', message } }));
       setDispatchLog((prev) => [`[${new Date().toLocaleTimeString()}] ${message}`, ...prev]);
       
-      // ✅ FIX: Reset button after 3 seconds
       setTimeout(() => setIsCellBroadcastSent(false), 3000); 
     } catch (error) {
       console.warn('Intervention logged locally:', error);
@@ -117,7 +118,6 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
       window.dispatchEvent(new CustomEvent('system_dispatch', { detail: { type: 'warning', message } }));
       setDispatchLog((prev) => [`[${new Date().toLocaleTimeString()}] ${message}`, ...prev]);
       
-      // ✅ FIX: Reset button after 3 seconds
       setTimeout(() => setIsGateUnlocked(false), 3000);
     } catch (error) {
       console.warn('Intervention logged locally:', error);
@@ -139,7 +139,6 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
       window.dispatchEvent(new CustomEvent('system_dispatch', { detail: { type: 'warning', message } }));
       setDispatchLog((prev) => [`[${new Date().toLocaleTimeString()}] ${message}`, ...prev]);
       
-      // ✅ FIX: Reset button after 3 seconds
       setTimeout(() => setIsGuardsDispatched(false), 3000);
     } catch (error) {
       console.warn('Intervention logged locally:', error);
@@ -168,48 +167,54 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
     }
   };
 
+  // ─── UI RENDER ───
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-body animate-fadeIn">
-      <div className="bg-white border-2 border-[#FF3B5C] rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[90vh] text-slate-800">
-        {/* Header */}
-        <div className="bg-[#FF3B5C] text-white p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/20 rounded-xl">
-              <Radio className="w-6 h-6 animate-pulse" />
+    <div className="fixed inset-0 z-[700] flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 sm:p-6 font-body animate-fadeIn">
+      <div className="bg-white border-2 border-rose-500 rounded-3xl shadow-2xl max-w-3xl w-full overflow-hidden flex flex-col max-h-[92vh] text-slate-800">
+        
+        {/* Header (High-Risk Red Banner with Brand Touch) */}
+        <div className="bg-gradient-to-r from-rose-600 to-red-700 text-white p-5 sm:p-6 flex items-center justify-between shadow-md relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16 pointer-events-none" />
+          
+          <div className="flex items-center gap-4 relative z-10">
+            <div className="p-3 bg-white/20 backdrop-blur-md rounded-2xl shadow-inner">
+              <Radio className="w-6 h-6 sm:w-7 sm:h-7 animate-pulse text-white" />
             </div>
-            <div>
-              <h2 className="font-heading font-bold text-lg leading-tight">
+            <div className="flex flex-col gap-1">
+              <h2 className="font-heading font-black text-base sm:text-lg tracking-tight leading-none">
                 EMERGENCY CROWD DISPATCH & PA BROADCAST
               </h2>
-              <p className="text-xs text-white/80">
-                Target Sector: {targetZoneName} ({formattedHeadcount} Active Headcount)
+              <p className="text-xs font-mono font-bold text-white/95 tracking-wide">
+                Target Sector: <span className="underline decoration-white/40">{targetZoneName}</span> ({formattedHeadcount} Active Headcount)
               </p>
             </div>
           </div>
+
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer border-none bg-transparent"
+            className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer border border-white/20 shadow-sm relative z-10 active:scale-95"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="p-5 overflow-y-auto flex flex-col gap-5 bg-white">
+        <div className="p-5 sm:p-7 overflow-y-auto flex flex-col gap-6 bg-slate-50/50 smooth-scroll">
+          
           {/* Section 1: Multilingual Sarvam AI PA Audio */}
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-xs flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <span className="font-heading font-bold text-sm text-slate-800 flex items-center gap-2">
-                <Volume2 className="w-4 h-4 text-indigo-600" />
+          <div className="bg-white border border-slate-200/80 rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+              <span className="font-heading font-black text-xs sm:text-sm text-slate-900 flex items-center gap-2.5 tracking-tight uppercase">
+                <Volume2 className="w-4 h-4 text-[#67b2b9]" />
                 1. Sarvam AI Multilingual PA System Announcement
               </span>
-              <div className="flex items-center gap-1">
+              <div className="flex flex-wrap items-center gap-1.5">
                 {supportedLanguages.map((l) => (
                   <button
                     key={l}
                     onClick={() => setActiveLang(l)}
-                    className={`px-2 py-0.5 rounded text-xs font-mono-num font-bold transition-colors border cursor-pointer ${
-                      activeLang === l ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-100'
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-black border transition-all shadow-2xs cursor-pointer ${
+                      activeLang === l ? 'bg-[#648d6a] border-[#648d6a] text-white shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-800'
                     }`}
                   >
                     {l.toUpperCase()}
@@ -218,136 +223,135 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
               </div>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded-lg p-3 text-xs text-slate-700 font-mono-num">
-              <span className="font-bold text-indigo-600 block mb-1">
+            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 text-xs sm:text-sm text-slate-700 font-mono shadow-inner leading-relaxed">
+              <span className="font-black text-[#648d6a] block mb-1 text-[10px] uppercase tracking-widest">
                 Script ({currentTranslation.langName}):
               </span>
               "{getDynamicScript()}"
             </div>
 
-            <div className="flex items-center justify-between gap-3">
-              <button
-                onClick={handlePlayPA}
-                disabled={isPlayingAudio}
-                className={`flex-1 py-2.5 px-4 rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border-none ${
-                  isPlayingAudio
-                    ? 'bg-indigo-600 text-white animate-pulse'
-                    : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md'
-                }`}
-              >
-                {isPlayingAudio ? (
-                  <>
-                    <Square className="w-4 h-4 fill-current" />
-                    <span>Broadcasting Audio Wave ({currentTranslation.langName})...</span>
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-4 h-4 fill-current" />
-                    <span>Broadcast PA Announcement ({currentTranslation.langName})</span>
-                  </>
-                )}
-              </button>
-            </div>
+            <button
+              onClick={handlePlayPA}
+              disabled={isPlayingAudio}
+              className={`w-full py-3.5 px-5 rounded-2xl font-heading font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all cursor-pointer border-none shadow-md active:scale-95 ${
+                isPlayingAudio
+                  ? 'bg-[#648d6a] text-white animate-pulse'
+                  : 'bg-gradient-to-r from-[#67b2b9] to-[#648d6a] hover:opacity-95 text-white shadow-[#67b2b9]/30'
+              }`}
+            >
+              {isPlayingAudio ? (
+                <>
+                  <Square className="w-4 h-4 fill-current" />
+                  <span>Broadcasting Audio ({currentTranslation.langName})...</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4 fill-current" />
+                  <span>Broadcast PA Announcement ({currentTranslation.langName})</span>
+                </>
+              )}
+            </button>
           </div>
 
-          {/* Section 2: Direct Interventions Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-slate-800">
+          {/* Section 2: Direct Interventions Grid (Admin Friendly, Polished Cards) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            
             {/* SMS Cell Broadcast */}
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col justify-between gap-3">
-              <div>
-                <span className="text-xs font-bold text-slate-800 block">SMS Cell Broadcast</span>
-                <span className="text-[11px] text-slate-500">Push alert to mobile devices</span>
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-4 flex flex-col justify-between gap-4 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex flex-col gap-1">
+                <span className="font-heading font-black text-xs text-slate-900 tracking-tight">SMS Cell Broadcast</span>
+                <span className="text-[11px] text-slate-500 font-medium">Push alert to mobile devices</span>
               </div>
               <button
                 onClick={handleSendSMS}
-                className={`w-full py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer border-none ${
+                className={`w-full py-2.5 px-3 rounded-xl font-heading font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer border-none shadow-sm active:scale-95 ${
                   isCellBroadcastSent
-                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
-                    : 'bg-sky-600 text-white hover:bg-sky-700'
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    : 'bg-sky-600 text-white hover:bg-sky-700 shadow-sky-600/20'
                 }`}
               >
                 {isCellBroadcastSent ? <CheckCircle2 className="w-4 h-4" /> : <Send className="w-4 h-4" />}
-                <span>{isCellBroadcastSent ? 'SMS Dispatched' : 'Push SMS Alert'}</span>
+                <span>{isCellBroadcastSent ? 'Dispatched' : 'Push SMS Alert'}</span>
               </button>
             </div>
 
-            {/* Remote Gate Override */}
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col justify-between gap-3">
-              <div>
-                <span className="text-xs font-bold text-slate-800 block">Gate Egress Override</span>
-                <span className="text-[11px] text-slate-500">Unlock turnstiles for {targetZoneName}</span>
+            {/* Gate Exit Override (Easier admin terminology) */}
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-4 flex flex-col justify-between gap-4 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex flex-col gap-1">
+                <span className="font-heading font-black text-xs text-slate-900 tracking-tight">Gate Exit Override</span>
+                <span className="text-[11px] text-slate-500 font-medium">Unlock turnstiles for {targetZoneName}</span>
               </div>
               <button
                 onClick={handleUnlockGates}
-                className={`w-full py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer border-none ${
+                className={`w-full py-2.5 px-3 rounded-xl font-heading font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer border-none shadow-sm active:scale-95 ${
                   isGateUnlocked
-                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
-                    : 'bg-amber-500 text-white hover:bg-amber-600'
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    : 'bg-amber-500 text-white hover:bg-amber-600 shadow-amber-500/20'
                 }`}
               >
                 {isGateUnlocked ? <CheckCircle2 className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
-                <span>{isGateUnlocked ? 'Gates Unlocked' : 'Unlock Aux Gates'}</span>
+                <span>{isGateUnlocked ? 'Unlocked' : 'Unlock Exits'}</span>
               </button>
             </div>
 
             {/* Response Guards */}
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col justify-between gap-3">
-              <div>
-                <span className="text-xs font-bold text-slate-800 block">Dispatch Security Squad</span>
-                <span className="text-[11px] text-slate-500">Send response team to {targetZoneName}</span>
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-4 flex flex-col justify-between gap-4 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex flex-col gap-1">
+                <span className="font-heading font-black text-xs text-slate-900 tracking-tight">Security Squad</span>
+                <span className="text-[11px] text-slate-500 font-medium">Send response team to sector</span>
               </div>
               <button
                 onClick={handleDeployGuards}
-                className={`w-full py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-slate-200 ${
+                className={`w-full py-2.5 px-3 rounded-xl font-heading font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm active:scale-95 border ${
                   isGuardsDispatched
-                    ? 'bg-emerald-50 text-emerald-600 border-emerald-200 border-solid'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                 }`}
               >
                 {isGuardsDispatched ? <CheckCircle2 className="w-4 h-4" /> : <Users className="w-4 h-4" />}
-                <span>{isGuardsDispatched ? 'Guards En Route' : 'Dispatch Guards'}</span>
+                <span>{isGuardsDispatched ? 'En Route' : 'Dispatch Guards'}</span>
               </button>
             </div>
 
             {/* Social Media Broadcast */}
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col justify-between gap-3">
-              <div>
-                <span className="text-xs font-bold text-slate-800 block">Social Media Alert</span>
-                <span className="text-[11px] text-slate-500">Post alert to Twitter/X</span>
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-4 flex flex-col justify-between gap-4 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex flex-col gap-1">
+                <span className="font-heading font-black text-xs text-slate-900 tracking-tight">Social Media Alert</span>
+                <span className="text-[11px] text-slate-500 font-medium">Post alert to Twitter/X</span>
               </div>
               <button
                 onClick={handleSendSocial}
-                className={`w-full py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer border-none ${
+                className={`w-full py-2.5 px-3 rounded-xl font-heading font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer border-none shadow-sm active:scale-95 ${
                   isSocialMediaSent
-                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
-                    : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-600/20'
                 }`}
               >
                 {isSocialMediaSent ? <CheckCircle2 className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
-                <span>{isSocialMediaSent ? 'Dispatched' : 'Post to Social'}</span>
+                <span>{isSocialMediaSent ? 'Posted' : 'Post to Social'}</span>
               </button>
             </div>
           </div>
 
-          {/* Live Dispatch Log */}
-          <div className="bg-slate-50 border border-slate-200 text-slate-700 p-4 rounded-xl font-mono-num text-xs flex flex-col gap-2 shadow-xs">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-              <span className="text-emerald-600 font-bold text-[11px] uppercase tracking-wider flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+          {/* Live Dispatch Audit Log (IBM Plex Mono High-Tech Terminal) */}
+          <div className="bg-slate-900 border border-slate-800 text-slate-300 p-5 rounded-3xl font-mono text-xs flex flex-col gap-3 shadow-xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <span className="text-[#67b2b9] font-black text-[11px] uppercase tracking-widest flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse" />
                 Live Intervention Logs
               </span>
-              <span className="text-[10px] text-slate-500">Edge Controller Audit Trail</span>
+              <span className="text-[10px] text-slate-500 font-bold tracking-widest bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700">AUDIT TRAIL</span>
             </div>
             {dispatchLog.length === 0 ? (
-              <div className="text-slate-500 text-xs py-2 italic font-body">
+              <div className="text-slate-500 text-xs py-3 italic font-body opacity-80">
                 No active dispatch logs in current session. Click PA Broadcast or Intervention CTAs above to execute emergency commands.
               </div>
             ) : (
-              <div className="flex flex-col gap-1.5 max-h-32 overflow-y-auto pr-1">
+              <div className="flex flex-col gap-2 max-h-36 overflow-y-auto pr-1 smooth-scroll">
                 {dispatchLog.map((log, idx) => (
-                  <div key={idx} className="text-slate-600 border-b border-slate-200 pb-1.5 text-[11px] leading-snug last:border-0 font-mono-num font-medium flex items-start gap-2">
-                    <span className="text-sky-600 font-bold">›</span>
-                    <span>{log}</span>
+                  <div key={idx} className="text-slate-300 border-b border-slate-800/60 pb-2 text-xs leading-relaxed last:border-0 font-mono font-medium flex items-start gap-2.5">
+                    <span className="text-[#67b2b9] font-black">›</span>
+                    <span className="truncate">{log}</span>
                   </div>
                 ))}
               </div>
@@ -356,10 +360,10 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
         </div>
 
         {/* Footer */}
-        <div className="bg-slate-50 border-t border-slate-200 p-3 flex justify-end gap-2">
+        <div className="bg-white border-t border-slate-200/80 p-4 sm:p-5 flex justify-end gap-3 shadow-sm">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-xs rounded-xl border-none transition-colors cursor-pointer"
+            className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-heading font-black text-xs uppercase tracking-wider rounded-2xl border border-slate-200 transition-all cursor-pointer active:scale-95 shadow-2xs"
           >
             Close Window
           </button>

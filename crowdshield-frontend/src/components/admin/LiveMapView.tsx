@@ -11,9 +11,13 @@ import {
   X,
   VideoOff,
   RefreshCw,
-  Navigation
+  Navigation,
+  ChevronUp,
+  ChevronDown,
+  Activity
 } from 'lucide-react';
 
+// ─── MAP UPDATER (UNTOUCHED) ───
 const MapUpdater: React.FC<{ center: [number, number]; resizeTrigger?: unknown }> = ({ center, resizeTrigger }) => {
   const map = useMap();
 
@@ -21,11 +25,6 @@ const MapUpdater: React.FC<{ center: [number, number]; resizeTrigger?: unknown }
     map.setView(center, map.getZoom());
   }, [center, map]);
 
-  // Leaflet calculates its render size once on mount. If the container's
-  // real size isn't settled yet (fonts still loading, flex layout still
-  // resolving), it renders at a stale size - this is the "pop in late"
-  // effect. Forcing invalidateSize() on mount and whenever layout-affecting
-  // things change (CCTV panel expand/collapse, window resize) fixes it.
   React.useEffect(() => {
     const t1 = setTimeout(() => map.invalidateSize(), 100);
     const t2 = setTimeout(() => map.invalidateSize(), 500);
@@ -44,6 +43,7 @@ const MapUpdater: React.FC<{ center: [number, number]; resizeTrigger?: unknown }
   return null;
 };
 
+// ─── LOCATE ME CONTROL (UI ENHANCED) ───
 const LocateMeControl = ({ onLocate, onError }: { onLocate: (loc: [number, number]) => void, onError: (msg: string) => void }) => {
   const map = useMap();
 
@@ -68,35 +68,30 @@ const LocateMeControl = ({ onLocate, onError }: { onLocate: (loc: [number, numbe
     <div className="absolute top-4 right-4 z-[400]">
       <button
         onClick={handleLocate}
-        className="bg-white/95 backdrop-blur-md p-2 px-3 rounded-xl shadow-lg border border-[#E7E5DD] text-[#2C7BE5] hover:bg-[#2C7BE5] hover:text-white transition-colors flex items-center gap-2 font-bold text-sm cursor-pointer"
+        className="bg-white/90 backdrop-blur-md p-2.5 sm:px-4 rounded-xl shadow-lg border border-slate-200 text-[#67b2b9] hover:bg-gradient-to-r hover:from-[#67b2b9] hover:to-[#648d6a] hover:text-white transition-all duration-300 flex items-center gap-2 font-bold text-sm cursor-pointer active:scale-95 group"
         title="My Location"
       >
-        <Navigation className="w-5 h-5" />
-        <span className="hidden sm:inline">Locate Me</span>
+        <Navigation className="w-5 h-5 group-hover:animate-pulse" />
+        <span className="hidden sm:inline tracking-wide">Locate Me</span>
       </button>
     </div>
   );
 };
 
+// ─── UTILS (UNTOUCHED) ───
 export const getRiskColor = (riskLevel: string): string => {
   switch ((riskLevel || '').toLowerCase()) {
-    case 'critical':
-      return '#FF3B5C'; // Red
-    case 'warning':
-      return '#FF7A45'; // Orange
-    case 'caution':
-      return '#FFB627'; // Yellow
+    case 'critical': return '#FF3B5C'; // Red
+    case 'warning': return '#FF7A45'; // Orange
+    case 'caution': return '#FFB627'; // Yellow
     case 'safe':
-    default:
-      return '#22D3A6'; // Green
+    default: return '#22D3A6'; // Green
   }
 };
 
 const isLegacyPhantomZone = (id: string): boolean => /^z-0?\d$/i.test(id || '');
 
-// --- MATHEMATICAL FIX: Force massive backend polygons to shrink down to buildings ---
 const getTightPolygon = (center: [number, number], existingPolygon?: any[]): [number, number][] => {
-  // If the backend provided valid coordinates, use them (force them to be Numbers)
   if (Array.isArray(existingPolygon) && existingPolygon.length >= 3) {
     const lats = existingPolygon.map(p => Number(p[0]));
     const maxSpan = Math.max(...lats) - Math.min(...lats);
@@ -104,12 +99,8 @@ const getTightPolygon = (center: [number, number], existingPolygon?: any[]): [nu
       return existingPolygon.map(p => [Number(p[0]), Number(p[1])]);
     }
   }
-
-  // Ensure lat/lng are strictly treated as math numbers, not strings
   const lat = Number(center[0]);
   const lng = Number(center[1]);
-  
-  // Increased size so the box visibly frames the HTML marker
   const dLat = 0.0003; 
   const dLng = 0.0004; 
 
@@ -120,7 +111,6 @@ const getTightPolygon = (center: [number, number], existingPolygon?: any[]): [nu
     [lat - dLat, lng - dLng],
   ];
 };
-// -----------------------------------------------------------------------------------
 
 interface LiveMapViewProps {
   selectedVenue: VenueInfo | null;
@@ -130,6 +120,7 @@ interface LiveMapViewProps {
   onToggleCctvExpanded: () => void;
 }
 
+// ─── MAIN COMPONENT ───
 export const LiveMapView: React.FC<LiveMapViewProps> = ({
   selectedVenue,
   zones = [],
@@ -143,27 +134,22 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [localToast, setLocalToast] = useState<string | null>(null);
 
-  // FIXED: Auto-center on ITER or Kalinga based on selection
+  // ─── LOGIC (UNTOUCHED) ───
   const centerCoords: [number, number] = useMemo(() => {
     if (selectedVenue?.centerCoords) return selectedVenue.centerCoords;
     const isKalingaSelected = selectedVenue?.id?.includes('kalinga') || selectedVenue?.name?.includes('Kalinga');
     return isKalingaSelected ? [20.2880, 85.8238] : [20.2494, 85.8000];
   }, [selectedVenue]);
 
-  // --- MATHEMATICAL FIX: Filter CCTV feeds by the active venue ---
   const filteredCctvFeeds = useMemo(() => {
     const isKalingaSelected = selectedVenue?.id?.includes('kalinga') || selectedVenue?.name?.includes('Kalinga');
-    
     return cctvFeeds.filter((feed) => {
       const isKalingaFeed = (feed.zoneId || '').toLowerCase().startsWith('ks_') || feed.id.startsWith('ks_');
-      
-      if (isKalingaSelected) {
-        return isKalingaFeed; // Show only Kalinga cameras
-      }
-      return !isKalingaFeed;  // Show only ITER cameras
+      if (isKalingaSelected) return isKalingaFeed;
+      return !isKalingaFeed;
     });
   }, [cctvFeeds, selectedVenue]);
-  // FIXED: Only show zones that belong to the selected venue
+
   const cleanZones = useMemo(() => {
     return zones.filter((z) => {
       if (isLegacyPhantomZone(z.id)) return false;
@@ -172,9 +158,7 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
         return venueId === selectedVenue.id;
       }
       const isKalingaSelected = selectedVenue?.id?.includes('kalinga') || selectedVenue?.name?.includes('Kalinga');
-      if (isKalingaSelected) {
-        return z.id.startsWith('ks_');
-      }
+      if (isKalingaSelected) return z.id.startsWith('ks_');
       return !z.id.startsWith('ks_');
     });
   }, [zones, selectedVenue]);
@@ -219,81 +203,77 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
       if (targetId && (zid === targetId || zcode === targetId)) return true;
       if (camNum) {
         const num = parseInt(camNum, 10);
-        if (zid.includes(`z-${num}`) || zid.includes(`z-0${num}`) || zcode.includes(`z-${num}`) || zcode.includes(`z-0${num}`)) {
-          return true;
-        }
+        if (zid.includes(`z-${num}`) || zid.includes(`z-0${num}`) || zcode.includes(`z-${num}`) || zcode.includes(`z-0${num}`)) return true;
       }
       return false;
     }) || null;
   };
 
   const createZoneMarkerIcon = (code: string, density: number, riskLevel: string) => {
-    let colorClass = 'bg-[#22D3A6] text-white';
-    if (riskLevel === 'critical') colorClass = 'bg-[#FF3B5C] text-white animate-pulse';
-    else if (riskLevel === 'warning') colorClass = 'bg-[#FF7A45] text-white';
-    else if (riskLevel === 'caution') colorClass = 'bg-[#FFB627] text-[#151726]';
+    let colorClass = 'bg-[#22D3A6] text-white border-white/20';
+    if (riskLevel === 'critical') colorClass = 'bg-[#FF3B5C] text-white animate-pulse border-white/50 shadow-[0_0_15px_rgba(255,59,92,0.6)]';
+    else if (riskLevel === 'warning') colorClass = 'bg-[#FF7A45] text-white border-white/30';
+    else if (riskLevel === 'caution') colorClass = 'bg-[#FFB627] text-slate-900 border-white/30';
 
     return L.divIcon({
-      className: 'custom-leaflet-marker',
+      className: 'custom-leaflet-marker bg-transparent border-0',
       html: `
-        <div class="px-2 py-1 rounded-md font-mono font-bold text-xs shadow-lg border border-white flex items-center gap-1 ${colorClass}">
+        <div class="px-2.5 py-1 rounded-lg font-mono font-black text-xs shadow-xl border flex items-center gap-1.5 transition-all ${colorClass}">
           <span>${code}</span>
-          <span class="text-[10px] bg-black/20 px-1 rounded">${Number(density || 0).toFixed(2)}p/m²</span>
+          <span class="text-[10px] bg-black/20 backdrop-blur-sm px-1.5 py-0.5 rounded-md tracking-wider">${Number(density || 0).toFixed(1)}</span>
         </div>
       `,
-      iconSize: [80, 26],
-      iconAnchor: [40, 13],
+      iconSize: [85, 30],
+      iconAnchor: [42, 15],
     });
   };
 
+  // ─── UI RENDER ───
   return (
-    <div className="flex flex-col h-full w-full relative font-body select-none">
-      <div className="bg-white border-b border-[#E7E5DD] px-4 py-2 flex items-center justify-between z-10">
+    <div className="flex flex-col h-full w-full relative font-body select-none bg-slate-50">
+      
+      {/* ── MAP HEADER (Premium Glassmorphism) ── */}
+      <div className="bg-white/80 backdrop-blur-xl border-b border-slate-200/80 px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center justify-between z-10 shadow-sm gap-2 sm:gap-0">
         <div className="flex items-center gap-3">
-          <h2 className="font-heading font-bold text-base text-[#151726]">
-            Spatial Telemetry & Heatmap Overlay
-          </h2>
-          <span className="text-xs text-[#5B5F73]">
-            {selectedVenue ? selectedVenue.name : 'Awaiting Edge Telemetry...'}
-          </span>
+          <div className="p-1.5 rounded-lg bg-gradient-to-br from-[#67b2b9] to-[#648d6a] text-white shadow-inner shrink-0">
+            <Activity className="w-4 h-4" />
+          </div>
+          <div className="flex flex-col">
+            <h2 className="font-heading font-black text-sm sm:text-base text-slate-900 tracking-tight">
+              Spatial Telemetry & Heatmap
+            </h2>
+            <span className="text-[10px] sm:text-xs text-slate-500 font-medium">
+              {selectedVenue ? selectedVenue.name : 'Awaiting Edge Telemetry...'}
+            </span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3 text-xs font-mono-num">
-          <span className="flex items-center gap-1 text-[#22D3A6]">
-            <span className="w-3 h-3 rounded bg-[#22D3A6]" /> Safe
-          </span>
-          <span className="flex items-center gap-1 text-[#FFB627]">
-            <span className="w-3 h-3 rounded bg-[#FFB627]" /> Caution
-          </span>
-          <span className="flex items-center gap-1 text-[#FF7A45]">
-            <span className="w-3 h-3 rounded bg-[#FF7A45]" /> Warning
-          </span>
-          <span className="flex items-center gap-1 text-[#FF3B5C]">
-            <span className="w-3 h-3 rounded bg-[#FF3B5C]" /> Critical
-          </span>
+        <div className="flex items-center gap-3 sm:gap-4 text-[10px] sm:text-xs font-mono font-bold tracking-wider uppercase bg-slate-100/50 px-3 py-1.5 rounded-xl border border-slate-200/50">
+          <span className="flex items-center gap-1.5 text-slate-600"><span className="w-2.5 h-2.5 rounded-full bg-[#22D3A6] shadow-sm" /> Safe</span>
+          <span className="flex items-center gap-1.5 text-slate-600"><span className="w-2.5 h-2.5 rounded-full bg-[#FFB627] shadow-sm" /> Caut</span>
+          <span className="flex items-center gap-1.5 text-slate-600"><span className="w-2.5 h-2.5 rounded-full bg-[#FF7A45] shadow-sm" /> Warn</span>
+          <span className="flex items-center gap-1.5 text-slate-600"><span className="w-2.5 h-2.5 rounded-full bg-[#FF3B5C] shadow-sm animate-pulse" /> Crit</span>
         </div>
       </div>
 
+      {/* ── MAP AREA ── */}
       <div className="flex-1 w-full min-h-0 relative z-0">
         {localToast && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[500] bg-[#FF3B5C] text-white px-4 py-2 rounded-lg shadow-xl font-body text-sm font-bold animate-fadeIn">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[500] bg-[#FF3B5C] text-white px-5 py-2.5 rounded-xl shadow-xl font-body text-sm font-bold animate-fadeIn tracking-wide">
             {localToast}
           </div>
         )}
+        
         {cleanZones.length === 0 && (
-          <div className="absolute inset-0 z-[450] bg-white/70 backdrop-blur-sm flex items-center justify-center pointer-events-none">
-            <div className="bg-white shadow-xl rounded-2xl px-5 py-3 flex items-center gap-3 border border-[#E7E5DD]">
-              <span className="w-4 h-4 rounded-full border-2 border-[#2C7BE5] border-t-transparent animate-spin" />
-              <span className="text-sm font-bold text-[#151726]">Loading zone telemetry…</span>
+          <div className="absolute inset-0 z-[450] bg-white/40 backdrop-blur-md flex items-center justify-center pointer-events-none">
+            <div className="bg-white shadow-2xl rounded-2xl px-6 py-4 flex items-center gap-4 border border-slate-200/80">
+              <span className="w-5 h-5 rounded-full border-2 border-[#67b2b9] border-t-transparent animate-spin" />
+              <span className="text-sm font-bold text-slate-800 tracking-wide">Loading zone telemetry…</span>
             </div>
           </div>
         )}
-        <MapContainer
-          center={centerCoords}
-          zoom={17}
-          scrollWheelZoom={true}
-          className="w-full h-full"
-        >
+
+        <MapContainer center={centerCoords} zoom={17} scrollWheelZoom={true} className="w-full h-full z-0">
           <MapUpdater center={centerCoords} resizeTrigger={isCctvExpanded} />
           <LocateMeControl onLocate={setUserLocation} onError={showToastError} />
 
@@ -301,35 +281,29 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
             <Marker
               position={userLocation}
               icon={L.divIcon({
-                className: 'custom-user-marker',
-                html: `<div class="w-4 h-4 bg-[#2C7BE5] border-2 border-white rounded-full shadow-[0_0_10px_rgba(44,123,229,0.8)] animate-pulse"></div>`,
+                className: 'custom-user-marker bg-transparent border-0',
+                html: `<div class="w-4 h-4 bg-[#67b2b9] border-2 border-white rounded-full shadow-[0_0_15px_rgba(103,178,185,0.9)] animate-pulse"></div>`,
                 iconSize: [16, 16],
                 iconAnchor: [8, 8],
               })}
             >
               <Popup>
-                <div className="text-xs font-bold text-center font-heading text-[#151726]">You Are Here</div>
+                <div className="text-xs font-black text-center font-heading text-slate-800">You Are Here</div>
               </Popup>
             </Marker>
           )}
 
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
 
-        {cleanZones.map((zone) => {
+          {cleanZones.map((zone) => {
             const polygonColor = getRiskColor(zone.riskLevel);
-            
-            // Bulletproof coordinate extraction for both camelCase and snake_case
             const lat = Number(zone.center?.[0] ?? (zone as any).center_lat ?? (zone as any).centerLat ?? 0);
             const lng = Number(zone.center?.[1] ?? (zone as any).center_lng ?? (zone as any).centerLng ?? 0);
             const center: [number, number] = [lat, lng];
-            
-            // Check all possible JSON fields the backend might have used
             const existingPoly = zone.polygon || (zone as any).coordinates_json || (zone as any).coordinatesJson;
-            
-            // Generate the visible polygon
             const tightPolygon = getTightPolygon(center, existingPoly);
 
             return (
@@ -339,59 +313,57 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
                   pathOptions={{
                     color: polygonColor,
                     fillColor: polygonColor,
-                    fillOpacity: 0.35,
-                    weight: 3,
+                    fillOpacity: 0.25,
+                    weight: 2,
+                    dashArray: '5, 5'
                   }}
                 >
-                  <Popup>
-                    <div className="p-1 font-body text-xs flex flex-col gap-1 min-w-[170px]">
-                      <span className="font-heading font-bold text-sm text-[#151726]">
-                        {zone.name} ({zone.code})
+                  <Popup className="premium-popup">
+                    <div className="p-1 font-body flex flex-col gap-1.5 min-w-[180px]">
+                      <span className="font-heading font-black text-sm text-slate-900 border-b border-slate-100 pb-1">
+                        {zone.name} <span className="text-slate-400 font-mono text-xs">({zone.code})</span>
                       </span>
-                      <span className="text-[11px] text-[#5B5F73] font-mono-num">
-                        Headcount: <strong className="text-[#151726]">{(zone.currentHeadcount ?? 0).toLocaleString()}</strong> / {zone.maxCapacity?.toLocaleString() ?? 'N/A'}
-                      </span>
-                      <span className="text-[11px] text-[#5B5F73] font-mono-num">
-                        Density: <strong className="text-[#151726]">{Number(zone.density || 0).toFixed(2)} p/m²</strong>
-                      </span>
-                      <span className="text-[11px] text-[#5B5F73] font-mono-num">
-                        Risk Score: <strong className="text-[#151726]">{zone.riskScore ?? 0}%</strong>
-                      </span>
-                      <span className="font-bold uppercase text-[10px] mt-1 px-1.5 py-0.5 rounded w-fit text-white font-mono-num" style={{ backgroundColor: polygonColor }}>
-                        Status: {zone.riskLevel}
+                      <div className="grid grid-cols-2 gap-2 mt-1">
+                        <div className="flex flex-col">
+                          <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Headcount</span>
+                          <span className="text-xs text-slate-900 font-mono font-bold">{(zone.currentHeadcount ?? 0).toLocaleString()}</span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Density</span>
+                          <span className="text-xs text-slate-900 font-mono font-bold">{Number(zone.density || 0).toFixed(1)} <span className="text-[9px]">p/m²</span></span>
+                        </div>
+                      </div>
+                      <span className="font-mono font-black uppercase text-[10px] mt-1.5 px-2 py-1 rounded w-full text-center text-white tracking-widest shadow-sm" style={{ backgroundColor: polygonColor }}>
+                        STATUS: {zone.riskLevel}
                       </span>
                     </div>
                   </Popup>
                   <Tooltip sticky>
-                    <div className="p-0.5 font-body text-xs flex flex-col gap-0.5 font-mono-num">
-                      <span className="font-bold font-heading text-xs">{zone.name}</span>
-                      <span>Headcount: {zone.currentHeadcount ?? 0}</span>
-                      <span>Density: {Number(zone.density || 0).toFixed(2)} p/m²</span>
-                      <span>Risk Score: {zone.riskScore ?? 0}%</span>
+                    <div className="p-0.5 font-body flex flex-col gap-0.5">
+                      <span className="font-black font-heading text-xs text-slate-800">{zone.name}</span>
+                      <span className="font-mono text-[10px] font-bold text-slate-600">Density: {Number(zone.density || 0).toFixed(2)} p/m²</span>
                     </div>
                   </Tooltip>
                 </Polygon>
 
-                <Marker
-                  position={center}
-                  icon={createZoneMarkerIcon(zone.code, zone.density, zone.riskLevel)}
-                >
-                  <Popup>
-                    <div className="p-1 font-body text-xs flex flex-col gap-1 min-w-[170px]">
-                      <span className="font-heading font-bold text-sm text-[#151726]">
-                        {zone.name} ({zone.code})
+                <Marker position={center} icon={createZoneMarkerIcon(zone.code, zone.density, zone.riskLevel)}>
+                  <Popup className="premium-popup">
+                    <div className="p-1 font-body flex flex-col gap-1.5 min-w-[180px]">
+                      <span className="font-heading font-black text-sm text-slate-900 border-b border-slate-100 pb-1">
+                        {zone.name} <span className="text-slate-400 font-mono text-xs">({zone.code})</span>
                       </span>
-                      <span className="text-[11px] text-[#5B5F73] font-mono-num">
-                        Headcount: <strong className="text-[#151726]">{(zone.currentHeadcount ?? 0).toLocaleString()}</strong> / {zone.maxCapacity?.toLocaleString() ?? 'N/A'}
-                      </span>
-                      <span className="text-[11px] text-[#5B5F73] font-mono-num">
-                        Density: <strong className="text-[#151726]">{Number(zone.density || 0).toFixed(2)} p/m²</strong>
-                      </span>
-                      <span className="text-[11px] text-[#5B5F73] font-mono-num">
-                        Risk Score: <strong className="text-[#151726]">{zone.riskScore ?? 0}%</strong>
-                      </span>
-                      <span className="font-bold uppercase text-[10px] mt-1 px-1.5 py-0.5 rounded w-fit text-white font-mono-num" style={{ backgroundColor: polygonColor }}>
-                        Status: {zone.riskLevel}
+                      <div className="grid grid-cols-2 gap-2 mt-1">
+                        <div className="flex flex-col">
+                          <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Headcount</span>
+                          <span className="text-xs text-slate-900 font-mono font-bold">{(zone.currentHeadcount ?? 0).toLocaleString()}</span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Density</span>
+                          <span className="text-xs text-slate-900 font-mono font-bold">{Number(zone.density || 0).toFixed(1)} <span className="text-[9px]">p/m²</span></span>
+                        </div>
+                      </div>
+                      <span className="font-mono font-black uppercase text-[10px] mt-1.5 px-2 py-1 rounded w-full text-center text-white tracking-widest shadow-sm" style={{ backgroundColor: polygonColor }}>
+                        STATUS: {zone.riskLevel}
                       </span>
                     </div>
                   </Popup>
@@ -403,106 +375,104 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
           {activeEvacuationRoute && (
             <Polyline
               positions={activeEvacuationRoute.path_coords}
-              pathOptions={{
-                color: '#2C7BE5',
-                weight: 5,
-                dashArray: '8, 8',
-                opacity: 0.9
-              }}
+              pathOptions={{ color: '#67b2b9', weight: 6, dashArray: '10, 10', opacity: 0.9 }}
             >
               <Popup>
-                <div className="p-1 text-xs font-heading font-bold text-[#2C7BE5]">
-                  ✓ A* Safe Evacuation Route{activeEvacuationRoute.message ? ` — ${activeEvacuationRoute.message}` : ''}
+                <div className="p-1 text-xs font-heading font-bold text-[#67b2b9]">
+                  ✓ Safe Evacuation Route{activeEvacuationRoute.message ? ` — ${activeEvacuationRoute.message}` : ''}
                 </div>
               </Popup>
             </Polyline>
           )}
         </MapContainer>
 
-        <div className="absolute top-4 left-4 z-[400] bg-white/95 backdrop-blur-md border border-[#E7E5DD] rounded-2xl p-4 shadow-xl max-w-xs w-full font-body">
-          <div className="flex items-center justify-between border-b border-[#E7E5DD] pb-2 mb-3">
-            <span className="font-heading font-bold text-xs text-[#151726] uppercase tracking-wider flex items-center gap-1.5">
-              <Layers className="w-4 h-4 text-[#2C7BE5]" /> Sector Live Status
+        {/* ── SECTOR LIVE STATUS (Mobile Constrained & Scrollable) ── */}
+        <div className="absolute top-4 left-4 z-[400] bg-white/90 backdrop-blur-xl border border-slate-200/80 rounded-2xl p-4 shadow-2xl max-w-[calc(100vw-2rem)] sm:max-w-xs w-full flex flex-col font-body max-h-[35vh] sm:max-h-[50vh]">
+          <div className="flex items-center justify-between border-b border-slate-200/80 pb-3 mb-3 shrink-0">
+            <span className="font-heading font-black text-xs text-slate-800 uppercase tracking-widest flex items-center gap-2">
+              <Layers className="w-4 h-4 text-[#67b2b9]" /> Sector Status
             </span>
-            <span className="w-2 h-2 rounded-full bg-[#22D3A6] animate-pulse" />
+            <span className="w-2.5 h-2.5 rounded-full bg-[#22D3A6] shadow-[0_0_8px_rgba(34,211,166,0.8)] animate-pulse" />
           </div>
 
-          <div className="flex flex-col gap-2.5 text-xs">
+          <div className="flex flex-col gap-2.5 overflow-y-auto pr-1 smooth-scroll">
             {cleanZones.length > 0 ? (
               cleanZones.map((z) => {
                 const zColor = getRiskColor(z.riskLevel);
                 return (
                   <div
                     key={z.id}
-                    className={`flex items-center justify-between p-2 rounded-lg border ${z.riskLevel === 'critical' ? 'bg-[#FF3B5C]/10 border-[#FF3B5C]/30' :
-                        z.riskLevel === 'warning' ? 'bg-[#FF7A45]/10 border-[#FF7A45]/30' :
-                          z.riskLevel === 'caution' ? 'bg-[#FFB627]/10 border-[#FFB627]/30' :
-                            'bg-[#22D3A6]/10 border-[#22D3A6]/30'
-                      }`}
+                    className={`flex items-center justify-between p-2.5 rounded-xl border transition-colors ${
+                      z.riskLevel === 'critical' ? 'bg-[#FF3B5C]/5 border-[#FF3B5C]/30 hover:bg-[#FF3B5C]/10' :
+                      z.riskLevel === 'warning' ? 'bg-[#FF7A45]/5 border-[#FF7A45]/30 hover:bg-[#FF7A45]/10' :
+                      z.riskLevel === 'caution' ? 'bg-[#FFB627]/5 border-[#FFB627]/30 hover:bg-[#FFB627]/10' :
+                      'bg-[#22D3A6]/5 border-[#22D3A6]/30 hover:bg-[#22D3A6]/10'
+                    }`}
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
                       {z.riskLevel === 'critical' || z.riskLevel === 'warning' ? (
-                        <AlertTriangle className="w-4 h-4 text-[#FF3B5C]" />
+                        <AlertTriangle className="w-4 h-4 text-[#FF3B5C] shrink-0" />
                       ) : (
-                        <CheckCircle2 className="w-4 h-4 text-[#22D3A6]" />
+                        <CheckCircle2 className="w-4 h-4 text-[#22D3A6] shrink-0" />
                       )}
-                      <span className="font-bold text-[#151726] truncate max-w-[120px]">{z.name}</span>
+                      <span className="font-bold text-slate-800 text-xs truncate max-w-[100px] sm:max-w-[120px]">{z.name}</span>
                     </div>
-                    <span className="font-mono-num font-bold uppercase text-[11px] shrink-0" style={{ color: zColor }}>
-                      {z.currentHeadcount} p · {Number(z.density || 0).toFixed(2)} p/m²
-                    </span>
+                    <div className="flex flex-col items-end shrink-0">
+                      <span className="font-mono font-black text-[10px]" style={{ color: zColor }}>
+                        {Number(z.density || 0).toFixed(1)} <span className="text-[8px]">p/m²</span>
+                      </span>
+                    </div>
                   </div>
                 );
               })
             ) : (
-              <div className="flex items-center justify-between p-2 rounded-lg bg-[#22D3A6]/10 border border-[#22D3A6]/30">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-[#22D3A6]/10 border border-[#22D3A6]/30">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-[#22D3A6]" />
-                  <span className="font-bold text-[#151726]">All Sectors</span>
+                  <CheckCircle2 className="w-5 h-5 text-[#22D3A6]" />
+                  <span className="font-bold text-slate-800 text-sm">All Sectors</span>
                 </div>
-                <span className="font-mono-num font-bold text-[#22D3A6]">SECURE</span>
+                <span className="font-mono font-black text-[#22D3A6] tracking-wider text-xs">SECURE</span>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      <div className={`bg-white text-slate-800 z-[400] border-t border-slate-200 flex flex-col transition-all duration-300 ease-in-out ${isCctvExpanded ? 'p-3 gap-2' : 'p-2'}`}>
+      {/* ── CCTV BOTTOM PANEL (Responsive Grid & Brand Gradient) ── */}
+      <div className={`bg-slate-900 text-white z-[400] flex flex-col transition-all duration-300 ease-in-out shadow-[0_-10px_30px_rgba(0,0,0,0.15)] ${isCctvExpanded ? 'p-4 sm:p-5 gap-4' : 'p-0'}`}>
+        
+        {/* Toggle Bar */}
         <div 
-          className="flex items-center justify-between px-2 text-xs cursor-pointer select-none hover:bg-slate-50 p-1 rounded transition-colors"
+          className={`flex items-center justify-between px-4 sm:px-6 py-3 cursor-pointer select-none transition-colors ${
+            !isCctvExpanded ? 'bg-gradient-to-r from-[#67b2b9] to-[#648d6a] hover:opacity-95' : 'bg-slate-800/50 hover:bg-slate-800 rounded-xl'
+          }`}
           onClick={onToggleCctvExpanded}
-          title="Click to toggle camera feed panel size"
         >
-          <span className="font-heading font-bold text-slate-700 flex items-center gap-2">
-            <span className="p-0.5 hover:bg-slate-100 rounded transition-colors flex items-center justify-center text-sky-600">
-              {isCctvExpanded ? (
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-down"><path d="m6 9 6 6 6-6"/></svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-up"><path d="m18 15-6-6-6 6"/></svg>
-              )}
+          <span className="font-heading font-black text-sm flex items-center gap-3 tracking-wide">
+            <span className="p-1 rounded-lg bg-black/20 text-white shadow-inner flex items-center justify-center">
+              {isCctvExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
             </span>
-            <Video className="w-4 h-4 text-sky-600" />
-            LIVE EDGE CCTV FEEDS (MULTI-PORT MJPEG)
-            <span className="text-[10px] bg-sky-50 text-sky-600 border border-sky-100 px-1.5 py-0.5 rounded font-mono font-bold ml-1">
-              {isCctvExpanded ? 'Active' : 'Collapsed'}
+            <Video className="w-4 h-4 text-white" />
+            LIVE EDGE CCTV
+            <span className="hidden sm:inline bg-white/20 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-mono font-bold tracking-widest ml-2 border border-white/20">
+              MULTI-PORT MJPEG
             </span>
           </span>
-          <div className="flex items-center gap-3 pr-24 sm:pr-32">
-            <span className="text-slate-500 font-mono-num text-[11px] hidden sm:inline">
-              {filteredCctvFeeds.filter((f) => !failedFeeds[f.id]).length} / {filteredCctvFeeds.length} Active Feeds
+          <div className="flex items-center gap-3">
+            <span className="text-white/80 font-mono font-bold text-[10px] sm:text-xs tracking-widest uppercase">
+              {filteredCctvFeeds.filter((f) => !failedFeeds[f.id]).length} / {filteredCctvFeeds.length} Active
             </span>
           </div>
         </div>
 
         {isCctvExpanded && (
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 animate-fadeIn">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fadeIn">
             {filteredCctvFeeds.map((feed) => {
               const port = getPortFromUrl(feed.imageUrl);
               const matchedZone = findMatchedZone(feed);
               const isOffline = failedFeeds[feed.id];
               const cacheBuster = streamCacheBusters[feed.id];
               const streamUrl = cacheBuster ? `${feed.imageUrl}?t=${cacheBuster}` : feed.imageUrl;
-
               const headcount = matchedZone ? matchedZone.currentHeadcount : (feed.personCount || 0);
               const density = matchedZone ? matchedZone.density : 0;
 
@@ -510,23 +480,20 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
                 <div
                   key={feed.id}
                   onClick={() => setActiveCameraModal(feed)}
-                  className="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-100 cursor-pointer group aspect-video"
+                  className="relative rounded-2xl overflow-hidden border border-slate-700 bg-slate-950 cursor-pointer group aspect-video shadow-xl"
                 >
                   {isOffline ? (
-                    <div className="w-full h-full bg-slate-50 flex flex-col items-center justify-center gap-1.5 text-slate-700 p-2 text-center">
-                      <VideoOff className="w-5 h-5 text-[#FF3B5C] animate-pulse" />
-                      <span className="font-heading font-bold text-[11px] text-slate-800">
-                        Camera Offline - Awaiting Edge Feed
-                      </span>
-                      <span className="px-1.5 py-0.5 rounded bg-[#FF3B5C]/20 border border-[#FF3B5C]/30 text-[#FF3B5C] font-mono-num font-bold text-[9px]">
-                        Port {port}
+                    <div className="w-full h-full bg-slate-900 flex flex-col items-center justify-center gap-2 text-slate-300 p-4 text-center">
+                      <VideoOff className="w-6 h-6 text-[#FF3B5C] animate-pulse" />
+                      <span className="font-heading font-bold text-xs tracking-wide">Signal Lost</span>
+                      <span className="px-2 py-1 rounded-md bg-[#FF3B5C]/10 border border-[#FF3B5C]/30 text-[#FF3B5C] font-mono font-bold text-[10px] tracking-widest">
+                        PORT {port}
                       </span>
                       <button
                         onClick={(e) => handleRetryFeed(feed.id, e)}
-                        className="mt-1 px-2.5 py-0.5 bg-sky-600 hover:bg-sky-700 rounded text-[10px] font-bold text-white flex items-center gap-1 transition-colors"
+                        className="mt-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-[10px] font-bold text-white flex items-center gap-1.5 transition-all active:scale-95"
                       >
-                        <RefreshCw className="w-3 h-3" />
-                        <span>Retry Stream</span>
+                        <RefreshCw className="w-3.5 h-3.5" /> Retry
                       </button>
                     </div>
                   ) : (
@@ -534,7 +501,7 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
                       src={streamUrl}
                       alt={feed.name}
                       onError={() => handleImageError(feed.id)}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-cover group-hover:scale-105 group-hover:opacity-80 transition-all duration-500"
                     />
                   )}
 
@@ -544,19 +511,11 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
                         <div
                           key={det.id}
                           style={{
-                            left: `${det.bbox.x}%`,
-                            top: `${det.bbox.y}%`,
-                            width: `${det.bbox.width}%`,
-                            height: `${det.bbox.height}%`,
+                            left: `${det.bbox.x}%`, top: `${det.bbox.y}%`, width: `${det.bbox.width}%`, height: `${det.bbox.height}%`,
                           }}
-                          className={`absolute border ${det.type === 'backlog'
-                              ? 'border-[#FF3B5C] bg-[#FF3B5C]/20'
-                              : det.type === 'velocity_anomaly'
-                                ? 'border-[#FFB627] bg-[#FFB627]/20'
-                                : 'border-[#22D3A6] bg-[#22D3A6]/10'
-                            }`}
+                          className={`absolute border-2 rounded-sm shadow-sm ${det.type === 'backlog' ? 'border-[#FF3B5C] bg-[#FF3B5C]/20' : 'border-[#22D3A6] bg-[#22D3A6]/10'}`}
                         >
-                          <span className="absolute -top-3 left-0 bg-black/80 text-[9px] font-mono-num px-1 rounded text-white whitespace-nowrap">
+                          <span className="absolute -top-4 left-[-2px] bg-black/80 backdrop-blur-sm text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-sm text-white whitespace-nowrap tracking-wider">
                             {det.label}
                           </span>
                         </div>
@@ -564,13 +523,14 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
                     </div>
                   )}
 
-                  <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-xs px-2 py-0.5 rounded text-[10px] font-mono-num text-white flex items-center gap-1">
-                    <span className={`w-1.5 h-1.5 rounded-full ${isOffline ? 'bg-[#FF3B5C]' : 'bg-[#22D3A6] animate-pulse'}`} />
-                    <span className="truncate max-w-[100px]">{feed.name}</span>
+                  {/* Glassmorphic Overlays */}
+                  <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold text-white flex items-center gap-1.5 border border-white/10 shadow-sm">
+                    <span className={`w-2 h-2 rounded-full ${isOffline ? 'bg-[#FF3B5C]' : 'bg-[#22D3A6] animate-pulse'}`} />
+                    <span className="truncate max-w-[120px] uppercase tracking-wider">{feed.name}</span>
                   </div>
 
-                  <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-0.5 rounded text-[10px] font-mono-num text-white">
-                    {isOffline ? 'No live feed' : `${headcount} headcount ${matchedZone ? `· ${density.toFixed(1)} p/m²` : ''}`}
+                  <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold text-white border border-white/10 shadow-sm tracking-wider">
+                    {isOffline ? 'NO FEED' : `${headcount} PAX ${matchedZone ? `· ${density.toFixed(1)} P/M²` : ''}`}
                   </div>
                 </div>
               );
@@ -579,21 +539,25 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
         )}
       </div>
 
+      {/* ── EXPANDED CAMERA MODAL ── */}
       {activeCameraModal && (
-        <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-body animate-fadeIn">
-          <div className="bg-white border border-slate-200 rounded-2xl max-w-3xl w-full overflow-hidden flex flex-col text-slate-800">
-            <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-              <div>
-                <h3 className="font-heading font-bold text-base text-slate-800">
+        <div className="fixed inset-0 z-[600] flex items-center justify-center bg-slate-950/90 backdrop-blur-sm p-4 sm:p-8 font-body animate-fadeIn">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-5xl w-full overflow-hidden flex flex-col text-white shadow-2xl">
+            
+            <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
+              <div className="flex flex-col gap-1">
+                <h3 className="font-heading font-black text-xl text-white tracking-wide">
                   {activeCameraModal.name}
                 </h3>
-                <p className="text-xs text-slate-500 font-mono-num">
-                  Location: {activeCameraModal.location} · Node: {activeCameraModal.edgeNodeId} · Port: {getPortFromUrl(activeCameraModal.imageUrl)}
+                <p className="text-[11px] text-slate-400 font-mono flex items-center gap-2 tracking-widest uppercase">
+                  <span className="bg-slate-800 border border-slate-700 px-2 py-0.5 rounded text-slate-300 font-bold">PORT {getPortFromUrl(activeCameraModal.imageUrl)}</span>
+                  <span>·</span>
+                  <span>{activeCameraModal.location}</span>
                 </p>
               </div>
               <button
                 onClick={() => setActiveCameraModal(null)}
-                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700"
+                className="p-2.5 rounded-full bg-slate-800 hover:bg-rose-500/20 border border-slate-700 hover:border-rose-500/50 text-slate-400 hover:text-rose-400 transition-all cursor-pointer active:scale-95"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -601,20 +565,14 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
 
             <div className="relative aspect-video bg-black w-full overflow-hidden">
               {failedFeeds[activeCameraModal.id] ? (
-                <div className="w-full h-full bg-slate-50 flex flex-col items-center justify-center gap-3 text-slate-700 p-6 text-center">
-                  <VideoOff className="w-10 h-10 text-[#FF3B5C] animate-pulse" />
-                  <span className="font-heading font-bold text-base text-slate-800">
-                    Camera Offline - Awaiting Edge Feed
-                  </span>
-                  <span className="px-3 py-1 rounded bg-[#FF3B5C]/20 border border-[#FF3B5C]/40 text-[#FF3B5C] font-mono-num font-bold text-xs">
-                    Target Port {getPortFromUrl(activeCameraModal.imageUrl)}
-                  </span>
+                <div className="w-full h-full bg-slate-950 flex flex-col items-center justify-center gap-3 text-slate-400 p-6 text-center">
+                  <VideoOff className="w-12 h-12 text-[#FF3B5C] animate-pulse" />
+                  <span className="font-heading font-bold text-lg text-slate-200">Signal Lost</span>
                   <button
                     onClick={() => handleRetryFeed(activeCameraModal.id)}
-                    className="mt-2 px-4 py-1.5 bg-sky-600 hover:bg-sky-700 rounded-xl text-xs font-bold text-white flex items-center gap-2 cursor-pointer transition-colors"
+                    className="mt-3 px-5 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-bold text-white flex items-center gap-2 cursor-pointer transition-all active:scale-95"
                   >
-                    <RefreshCw className="w-4 h-4" />
-                    <span>Retry Stream Connection</span>
+                    <RefreshCw className="w-4 h-4" /> Retry Connection
                   </button>
                 </div>
               ) : (
@@ -622,7 +580,7 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
                   src={streamCacheBusters[activeCameraModal.id] ? `${activeCameraModal.imageUrl}?t=${streamCacheBusters[activeCameraModal.id]}` : activeCameraModal.imageUrl}
                   alt={activeCameraModal.name}
                   onError={() => handleImageError(activeCameraModal.id)}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                 />
               )}
 
@@ -632,17 +590,11 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
                     <div
                       key={det.id}
                       style={{
-                        left: `${det.bbox.x}%`,
-                        top: `${det.bbox.y}%`,
-                        width: `${det.bbox.width}%`,
-                        height: `${det.bbox.height}%`,
+                        left: `${det.bbox.x}%`, top: `${det.bbox.y}%`, width: `${det.bbox.width}%`, height: `${det.bbox.height}%`,
                       }}
-                      className={`absolute border-2 ${det.type === 'backlog'
-                          ? 'border-[#FF3B5C] bg-[#FF3B5C]/25'
-                          : 'border-[#22D3A6] bg-[#22D3A6]/15'
-                        }`}
+                      className={`absolute border-2 rounded ${det.type === 'backlog' ? 'border-[#FF3B5C] bg-[#FF3B5C]/20 shadow-[0_0_15px_rgba(255,59,92,0.4)]' : 'border-[#22D3A6] bg-[#22D3A6]/10'}`}
                     >
-                      <span className="absolute -top-5 left-0 bg-slate-900 text-[11px] font-mono-num px-1.5 py-0.5 rounded text-white">
+                      <span className="absolute -top-6 left-[-2px] bg-black/80 backdrop-blur-md text-[10px] font-mono font-bold px-2 py-1 rounded text-white whitespace-nowrap tracking-wider shadow-sm">
                         {det.label}
                       </span>
                     </div>
@@ -651,17 +603,12 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
               )}
             </div>
 
-            <div className="p-4 flex items-center justify-between text-xs font-mono-num text-slate-500 bg-slate-50 border-t border-slate-200">
-              <span>YOLO11 Edge Stream · Port {getPortFromUrl(activeCameraModal.imageUrl)}</span>
-              <span>
-                Live Telemetry: {findMatchedZone(activeCameraModal)?.currentHeadcount ?? 0} headcount · {findMatchedZone(activeCameraModal)?.density.toFixed(1) ?? '--'} p/m²
+            <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs font-mono text-slate-400 bg-slate-950 border-t border-slate-800">
+              <span className="uppercase tracking-widest font-bold">YOLO11 Edge Stream</span>
+              <span className="flex items-center gap-2 text-slate-300">
+                <span className="w-2 h-2 rounded-full bg-[#22D3A6] animate-pulse" />
+                {findMatchedZone(activeCameraModal)?.currentHeadcount ?? 0} PAX · {findMatchedZone(activeCameraModal)?.density.toFixed(1) ?? '--'} P/M²
               </span>
-              <button
-                onClick={() => setActiveCameraModal(null)}
-                className="px-4 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-bold font-heading"
-              >
-                Close Feed
-              </button>
             </div>
           </div>
         </div>
