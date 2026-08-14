@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TopologyEdge, TopologyNode } from '../../data/venueTopology';
-import { Eye, AlertTriangle } from 'lucide-react';
+import { Eye, AlertTriangle, MousePointer2 } from 'lucide-react';
 
 interface MergedNode extends TopologyNode {
   density: number;
@@ -14,7 +14,7 @@ interface ThreeDigitalTwinCanvasProps {
   nodes: MergedNode[];
   edges: TopologyEdge[];
   selectedZoneId: string;
-  highlightedPath: string[]; // ordered zone IDs - the live or fallback route
+  highlightedPath: string[]; 
   onSelectZone: (zoneId: string) => void;
 }
 
@@ -59,17 +59,21 @@ export const ThreeDigitalTwinCanvas: React.FC<ThreeDigitalTwinCanvasProps> = ({
     }
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xf8fafc); // slate-50 light background
+    scene.background = new THREE.Color(0xf8fafc); 
 
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-    camera.position.set(14, 16, 14);
+    
+    // 🚨 FIX APPLIED: Pulled the camera back and up for a perfect wide overview!
+    camera.position.set(18, 22, 18);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     controls.maxPolarAngle = Math.PI / 2.1;
     controls.minDistance = 6;
-    controls.maxDistance = 40;
+    
+    // 🚨 FIX APPLIED: Increased max zoom out distance
+    controls.maxDistance = 100; 
     controls.target.set(0, 0, 0);
 
     scene.add(new THREE.AmbientLight(0xffffff, 0.7));
@@ -80,30 +84,26 @@ export const ThreeDigitalTwinCanvas: React.FC<ThreeDigitalTwinCanvasProps> = ({
     dirLight.shadow.mapSize.set(1024, 1024);
     scene.add(dirLight);
 
-    const bluePointLight = new THREE.PointLight(0x0ea5e9, 1.5, 30); // Sky blue point light
-    bluePointLight.position.set(-8, 8, -8);
-    scene.add(bluePointLight);
+    const brandPointLight = new THREE.PointLight(0x67b2b9, 1.5, 30); 
+    brandPointLight.position.set(-8, 8, -8);
+    scene.add(brandPointLight);
 
-    // --- FIX 1: Expanded Floor & Grid to 40x40 to fit Kalinga Stadium ---
     const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(40, 40),
+      new THREE.PlaneGeometry(50, 50),
       new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.7, metalness: 0.1 })
     );
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     scene.add(floor);
 
-    const gridHelper = new THREE.GridHelper(40, 20, 0x0ea5e9, 0xcbd5e1);
+    const gridHelper = new THREE.GridHelper(50, 25, 0x67b2b9, 0xcbd5e1);
     gridHelper.position.y = 0.02;
     scene.add(gridHelper);
 
-    // --- Draw the real road edges as ground-level lines ---
     edges.forEach((edge) => {
-      // Look up nodes from the filtered 'nodes' prop to prevent ghost lines
       const a = nodes.find((n) => n.id === edge.source);
       const b = nodes.find((n) => n.id === edge.target);
       
-      // If either node isn't in the current venue, skip drawing the line entirely
       if (!a || !b) return; 
       
       const [ax, az] = toWorld(a.x, a.y);
@@ -116,17 +116,15 @@ export const ThreeDigitalTwinCanvas: React.FC<ThreeDigitalTwinCanvasProps> = ({
             (highlightedPath[i] === edge.target && highlightedPath[i + 1] === edge.source))
       );
 
-      // --- FIX 2: Raise lines to Y=0.06 to prevent grid blending, and darken inactive color ---
       const points = [new THREE.Vector3(ax, 0.06, az), new THREE.Vector3(bx, 0.06, bz)];
       const geometry = new THREE.BufferGeometry().setFromPoints(points);
       const material = new THREE.LineBasicMaterial({
-        color: isOnHighlightedPath ? 0x10b981 : 0x475569, // active green, darker slate for inactive contrast
+        color: isOnHighlightedPath ? 0x67b2b9 : 0x64748b, 
         linewidth: isOnHighlightedPath ? 3 : 2,
       });
       scene.add(new THREE.Line(geometry, material));
     });
 
-    // --- Draw each real zone/gate as a distinct 3D object ---
     const zoneMeshes: {
       mesh: THREE.Mesh; zoneId: string; initialY: number; isHighRisk: boolean; density: number;
     }[] = [];
@@ -138,14 +136,14 @@ export const ThreeDigitalTwinCanvas: React.FC<ThreeDigitalTwinCanvasProps> = ({
       const onPath = highlightedPath.includes(node.id);
       const blockHeight = node.hasTelemetry ? Math.max(0.4, node.density * 0.9) : 0.4;
 
-      let colorHex = 0x64748b; // no telemetry yet -> neutral slate-500
+      let colorHex = 0x64748b; 
       if (node.hasTelemetry) {
-        if (node.riskLevel === 'critical') colorHex = 0xef4444;
+        if (node.riskLevel === 'critical') colorHex = 0xf43f5e;
         else if (node.riskLevel === 'warning') colorHex = 0xf97316;
-        else if (node.riskLevel === 'caution') colorHex = 0xeab308;
+        else if (node.riskLevel === 'caution') colorHex = 0xf59e0b;
         else colorHex = 0x10b981;
       }
-      if (isSelected) colorHex = 0x0ea5e9;
+      if (isSelected) colorHex = 0x67b2b9;
 
       const geometry = node.isGate
         ? new THREE.OctahedronGeometry(0.7, 0)
@@ -170,14 +168,14 @@ export const ThreeDigitalTwinCanvas: React.FC<ThreeDigitalTwinCanvasProps> = ({
       zoneMeshes.push({ mesh, zoneId: node.id, initialY: yPos, isHighRisk, density: node.density });
 
       if (isHighRisk) {
-        const beacon = new THREE.PointLight(0xef4444, 2.5, 10);
+        const beacon = new THREE.PointLight(0xf43f5e, 2.5, 10);
         beacon.position.set(wx, yPos + 2, wz);
         scene.add(beacon);
       }
 
       if (onPath) {
         const ringGeo = new THREE.RingGeometry(0.9, 1.05, 24);
-        const ringMat = new THREE.MeshBasicMaterial({ color: 0x10b981, side: THREE.DoubleSide, transparent: true, opacity: 0.7 });
+        const ringMat = new THREE.MeshBasicMaterial({ color: 0x67b2b9, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
         const ring = new THREE.Mesh(ringGeo, ringMat);
         ring.rotation.x = -Math.PI / 2;
         ring.position.set(wx, 0.04, wz);
@@ -185,7 +183,6 @@ export const ThreeDigitalTwinCanvas: React.FC<ThreeDigitalTwinCanvasProps> = ({
       }
     });
 
-    // --- Raycasting ---
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
@@ -267,14 +264,14 @@ export const ThreeDigitalTwinCanvas: React.FC<ThreeDigitalTwinCanvasProps> = ({
 
   if (webGlError) {
     return (
-      <div className="relative w-full h-[380px] bg-slate-50 rounded-xl border border-slate-200 overflow-hidden flex flex-col items-center justify-center p-6 text-center gap-3">
-        <div className="p-3 bg-amber-50 text-amber-500 rounded-full border border-amber-200">
-          <AlertTriangle className="w-6 h-6" />
+      <div className="relative w-full h-full min-h-[400px] bg-slate-950 rounded-3xl overflow-hidden flex flex-col items-center justify-center p-8 text-center gap-5 shadow-inner border border-slate-800">
+        <div className="p-4 bg-rose-500/10 text-rose-500 rounded-2xl border border-rose-500/20 shadow-inner">
+          <AlertTriangle className="w-8 h-8 animate-pulse" />
         </div>
-        <div className="flex flex-col gap-1 max-w-sm text-slate-800">
-          <span className="font-heading font-bold text-sm">3D WebGL Context Unavailable</span>
-          <span className="text-xs text-slate-500 leading-relaxed">
-            Hardware acceleration is disabled or unsupported by your graphics driver.
+        <div className="flex flex-col gap-2 max-w-md">
+          <span className="font-heading font-black text-xl text-white tracking-tight">WebGL Context Unavailable</span>
+          <span className="font-mono text-xs text-slate-400 leading-relaxed uppercase tracking-widest">
+            Hardware acceleration is disabled or unsupported by your graphics driver. 3D visualization suspended.
           </span>
         </div>
       </div>
@@ -282,19 +279,31 @@ export const ThreeDigitalTwinCanvas: React.FC<ThreeDigitalTwinCanvasProps> = ({
   }
 
   return (
-    <div className="relative w-full h-[380px] bg-slate-50 rounded-xl border border-slate-200 overflow-hidden shadow-inner group">
-      <div ref={mountRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
-      <div className="absolute top-3 left-3 bg-white/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-200 text-slate-800 text-xs font-mono-num flex items-center gap-2 pointer-events-none">
-        <Eye className="w-3.5 h-3.5 text-emerald-600" />
-        <span>Real venue · diamonds = gates · cylinders = zones</span>
+    <div className="relative w-full h-full min-h-[400px] sm:min-h-[500px] bg-[#FAFAF7] rounded-3xl overflow-hidden shadow-inner group">
+      <div ref={mountRef} className="w-full h-full cursor-grab active:cursor-grabbing outline-none" />
+      
+      <div className="absolute top-4 left-4 bg-slate-900/80 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-slate-700/50 text-white text-[10px] sm:text-xs font-mono font-bold uppercase tracking-widest flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 pointer-events-none shadow-xl">
+        <span className="flex items-center gap-2 text-[#67b2b9]">
+          <Eye className="w-4 h-4" /> Live 3D Twin
+        </span>
+        <span className="hidden sm:inline text-slate-600">|</span>
+        <div className="flex items-center gap-3.5">
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-[#67b2b9] rounded-sm rotate-45" /> Gate</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-[#67b2b9] rounded-full" /> Sector</span>
+        </div>
       </div>
+
       {hoveredZoneName && (
-        <div className="absolute bottom-3 left-3 bg-sky-600 text-white px-3 py-1 rounded-lg text-xs font-bold font-heading shadow-md border border-sky-700">
+        <div className="absolute bottom-6 left-6 bg-gradient-to-r from-[#67b2b9] to-[#648d6a] text-white px-5 py-2.5 rounded-xl text-xs sm:text-sm font-black font-heading shadow-lg shadow-[#67b2b9]/20 border border-white/20 uppercase tracking-widest animate-in fade-in slide-in-from-bottom-2 pointer-events-none z-10 flex items-center gap-2">
+          <MousePointer2 className="w-4 h-4" />
           {hoveredZoneName}
         </div>
       )}
-      <div className="absolute bottom-3 right-3 bg-white/80 backdrop-blur px-2.5 py-1 rounded-lg border border-slate-200 text-[10px] text-slate-600 font-mono-num">
-        Scroll to Zoom · Right-Click to Pan
+
+      <div className="absolute bottom-6 right-6 bg-slate-900/80 backdrop-blur-md px-4 py-2.5 rounded-xl border border-slate-700/50 text-[9px] sm:text-[10px] text-slate-400 font-mono font-bold uppercase tracking-widest shadow-xl flex items-center gap-2 pointer-events-none">
+        <span>Scroll: Zoom</span>
+        <span className="text-slate-600">•</span>
+        <span>Right-Click: Pan</span>
       </div>
     </div>
   );
