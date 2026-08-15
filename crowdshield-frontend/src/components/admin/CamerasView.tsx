@@ -160,7 +160,20 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [],
           const isUploading = uploadingFeeds[feed.id];
           const currentStatus = uploadStatus[feed.id];
           const cacheBuster = streamCacheBusters[feed.id];
-          const streamUrl = cacheBuster ? `${feed.imageUrl}?t=${cacheBuster}` : feed.imageUrl;
+    const RAILWAY_BASE_URL = "https://crowdshield-production-9825.up.railway.app";
+
+// Map active camera IDs to their live Railway stream endpoints
+const baseFeedUrl =
+  feed.id === "gate_1" || feed.id === "ks_gate_3"
+    ? `${RAILWAY_BASE_URL}/stream/${feed.id}`
+    : undefined;
+
+// Append cacheBuster query param to trigger clean re-renders on video swap
+const streamUrl = baseFeedUrl
+  ? cacheBuster
+    ? `${baseFeedUrl}?t=${cacheBuster}`
+    : baseFeedUrl
+  : undefined;
 
           const headcount = matchedZone?.currentHeadcount || feed.personCount || 0;
           const density = matchedZone?.density || (feed as any).density || 0;
@@ -211,7 +224,7 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [],
                       <Server className="w-6 h-6 text-rose-500/80" />
                     </div>
                     <div className="flex flex-col gap-1">
-                      <span className="font-heading font-bold text-sm text-slate-200 tracking-wide">Signal Lost</span>
+                      <span className="font-heading font-bold text-sm text-slate-200 tracking-wide">These cameras are closed due to restrictions</span>
                       <span className="text-[10px] font-mono-num text-slate-500">Awaiting Edge Node on Port {port}</span>
                     </div>
 

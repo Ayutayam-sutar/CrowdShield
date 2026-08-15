@@ -472,7 +472,20 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
               const matchedZone = findMatchedZone(feed);
               const isOffline = failedFeeds[feed.id];
               const cacheBuster = streamCacheBusters[feed.id];
-              const streamUrl = cacheBuster ? `${feed.imageUrl}?t=${cacheBuster}` : feed.imageUrl;
+             const RAILWAY_BASE_URL = "https://crowdshield-production-9825.up.railway.app";
+
+// Map active camera IDs to their live Railway stream endpoints
+const baseFeedUrl =
+  feed.id === "gate_1" || feed.id === "ks_gate_3"
+    ? `${RAILWAY_BASE_URL}/stream/${feed.id}`
+    : undefined;
+
+// Append cacheBuster query param to trigger clean re-renders on video swap
+const streamUrl = baseFeedUrl
+  ? cacheBuster
+    ? `${baseFeedUrl}?t=${cacheBuster}`
+    : baseFeedUrl
+  : undefined;
               const headcount = matchedZone ? matchedZone.currentHeadcount : (feed.personCount || 0);
               const density = matchedZone ? matchedZone.density : 0;
 
