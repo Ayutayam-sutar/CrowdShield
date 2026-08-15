@@ -12,6 +12,26 @@ import {
   Server
 } from 'lucide-react';
 
+const RAILWAY_BASE_URL = "https://crowdshield-production-9825.up.railway.app";
+
+// Helper to route specific active feeds to their live cloud streams
+const getActiveCameraStream = (feedId: string, feedName: string): string | undefined => {
+  const id = String(feedId || "").toLowerCase();
+  const name = String(feedName || "").toLowerCase();
+
+  // Match Camera 1: ITER Main Gate
+  if (id === "gate_1" || id === "cam-01" || id === "cam_01" || id === "1" || name.includes("main gate")) {
+    return `${RAILWAY_BASE_URL}/stream/gate_1`;
+  }
+
+  // Match Camera 2: Kalinga Stadium Gate 3
+  if (id === "ks_gate_3" || id === "cam-03" || id === "cam_03" || name.includes("gate 3") || name.includes("kalinga")) {
+    return `${RAILWAY_BASE_URL}/stream/ks_gate_3`;
+  }
+
+  return undefined;
+};
+
 interface CamerasViewProps {
   cctvFeeds: CCTVFeed[];
   zones?: VenueZone[];
@@ -53,6 +73,19 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [],
 
   const handleFileUpload = async (feedId: string, port: string, file: File) => {
     if (!file) return;
+
+    // Determine the correct Railway upload URL for hot-swapping
+    const activeStream = getActiveCameraStream(feedId, '');
+    let uploadUrl = '';
+    if (activeStream?.includes('gate_1')) {
+      uploadUrl = `${RAILWAY_BASE_URL}/upload/gate_1`;
+    } else if (activeStream?.includes('ks_gate_3')) {
+      uploadUrl = `${RAILWAY_BASE_URL}/upload/ks_gate_3`;
+    } else {
+      setUploadStatus((prev) => ({ ...prev, [feedId]: 'Cannot hot-swap an offline camera' }));
+      return;
+    }
+
     setUploadingFeeds((prev) => ({ ...prev, [feedId]: true }));
     setUploadStatus((prev) => ({ ...prev, [feedId]: `Uploading ${file.name}...` }));
 
@@ -60,7 +93,7 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [],
     formData.append('file', file);
 
     try {
-      const response = await fetch(`http://127.0.0.1:${port}/upload`, {
+      const response = await fetch(uploadUrl, {
         method: 'POST',
         body: formData,
       });
@@ -69,11 +102,11 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [],
         setUploadStatus((prev) => ({ ...prev, [feedId]: `Hot-swapped: ${file.name}` }));
         handleRetryFeed(feedId);
       } else {
-        setUploadStatus((prev) => ({ ...prev, [feedId]: 'Upload failed on edge node' }));
+        setUploadStatus((prev) => ({ ...prev, [feedId]: 'Upload failed on cloud edge node' }));
       }
     } catch (err) {
-      console.error(`Failed to upload media to edge port ${port}:`, err);
-      setUploadStatus((prev) => ({ ...prev, [feedId]: 'Edge server unreachable' }));
+      console.error(`Failed to upload media to cloud edge node:`, err);
+      setUploadStatus((prev) => ({ ...prev, [feedId]: 'Cloud edge unreachable' }));
     } finally {
       setUploadingFeeds((prev) => ({ ...prev, [feedId]: false }));
       setTimeout(() => {
@@ -156,24 +189,20 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [],
         {filteredFeeds.map((feed) => {
           const port = getPortFromUrl(feed.imageUrl);
           const matchedZone = findMatchedZone(feed);
-          const isOffline = failedFeeds[feed.id];
           const isUploading = uploadingFeeds[feed.id];
           const currentStatus = uploadStatus[feed.id];
           const cacheBuster = streamCacheBusters[feed.id];
-    const RAILWAY_BASE_URL = "https://crowdshield-production-9825.up.railway.app";
 
-// Map active camera IDs to their live Railway stream endpoints
-const baseFeedUrl =
-  feed.id === "gate_1" || feed.id === "ks_gate_3"
-    ? `${RAILWAY_BASE_URL}/stream/${feed.id}`
-    : undefined;
+          // 1. Resolve live video stream dynamically
+          const activeStreamUrl = getActiveCameraStream(feed.id, feed.name);
+          const streamUrl = activeStreamUrl
+            ? cacheBuster
+              ? `${activeStreamUrl}?t=${cacheBuster}`
+              : activeStreamUrl
+            : undefined;
 
-// Append cacheBuster query param to trigger clean re-renders on video swap
-const streamUrl = baseFeedUrl
-  ? cacheBuster
-    ? `${baseFeedUrl}?t=${cacheBuster}`
-    : baseFeedUrl
-  : undefined;
+          // 2. Mark any unmapped/restricted camera or failed load as offline
+          const isOffline = !streamUrl || failedFeeds[feed.id];
 
           const headcount = matchedZone?.currentHeadcount || feed.personCount || 0;
           const density = matchedZone?.density || (feed as any).density || 0;
@@ -258,10 +287,10 @@ const streamUrl = baseFeedUrl
                   />
                 )}
 
-                {/* YOLO Bounding Boxes Overlay */}
-                {showDetections && !isOffline && (
+                {/* YOLO Bounding Boxes Overlay - Now prevents fake rendering on real streams */}
+                {showDetections && !isOffline && feed.yoloDetections && feed.yoloDetections.length > 0 && (
                   <div className="absolute inset-0 p-2 pointer-events-none">
-                    {feed.yoloDetections?.map((det) => (
+                    {feed.yoloDetections.map((det) => (
                       <div
                         key={det.id}
                         style={{
@@ -352,7 +381,9 @@ const streamUrl = baseFeedUrl
                   {selectedFeed.name}
                 </h3>
                 <p className="text-[11px] text-slate-400 font-mono-num mt-1 flex items-center gap-2">
-                  <span className="px-2 py-0.5 bg-slate-800 rounded-md text-slate-300 font-bold border border-slate-700">Port {getPortFromUrl(selectedFeed.imageUrl)}</span>
+                  <span className="px-2 py-0.5 bg-slate-800 rounded-md text-slate-300 font-bold border border-slate-700">
+                    Port {getPortFromUrl(selectedFeed.imageUrl)}
+                  </span>
                   <span>·</span>
                   <span className="uppercase tracking-wider font-semibold">{selectedFeed.location}</span>
                 </p>
@@ -367,7 +398,7 @@ const streamUrl = baseFeedUrl
 
             <div className="relative w-full bg-black flex-1 aspect-video flex items-center justify-center">
               <img
-                src={selectedFeed.imageUrl}
+                src={getActiveCameraStream(selectedFeed.id, selectedFeed.name) || selectedFeed.imageUrl}
                 alt={selectedFeed.name}
                 className="w-full h-full object-contain"
               />
