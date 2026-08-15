@@ -17,6 +17,26 @@ import {
   Activity
 } from 'lucide-react';
 
+const RAILWAY_BASE_URL = "https://crowdshield-production-9825.up.railway.app";
+
+// Helper to route specific active feeds to their live cloud streams
+const getActiveCameraStream = (feedId: string, feedName: string): string | undefined => {
+  const id = String(feedId || "").toLowerCase();
+  const name = String(feedName || "").toLowerCase();
+
+  // Match Camera 1: ITER Main Gate
+  if (id === "gate_1" || id === "cam-01" || id === "cam_01" || id === "1" || name.includes("main gate")) {
+    return `${RAILWAY_BASE_URL}/stream/gate_1`;
+  }
+
+  // Match Camera 2: Kalinga Stadium Gate 3
+  if (id === "ks_gate_3" || id === "cam-03" || id === "cam_03" || name.includes("gate 3") || name.includes("kalinga")) {
+    return `${RAILWAY_BASE_URL}/stream/ks_gate_3`;
+  }
+
+  return undefined;
+};
+
 // ─── MAP UPDATER (UNTOUCHED) ───
 const MapUpdater: React.FC<{ center: [number, number]; resizeTrigger?: unknown }> = ({ center, resizeTrigger }) => {
   const map = useMap();
@@ -227,6 +247,17 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
       iconAnchor: [42, 15],
     });
   };
+
+  // Pre-calculate Expanded Modal URLs to satisfy TypeScript
+  const activeModalStreamUrl = activeCameraModal 
+    ? getActiveCameraStream(activeCameraModal.id, activeCameraModal.name) 
+    : undefined;
+  
+  const finalModalUrl = activeModalStreamUrl 
+    ? (streamCacheBusters[activeCameraModal!.id] ? `${activeModalStreamUrl}?t=${streamCacheBusters[activeCameraModal!.id]}` : activeModalStreamUrl)
+    : undefined;
+    
+  const isModalOffline = activeCameraModal ? (!finalModalUrl || failedFeeds[activeCameraModal.id]) : false;
 
   // ─── UI RENDER ───
   return (
@@ -470,22 +501,19 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
             {filteredCctvFeeds.map((feed) => {
               const port = getPortFromUrl(feed.imageUrl);
               const matchedZone = findMatchedZone(feed);
-              const isOffline = failedFeeds[feed.id];
               const cacheBuster = streamCacheBusters[feed.id];
-             const RAILWAY_BASE_URL = "https://crowdshield-production-9825.up.railway.app";
+              
+              // 1. Resolve live video stream dynamically from Railway
+              const activeStreamUrl = getActiveCameraStream(feed.id, feed.name);
+              const streamUrl = activeStreamUrl
+                ? cacheBuster
+                  ? `${activeStreamUrl}?t=${cacheBuster}`
+                  : activeStreamUrl
+                : undefined;
+              
+              // 2. Mark any unmapped/restricted camera or failed load as offline
+              const isOffline = !streamUrl || failedFeeds[feed.id];
 
-// Map active camera IDs to their live Railway stream endpoints
-const baseFeedUrl =
-  feed.id === "gate_1" || feed.id === "ks_gate_3"
-    ? `${RAILWAY_BASE_URL}/stream/${feed.id}`
-    : undefined;
-
-// Append cacheBuster query param to trigger clean re-renders on video swap
-const streamUrl = baseFeedUrl
-  ? cacheBuster
-    ? `${baseFeedUrl}?t=${cacheBuster}`
-    : baseFeedUrl
-  : undefined;
               const headcount = matchedZone ? matchedZone.currentHeadcount : (feed.personCount || 0);
               const density = matchedZone ? matchedZone.density : 0;
 
@@ -518,7 +546,7 @@ const streamUrl = baseFeedUrl
                     />
                   )}
 
-                  {!isOffline && (
+                  {!isOffline && feed.yoloDetections && feed.yoloDetections.length > 0 && (
                     <div className="absolute inset-0 pointer-events-none p-1">
                       {feed.yoloDetections.map((det) => (
                         <div
@@ -577,7 +605,7 @@ const streamUrl = baseFeedUrl
             </div>
 
             <div className="relative aspect-video bg-black w-full overflow-hidden">
-              {failedFeeds[activeCameraModal.id] ? (
+              {isModalOffline ? (
                 <div className="w-full h-full bg-slate-950 flex flex-col items-center justify-center gap-3 text-slate-400 p-6 text-center">
                   <VideoOff className="w-12 h-12 text-[#FF3B5C] animate-pulse" />
                   <span className="font-heading font-bold text-lg text-slate-200">Signal Lost</span>
@@ -590,14 +618,14 @@ const streamUrl = baseFeedUrl
                 </div>
               ) : (
                 <img
-                  src={streamCacheBusters[activeCameraModal.id] ? `${activeCameraModal.imageUrl}?t=${streamCacheBusters[activeCameraModal.id]}` : activeCameraModal.imageUrl}
+                  src={finalModalUrl}
                   alt={activeCameraModal.name}
                   onError={() => handleImageError(activeCameraModal.id)}
                   className="w-full h-full object-contain"
                 />
               )}
 
-              {!failedFeeds[activeCameraModal.id] && (
+              {!isModalOffline && activeCameraModal.yoloDetections && activeCameraModal.yoloDetections.length > 0 && (
                 <div className="absolute inset-0 p-4 pointer-events-none">
                   {activeCameraModal.yoloDetections.map((det) => (
                     <div
