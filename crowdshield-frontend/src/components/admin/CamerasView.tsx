@@ -12,26 +12,12 @@ import {
   Server
 } from 'lucide-react';
 
-const RAILWAY_BASE_URL = "https://crowdshield-production-9825.up.railway.app";
-
-// Helper to route specific active feeds to their live cloud streams
-const getActiveCameraStream = (feedId: string, feedName: string): string | undefined => {
-  const id = String(feedId || "").toLowerCase();
-  const name = String(feedName || "").toLowerCase();
-
-  // Match Camera 1: ITER Main Gate
-  if (id === "gate_1" || id === "cam-01" || id === "cam_01" || id === "1" || name.includes("main gate")) {
-    return `${RAILWAY_BASE_URL}/stream/gate_1`;
-  }
-
-  // Match Camera 2: Kalinga Stadium Gate 3
-  if (id === "ks_gate_3" || id === "cam-03" || id === "cam_03" || name.includes("gate 3") || name.includes("kalinga")) {
-    return `${RAILWAY_BASE_URL}/stream/ks_gate_3`;
-  }
-
-  return undefined;
+// ─── SET YOUR ACTIVE HTTPS TUNNEL URL HERE ───
+// Paste your Pinggy, Cloudflare, or Ngrok URL here (No trailing slash)
+const PORT_TUNNELS: Record<string, string> = {
+  "5000": "https://dirty-peaches-battle.loca.lt",       // Camera 1 (ITER Campus / gate_1)
+  "5001": "https://silver-flies-hear.loca.lt", // Camera 2 (Kalinga Stadium / ks_gate_3)
 };
-
 interface CamerasViewProps {
   cctvFeeds: CCTVFeed[];
   zones?: VenueZone[];
@@ -42,11 +28,27 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [],
   const [showDetections, setShowDetections] = useState(true);
   const [selectedFeed, setSelectedFeed] = useState<CCTVFeed | null>(null);
   
-  // ─── TEAM's BACKEND LOGIC (100% UNTOUCHED) ───
+  // ─── TEAM's BACKEND LOGIC (100% PRESERVED) ───
   const [failedFeeds, setFailedFeeds] = useState<Record<string, boolean>>({});
   const [streamCacheBusters, setStreamCacheBusters] = useState<Record<string, number>>({});
   const [uploadingFeeds, setUploadingFeeds] = useState<Record<string, boolean>>({});
   const [uploadStatus, setUploadStatus] = useState<Record<string, string>>({});
+
+  // Resolves local URLs (localhost/127.0.0.1) to the secure Tunnel URL for Netlify
+const resolveStreamUrl = (url: string, feedId: string): string => {
+  if (!url) return '';
+
+  // Extract port from original feed URL (e.g., http://127.0.0.1:5001/video_feed)
+  const portMatch = url.match(/:(\d+)\//);
+  const port = portMatch ? portMatch[1] : (feedId.includes('ks_') ? '5001' : '5000');
+
+  const activeTunnel = PORT_TUNNELS[port];
+  if (!activeTunnel) return url;
+
+  // Extract endpoint path (e.g., /video_feed)
+  const path = url.replace(/^https?:\/\/[^/]+/, '') || '/video_feed';
+  return `${activeTunnel}${path}`;
+};
 
   const filteredFeeds = useMemo(() => {
     const isKalingaSelected = selectedVenue?.id?.includes('kalinga') || selectedVenue?.name?.includes('Kalinga');
@@ -71,49 +73,39 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [],
     return match ? match[1] : defaultPort;
   };
 
-  const handleFileUpload = async (feedId: string, port: string, file: File) => {
-    if (!file) return;
+const handleFileUpload = async (feedId: string, port: string, file: File) => {
+  if (!file) return;
+  setUploadingFeeds((prev) => ({ ...prev, [feedId]: true }));
+  setUploadStatus((prev) => ({ ...prev, [feedId]: `Uploading ${file.name}...` }));
 
-    // Determine the correct Railway upload URL for hot-swapping
-    const activeStream = getActiveCameraStream(feedId, '');
-    let uploadUrl = '';
-    if (activeStream?.includes('gate_1')) {
-      uploadUrl = `${RAILWAY_BASE_URL}/upload/gate_1`;
-    } else if (activeStream?.includes('ks_gate_3')) {
-      uploadUrl = `${RAILWAY_BASE_URL}/upload/ks_gate_3`;
+  const formData = new FormData();
+  formData.append('file', file);
+
+  // Dynamically target the correct port's tunnel when deployed, or localhost during local dev
+  const uploadBase = PORT_TUNNELS[port] || `http://127.0.0.1:${port}`;
+
+  try {
+    const response = await fetch(`${uploadBase}/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (response.ok) {
+      setUploadStatus((prev) => ({ ...prev, [feedId]: `Hot-swapped: ${file.name}` }));
+      handleRetryFeed(feedId);
     } else {
-      setUploadStatus((prev) => ({ ...prev, [feedId]: 'Cannot hot-swap an offline camera' }));
-      return;
+      setUploadStatus((prev) => ({ ...prev, [feedId]: 'Upload failed on edge node' }));
     }
-
-    setUploadingFeeds((prev) => ({ ...prev, [feedId]: true }));
-    setUploadStatus((prev) => ({ ...prev, [feedId]: `Uploading ${file.name}...` }));
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-      const response = await fetch(uploadUrl, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (response.ok) {
-        setUploadStatus((prev) => ({ ...prev, [feedId]: `Hot-swapped: ${file.name}` }));
-        handleRetryFeed(feedId);
-      } else {
-        setUploadStatus((prev) => ({ ...prev, [feedId]: 'Upload failed on cloud edge node' }));
-      }
-    } catch (err) {
-      console.error(`Failed to upload media to cloud edge node:`, err);
-      setUploadStatus((prev) => ({ ...prev, [feedId]: 'Cloud edge unreachable' }));
-    } finally {
-      setUploadingFeeds((prev) => ({ ...prev, [feedId]: false }));
-      setTimeout(() => {
-        setUploadStatus((prev) => ({ ...prev, [feedId]: '' }));
-      }, 4000);
-    }
-  };
+  } catch (err) {
+    console.error(`Failed to upload media to edge port ${port}:`, err);
+    setUploadStatus((prev) => ({ ...prev, [feedId]: 'Edge server unreachable' }));
+  } finally {
+    setUploadingFeeds((prev) => ({ ...prev, [feedId]: false }));
+    setTimeout(() => {
+      setUploadStatus((prev) => ({ ...prev, [feedId]: '' }));
+    }, 4000);
+  }
+};
 
   const findMatchedZone = (feed: CCTVFeed): VenueZone | null => {
     if (!zones || zones.length === 0) return null;
@@ -143,13 +135,11 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [],
     }
   };
 
-  // ─── UI RENDER ───
   return (
     <div className="p-4 md:p-6 lg:p-8 flex flex-col gap-6 lg:gap-8 font-body text-slate-800 bg-slate-50/50 min-h-full">
       
       {/* ── Header Section ── */}
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 bg-white p-6 md:p-8 rounded-3xl border border-slate-200/80 shadow-sm relative overflow-hidden">
-        {/* Decorative background glow */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 rounded-full blur-3xl -mr-20 -mt-20 opacity-60 pointer-events-none" />
         
         <div className="flex flex-col gap-1.5 relative z-10">
@@ -184,25 +174,18 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [],
         </div>
       </div>
 
-      {/* ── Camera Grid (Strictly 3 Columns on Laptops) ── */}
+      {/* ── Camera Grid ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 xl:gap-8">
         {filteredFeeds.map((feed) => {
           const port = getPortFromUrl(feed.imageUrl);
           const matchedZone = findMatchedZone(feed);
+          const isOffline = failedFeeds[feed.id];
           const isUploading = uploadingFeeds[feed.id];
           const currentStatus = uploadStatus[feed.id];
           const cacheBuster = streamCacheBusters[feed.id];
-
-          // 1. Resolve live video stream dynamically
-          const activeStreamUrl = getActiveCameraStream(feed.id, feed.name);
-          const streamUrl = activeStreamUrl
-            ? cacheBuster
-              ? `${activeStreamUrl}?t=${cacheBuster}`
-              : activeStreamUrl
-            : undefined;
-
-          // 2. Mark any unmapped/restricted camera or failed load as offline
-          const isOffline = !streamUrl || failedFeeds[feed.id];
+          
+          const rawUrl = resolveStreamUrl(feed.imageUrl, feed.id);
+          const streamUrl = cacheBuster ? `${rawUrl}${rawUrl.includes('?') ? '&' : '?'}t=${cacheBuster}` : rawUrl;
 
           const headcount = matchedZone?.currentHeadcount || feed.personCount || 0;
           const density = matchedZone?.density || (feed as any).density || 0;
@@ -213,7 +196,7 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [],
               key={feed.id}
               className="group bg-white border border-slate-200/80 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col relative"
             >
-              {/* Card Header (Camera Info & Badge perfectly aligned) */}
+              {/* Card Header */}
               <div className="px-5 py-4 bg-white flex items-center justify-between z-10">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="relative flex items-center justify-center shrink-0">
@@ -234,7 +217,7 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [],
                   </div>
                 </div>
                 
-                {/* Cleanly Integrated Risk Badge */}
+                {/* Risk Badge */}
                 <div className="shrink-0 ml-3">
                   <span className={`px-3 py-1.5 rounded-lg border font-bold uppercase text-[9px] sm:text-[10px] tracking-wider shadow-sm whitespace-nowrap ${
                     isOffline ? 'bg-slate-100 border-slate-200 text-slate-500' : getRiskBadge(riskLevel)
@@ -247,13 +230,12 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [],
               {/* Video Stream Area */}
               <div className="relative aspect-video bg-slate-900 w-full overflow-hidden border-y border-slate-200 animate-bounce-top">
                 {isOffline ? (
-                  /* High-Tech Offline State */
                   <div className="absolute inset-0 bg-slate-900 flex flex-col items-center justify-center gap-3 text-center p-6">
                     <div className="w-14 h-14 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center justify-center mb-1 shadow-inner">
                       <Server className="w-6 h-6 text-rose-500/80" />
                     </div>
                     <div className="flex flex-col gap-1">
-                      <span className="font-heading font-bold text-sm text-slate-200 tracking-wide">These cameras are closed due to restrictions</span>
+                      <span className="font-heading font-bold text-sm text-slate-200 tracking-wide">Signal Lost</span>
                       <span className="text-[10px] font-mono-num text-slate-500">Awaiting Edge Node on Port {port}</span>
                     </div>
 
@@ -287,10 +269,10 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [],
                   />
                 )}
 
-                {/* YOLO Bounding Boxes Overlay - Now prevents fake rendering on real streams */}
-                {showDetections && !isOffline && feed.yoloDetections && feed.yoloDetections.length > 0 && (
+                {/* YOLO Bounding Boxes Overlay */}
+                {showDetections && !isOffline && (
                   <div className="absolute inset-0 p-2 pointer-events-none">
-                    {feed.yoloDetections.map((det) => (
+                    {feed.yoloDetections?.map((det) => (
                       <div
                         key={det.id}
                         style={{
@@ -343,10 +325,8 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [],
                 )}
               </div>
 
-              {/* ── Responsive Stats Footer (Balanced 2-Column Grid) ── */}
+              {/* Stats Footer */}
               <div className="grid grid-cols-2 divide-x divide-slate-200/60 bg-slate-50 border-t border-slate-100 rounded-b-3xl">
-                
-                {/* Headcount */}
                 <div className="flex flex-col items-center justify-center py-4">
                   <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider mb-1">Headcount</span>
                   <span className={`font-mono-num font-black text-2xl leading-none ${isOffline ? 'text-slate-300' : 'text-slate-800'}`}>
@@ -354,7 +334,6 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [],
                   </span>
                 </div>
 
-                {/* Density */}
                 <div className="flex flex-col items-center justify-center py-4">
                   <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider mb-1">Density</span>
                   <div className={`flex items-baseline gap-1 ${isOffline ? 'text-slate-300' : 'text-slate-800'}`}>
@@ -364,14 +343,13 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [],
                     <span className="text-[10px] font-bold text-slate-400">p/m²</span>
                   </div>
                 </div>
-
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* ── Expanded Feed Modal (Sleek Inspection Window) ── */}
+      {/* ── Expanded Feed Modal ── */}
       {selectedFeed && (
         <div className="fixed inset-0 z-[600] flex items-center justify-center bg-slate-900/90 backdrop-blur-sm p-4 md:p-8 font-body animate-fadeIn">
           <div className="bg-slate-950 rounded-3xl max-w-6xl w-full overflow-hidden flex flex-col shadow-2xl border border-slate-800">
@@ -398,7 +376,7 @@ export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [],
 
             <div className="relative w-full bg-black flex-1 aspect-video flex items-center justify-center">
               <img
-                src={getActiveCameraStream(selectedFeed.id, selectedFeed.name) || selectedFeed.imageUrl}
+                src={resolveStreamUrl(selectedFeed.imageUrl, selectedFeed.id)}
                 alt={selectedFeed.name}
                 className="w-full h-full object-contain"
               />
