@@ -45,10 +45,10 @@ VENUE_ID = args.venue  # 🚨 NEW: Variable assignment
 PORT = args.port
 
 # Load environment variables
+# Load environment variables with live Render fallbacks
 load_dotenv()
-BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
-NODE_TOKEN = os.getenv("NODE_AUTH_TOKEN", "")
-
+BACKEND_URL = os.getenv("BACKEND_URL", "https://crowdshield-uw8r.onrender.com")
+NODE_TOKEN = os.getenv("NODE_AUTH_TOKEN", "technova_demo_key_9988")
 # ---------------------------------------------------------
 # CONSTANTS & PHYSICAL CALIBRATION (IPM)
 # ---------------------------------------------------------
