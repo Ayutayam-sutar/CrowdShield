@@ -17,24 +17,11 @@ import {
   Activity
 } from 'lucide-react';
 
-const RAILWAY_BASE_URL = "https://crowdshield-production-9825.up.railway.app";
-
-// Helper to route specific active feeds to their live cloud streams
-const getActiveCameraStream = (feedId: string, feedName: string): string | undefined => {
-  const id = String(feedId || "").toLowerCase();
-  const name = String(feedName || "").toLowerCase();
-
-  // Match Camera 1: ITER Main Gate
-  if (id === "gate_1" || id === "cam-01" || id === "cam_01" || id === "1" || name.includes("main gate")) {
-    return `${RAILWAY_BASE_URL}/stream/gate_1`;
-  }
-
-  // Match Camera 2: Kalinga Stadium Gate 3
-  if (id === "ks_gate_3" || id === "cam-03" || id === "cam_03" || name.includes("gate 3") || name.includes("kalinga")) {
-    return `${RAILWAY_BASE_URL}/stream/ks_gate_3`;
-  }
-
-  return undefined;
+// ─── SET YOUR ACTIVE HTTPS TUNNEL URL HERE ───
+// Paste your Pinggy, Cloudflare, or Ngrok URL here (No trailing slash)
+const PORT_TUNNELS: Record<string, string> = {
+  "5000": "https://dirty-peaches-battle.loca.lt",       // Camera 1 (ITER Campus / gate_1)
+  "5001": "https://silver-flies-hear.loca.lt", // Camera 2 (Kalinga Stadium / ks_gate_3)
 };
 
 // ─── MAP UPDATER (UNTOUCHED) ───
@@ -154,6 +141,22 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [localToast, setLocalToast] = useState<string | null>(null);
 
+  // Resolves local URLs (localhost/127.0.0.1) to the secure Tunnel URL for Netlify
+const resolveStreamUrl = (url: string, feedId: string): string => {
+  if (!url) return '';
+
+  // Extract port from original feed URL (e.g., http://127.0.0.1:5001/video_feed)
+  const portMatch = url.match(/:(\d+)\//);
+  const port = portMatch ? portMatch[1] : (feedId.includes('ks_') ? '5001' : '5000');
+
+  const activeTunnel = PORT_TUNNELS[port];
+  if (!activeTunnel) return url;
+
+  // Extract endpoint path (e.g., /video_feed)
+  const path = url.replace(/^https?:\/\/[^/]+/, '') || '/video_feed';
+  return `${activeTunnel}${path}`;
+};
+
   // ─── LOGIC (UNTOUCHED) ───
   const centerCoords: [number, number] = useMemo(() => {
     if (selectedVenue?.centerCoords) return selectedVenue.centerCoords;
@@ -247,17 +250,6 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
       iconAnchor: [42, 15],
     });
   };
-
-  // Pre-calculate Expanded Modal URLs to satisfy TypeScript
-  const activeModalStreamUrl = activeCameraModal 
-    ? getActiveCameraStream(activeCameraModal.id, activeCameraModal.name) 
-    : undefined;
-  
-  const finalModalUrl = activeModalStreamUrl 
-    ? (streamCacheBusters[activeCameraModal!.id] ? `${activeModalStreamUrl}?t=${streamCacheBusters[activeCameraModal!.id]}` : activeModalStreamUrl)
-    : undefined;
-    
-  const isModalOffline = activeCameraModal ? (!finalModalUrl || failedFeeds[activeCameraModal.id]) : false;
 
   // ─── UI RENDER ───
   return (
@@ -501,19 +493,12 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
             {filteredCctvFeeds.map((feed) => {
               const port = getPortFromUrl(feed.imageUrl);
               const matchedZone = findMatchedZone(feed);
+              const isOffline = failedFeeds[feed.id];
               const cacheBuster = streamCacheBusters[feed.id];
               
-              // 1. Resolve live video stream dynamically from Railway
-              const activeStreamUrl = getActiveCameraStream(feed.id, feed.name);
-              const streamUrl = activeStreamUrl
-                ? cacheBuster
-                  ? `${activeStreamUrl}?t=${cacheBuster}`
-                  : activeStreamUrl
-                : undefined;
+              const rawUrl = resolveStreamUrl(feed.imageUrl, feed.id);
+              const streamUrl = cacheBuster ? `${rawUrl}${rawUrl.includes('?') ? '&' : '?'}t=${cacheBuster}` : rawUrl;
               
-              // 2. Mark any unmapped/restricted camera or failed load as offline
-              const isOffline = !streamUrl || failedFeeds[feed.id];
-
               const headcount = matchedZone ? matchedZone.currentHeadcount : (feed.personCount || 0);
               const density = matchedZone ? matchedZone.density : 0;
 
@@ -546,9 +531,9 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
                     />
                   )}
 
-                  {!isOffline && feed.yoloDetections && feed.yoloDetections.length > 0 && (
+                  {!isOffline && (
                     <div className="absolute inset-0 pointer-events-none p-1">
-                      {feed.yoloDetections.map((det) => (
+                      {feed.yoloDetections?.map((det) => (
                         <div
                           key={det.id}
                           style={{
@@ -605,7 +590,7 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
             </div>
 
             <div className="relative aspect-video bg-black w-full overflow-hidden">
-              {isModalOffline ? (
+              {failedFeeds[activeCameraModal.id] ? (
                 <div className="w-full h-full bg-slate-950 flex flex-col items-center justify-center gap-3 text-slate-400 p-6 text-center">
                   <VideoOff className="w-12 h-12 text-[#FF3B5C] animate-pulse" />
                   <span className="font-heading font-bold text-lg text-slate-200">Signal Lost</span>
@@ -618,16 +603,20 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
                 </div>
               ) : (
                 <img
-                  src={finalModalUrl}
+                  src={(() => {
+                    const rawModalUrl = resolveStreamUrl(activeCameraModal.imageUrl, activeCameraModal.id);
+                    const buster = streamCacheBusters[activeCameraModal.id];
+                    return buster ? `${rawModalUrl}${rawModalUrl.includes('?') ? '&' : '?'}t=${buster}` : rawModalUrl;
+                  })()}
                   alt={activeCameraModal.name}
                   onError={() => handleImageError(activeCameraModal.id)}
                   className="w-full h-full object-contain"
                 />
               )}
 
-              {!isModalOffline && activeCameraModal.yoloDetections && activeCameraModal.yoloDetections.length > 0 && (
+              {!failedFeeds[activeCameraModal.id] && (
                 <div className="absolute inset-0 p-4 pointer-events-none">
-                  {activeCameraModal.yoloDetections.map((det) => (
+                  {activeCameraModal.yoloDetections?.map((det) => (
                     <div
                       key={det.id}
                       style={{
