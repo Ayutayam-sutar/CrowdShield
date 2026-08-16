@@ -51,7 +51,7 @@ class CitizenReport(Base):
     longitude: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
 
     # Media Attachments
-    media_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    media_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     media_type: Mapped[str | None] = mapped_column(
         String(16), nullable=True, doc="image | video"
     )

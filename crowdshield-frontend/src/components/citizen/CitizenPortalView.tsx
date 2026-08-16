@@ -84,7 +84,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
   const [exitRouteTriggered, setExitRouteTriggered] = useState(false);
 
   // Helper for status badge formatting
-  const getStatusBadgeStyle = (status: string) => {
+  const getStatusBadgeStyle = (status?: string) => {
     const upper = (status || '').toUpperCase();
     if (upper === 'RESOLVED') {
       return { label: tc('resolved', selectedLang), className: 'bg-[#67b2b9]/10 text-[#648d6a] border-[#67b2b9]/30 font-bold' };
@@ -95,13 +95,12 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
     return { label: tc('pending', selectedLang), className: 'bg-amber-50 text-amber-600 border-amber-200 font-bold' };
   };
 
-  const getCategoryTranslation = (cat: string, lang: SupportedLanguage) => {
+  const getCategoryTranslation = (cat?: string, lang: SupportedLanguage = 'en') => {
     const c = (cat || '').trim();
-    if (c.toLowerCase().includes('blocked') || c === 'Blocked Exit') return tc('blockedExitOpt', lang);
     if (c.toLowerCase().includes('medical') || c === 'Medical Emergency') return tc('medicalEmergencyOpt', lang);
     if (c.toLowerCase().includes('overcrowd') || c === 'Overcrowding') return tc('overcrowdingOpt', lang);
     if (c.toLowerCase().includes('hazard') || c === 'Hazard') return tc('hazardOpt', lang);
-    return cat;
+    return cat || tc('hazardOpt', lang);
   };
 
   // ─── TEAM'S BACKEND LOGIC & HOOKS (100% UNTOUCHED) ───
@@ -233,7 +232,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
     const destination = routeWaypoints[routeWaypoints.length - 1];
 
     if (selectedLang === 'hi') return `कृपया ध्यान दें! शिक्षा ओ अनुसंधान विश्वविद्यालय परिसर में भगदड़ की आशंका है। ${startZone} से आपका सुरक्षित मार्ग है: ${viaZones}, फिर ${destination}। कृपया शांतिपूर्वक बाहर निकलें।`;
-    if (selectedLang === 'od') return `ଧ୍ୟାନ ଦିଅନ୍ତୁ! ଶିକ୍ଷା ଓ ଅନୁସନ୍ଧାନ ବିଶ୍ୱବିଦ୍ୟାଳୟ ପରିସରରେ ଭିଡ଼ ଜନିତ ବିପଦ ଅଛି। ${startZone} ରୁ ଆପଣଙ୍କ ପ୍ରସ୍ଥାନ ମାର୍ଗ ହେଉଛି: ${viaZones}, ଏବଂ ${destination}। ଦୟาକରି ଶାନ୍ତ ଭାବରେ ପ୍ରସ୍ଥାନ କରନ୍ତୁ।`;
+    if (selectedLang === 'od') return `ଧ୍ୟାନ ଦିଅନ୍ତୁ! ଶିକ୍ଷା ଓ ଅନୁସନ୍ଧାନ ବିଶ୍ୱବିଦ୍ୟାଳୟ ପରିସରରେ ଭିଡ଼ ଜନିତ ବିପଦ ଅଛି। ${startZone} ରୁ ଆପଣଙ୍କ ପ୍ରସ୍ଥାନ ମାର୍ଗ ହେଉଛି: ${viaZones}, ଏବଂ ${destination}। ଦୟାକରି ଶାନ୍ତ ଭାବରେ ପ୍ରସ୍ଥାନ କରନ୍ତୁ।`;
     if (selectedLang === 'bn') return `বিশেষ সতর্কবার্তা! শিক্ষা ও অনুসন্ধান বিশ্ববিদ্যালয় চত্বরে হুড়োহুড়ির আশঙ্কা রয়েছে। ${startZone} থেকে আপনার নিরাপদ পথ হলো: ${viaZones}, তারপর ${destination}। অনুগ্রহ করে শান্তভাবে চলুন।`;
     if (selectedLang === 'ta') return `கவனத்திற்கு! சிக்ஷா ஓ அனுசந்தன் பல்கலைக்கழக வளாகத்தில் நெரிசல் ஆபத்து. ${startZone} இலிருந்து உங்களின் அவசர வழி: ${viaZones}, பின்னர் ${destination}. தயவுசெய்து அமைதியாக வெளியேறவும்.`;
     return `Attention! A stampede risk has been detected at Siksha O Anusandhan University Campus. Your safest route from ${startZone} is: ${viaZones}, then pass through ${destination} to successfully evacuate. Please proceed calmly.`;
@@ -261,7 +260,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
 
           setIsPlayingAudio(true);
           speakAnnouncement(textToAnnounce, langToUse).finally(() => {
-             setIsPlayingAudio(false);
+              setIsPlayingAudio(false);
           });
         }
       } 
@@ -320,12 +319,17 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const type = file.type.startsWith('video/') ? 'video' : 'image';
-      setMediaType(type);
-      setMediaUrl(URL.createObjectURL(file));
-      setMediaFileName(file.name);
-    }
+    if (!file) return;
+
+    setMediaFileName(file.name);
+    setMediaType(file.type.startsWith('video') ? 'video' : 'image');
+
+    // Convert to Base64 so any connected device can render it
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setMediaUrl(reader.result as string);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSimulateSampleImage = () => {
@@ -335,6 +339,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
       fileInputRef.current.click();
     }
   };
+
   const handleSimulateSampleVideo = () => {
     if (fileInputRef.current) {
       fileInputRef.current.accept = 'video/*';
@@ -342,6 +347,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
       fileInputRef.current.click();
     }
   };
+
   const removeMedia = () => {
     setMediaUrl(null);
     setMediaType(null);
@@ -532,31 +538,32 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
 
       {/* ── HEADER (Glassmorphic) ── */}
       <header
-        className={`sticky top-0 z-40 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between border-b transition-colors duration-500 backdrop-blur-xl ${
+        className={`sticky top-0 z-40 px-3 sm:px-6 py-2.5 sm:py-4 flex items-center justify-between border-b transition-colors duration-500 backdrop-blur-xl gap-2 ${
           isScenarioActive
             ? 'bg-rose-600/90 text-white border-rose-500 shadow-lg shadow-rose-600/20'
             : 'bg-white/80 text-slate-900 border-slate-200/80 shadow-sm'
         }`}
       >
-        <div className="flex items-center gap-3.5 min-w-0">
+        {/* Left Section: Logo + Title + Truncated Venue */}
+        <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1">
           {isScenarioActive ? (
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shadow-inner">
-              <AlertTriangle className="w-6 h-6 text-white animate-pulse" />
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20 flex items-center justify-center shadow-inner shrink-0">
+              <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-white animate-pulse" />
             </div>
           ) : (
             <img 
               src="/photos/crowdshieldlogo1.png" 
               alt="CrowdShield Logo" 
-              className="w-10 h-10 object-contain rounded-xl shadow-sm bg-white" 
+              className="w-9 h-9 sm:w-10 sm:h-10 object-contain rounded-xl shadow-sm bg-white shrink-0" 
             />
           )}
 
-          <div className="min-w-0 flex flex-col">
-            <h1 className="font-heading font-black text-sm sm:text-base tracking-tight truncate">
+          <div className="min-w-0 flex-1 flex flex-col">
+            <h1 className="font-heading font-black text-xs sm:text-base tracking-tight truncate leading-tight">
               {isScenarioActive ? '⚠ EMERGENCY ACTIVE' : 'CrowdShield Portal'}
             </h1>
-            <span
-              className={`text-[10px] font-mono font-bold uppercase tracking-widest flex items-center gap-1.5 truncate mt-0.5 ${
+            <div
+              className={`text-[10px] font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 min-w-0 mt-0.5 ${
                 isScenarioActive ? 'text-white/80' : 'text-[#67b2b9]'
               }`}
             >
@@ -565,22 +572,27 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                   isScenarioActive ? 'bg-white animate-ping' : 'bg-[#67b2b9] animate-pulse'
                 }`}
               />
-              {isScenarioActive ? `Evacuate Now · ${selectedVenue?.name || 'Campus'}` : `${selectedVenue?.name || 'SOA ITER Campus'} · Live`}
-            </span>
+              <span className="truncate">
+                {isScenarioActive 
+                  ? `Evacuate Now · ${selectedVenue?.name || 'Campus'}` 
+                  : `${selectedVenue?.name || 'SOA ITER Campus'} · Live`}
+              </span>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        {/* Right Section: Notification & Language Selector */}
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
           <button
             onClick={() => setShowNotifications(true)}
-            className={`relative p-2.5 rounded-xl transition-colors cursor-pointer border ${
+            className={`relative p-2 sm:p-2.5 rounded-xl transition-colors cursor-pointer border ${
               isScenarioActive ? 'hover:bg-white/20 text-white border-white/20' : 'hover:bg-slate-50 bg-white text-slate-500 border-slate-200 shadow-sm'
             }`}
           >
             <BellRing className="w-4 h-4 sm:w-5 sm:h-5" />
             {notifications.length > 0 && (
               <span
-                className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 animate-gentle-pulse ${
+                className={`absolute -top-1 -right-1 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full border-2 animate-gentle-pulse ${
                   isScenarioActive
                     ? 'bg-white border-rose-600'
                     : 'bg-rose-500 border-white'
@@ -590,23 +602,23 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
           </button>
 
           <div
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black tracking-widest border transition-all ${
+            className={`flex items-center gap-1 px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl text-[10px] sm:text-[11px] font-black tracking-wider border transition-all ${
               isScenarioActive
                 ? 'bg-white/20 border-white/30 text-white'
                 : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-600 shadow-sm'
             }`}
           >
-            <Languages className="w-4 h-4 shrink-0" />
+            <Languages className="w-3.5 h-3.5 shrink-0" />
             <select
               value={selectedLang}
               onChange={(e) => setSelectedLang(e.target.value as SupportedLanguage)}
-              className="bg-transparent focus:outline-none cursor-pointer font-mono font-bold outline-none"
+              className="bg-transparent focus:outline-none cursor-pointer font-mono font-bold outline-none text-[10px] sm:text-[11px]"
             >
-                <option value="en" className="text-slate-900 bg-white">ENGLISH</option>
-        <option value="hi" className="text-slate-900 bg-white">हिन्दी</option>
-        <option value="od" className="text-slate-900 bg-white">ଓଡ଼ିଆ</option>
-        <option value="bn" className="text-slate-900 bg-white">বাংলা</option>
-        <option value="ta" className="text-slate-900 bg-white">தமிழ்</option>
+              <option value="en" className="text-slate-900 bg-white">EN</option>
+              <option value="hi" className="text-slate-900 bg-white">हिन्दी</option>
+              <option value="od" className="text-slate-900 bg-white">ଓଡ଼ିଆ</option>
+              <option value="bn" className="text-slate-900 bg-white">বাংলা</option>
+              <option value="ta" className="text-slate-900 bg-white">தமிழ்</option>
             </select>
           </div>
 
@@ -889,7 +901,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                               onChange={(e) => setReportCategory(e.target.value)}
                               className="w-full appearance-none bg-slate-50 border border-slate-200 rounded-2xl px-4 py-4 text-sm font-bold font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-400 transition-all shadow-inner outline-none cursor-pointer"
                             >
-                              <option value="Blocked Exit">{tc('blockedExitOpt', selectedLang)}</option>
                               <option value="Medical Emergency">{tc('medicalEmergencyOpt', selectedLang)}</option>
                               <option value="Overcrowding">{tc('overcrowdingOpt', selectedLang)}</option>
                               <option value="Hazard">{tc('hazardOpt', selectedLang)}</option>
@@ -1024,8 +1035,23 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                       <p className="text-xs font-mono text-slate-400 max-w-sm uppercase tracking-wider">All sectors are reporting normal conditions.</p>
                     </div>
                   ) : (
-                    liveReports.map((rep, idx) => {
+                    liveReports.map((rawRep, idx) => {
+                      const rep = rawRep as any;
                       const badgeStyle = getStatusBadgeStyle(rep.status);
+
+                      // CRITICAL FIX: Extract image/video logic safely & kill toxic blobs
+                      let photoSrc = rep.photoUrl || (rep.media_type === 'image' ? rep.media_url : null) || rep.imageUrl || rep.mediaUrl || (!rep.media_url?.endsWith('.mp4') ? rep.media_url : null);
+                      let videoSrc = rep.videoUrl || (rep.media_type === 'video' ? rep.media_url : null) || (rep.media_url?.endsWith('.mp4') ? rep.media_url : null);
+
+                      if (photoSrc && photoSrc.startsWith('blob:')) photoSrc = null;
+                      if (videoSrc && videoSrc.startsWith('blob:')) videoSrc = null;
+
+                      // Failsafe: Move obvious videos out of photo string
+                      if (photoSrc && photoSrc.includes('video')) {
+                        videoSrc = photoSrc;
+                        photoSrc = null;
+                      }
+
                       return (
                         <motion.div
                           key={rep.id || idx}
@@ -1043,26 +1069,36 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                                 {getCategoryTranslation(rep.category, selectedLang)}
                               </span>
                             </div>
-                            <span className="text-[10px] font-mono font-bold text-slate-400 shrink-0 flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100">
-                              <Clock className="w-3.5 h-3.5 text-slate-400" />
-                              {rep.timestamp}
-                            </span>
+                        
                           </div>
 
                           <div className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-100 shadow-inner">
-                            <strong className="text-slate-900 font-black font-heading block mb-1">{rep.location}</strong> 
+                            <strong className="text-slate-900 font-black font-heading block mb-1">{rep.location || rep.location_name || 'Campus Sector'}</strong> 
                             {rep.description}
                           </div>
 
-                          {rep.photoUrl && (
+                          {/* ── Photo Renderer ── */}
+                          {photoSrc && !videoSrc && (
                             <div className="rounded-2xl overflow-hidden border border-slate-200 shadow-sm max-h-48 bg-slate-900 relative">
-                              <img src={rep.photoUrl} alt="Report Incident" className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500 opacity-90 hover:opacity-100" />
+                              <img 
+                                src={photoSrc} 
+                                alt="Report Incident" 
+                                className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500 opacity-90 hover:opacity-100" 
+                                onError={(e) => {
+                                  (e.target as HTMLElement).style.display = 'none';
+                                }}
+                              />
                             </div>
                           )}
 
-                          {rep.videoUrl && (
+                          {/* ── Video Renderer ── */}
+                          {videoSrc && (
                             <div className="rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-slate-900">
-                              <video src={rep.videoUrl} controls className="w-full max-h-48 object-cover opacity-90 hover:opacity-100 transition-opacity" />
+                              <video 
+                                src={videoSrc} 
+                                controls 
+                                className="w-full max-h-48 object-cover opacity-90 hover:opacity-100 transition-opacity" 
+                              />
                             </div>
                           )}
 
@@ -1084,30 +1120,32 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
 
       {/* ── EMERGENCY BOTTOM BAR ── */}
       <div
-        className={`fixed bottom-0 left-0 right-0 w-full max-w-6xl mx-auto p-4 sm:p-5 z-40 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t transition-colors duration-500 backdrop-blur-xl ${
+        className={`fixed bottom-0 left-0 right-0 w-full max-w-6xl mx-auto px-4 py-2.5 sm:px-6 sm:py-4 z-40 flex items-center justify-between gap-3 border-t transition-colors duration-500 backdrop-blur-xl ${
           isScenarioActive
             ? 'bg-rose-600/95 text-white border-rose-500 shadow-[0_-10px_40px_rgba(244,63,94,0.3)]'
             : 'bg-white/90 text-slate-900 border-slate-200 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]'
         }`}
       >
-        <div className="flex items-center gap-3 min-w-0">
-          <div className={`p-2.5 rounded-xl shadow-inner ${isScenarioActive ? 'bg-white/20 text-white' : 'bg-rose-50 text-rose-500 border border-rose-100'}`}>
-            <PhoneCall className={`w-5 h-5 shrink-0 ${isScenarioActive ? 'animate-pulse' : ''}`} />
+        {/* Left: Compact Emergency Title */}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className={`p-2 rounded-xl shadow-inner shrink-0 ${isScenarioActive ? 'bg-white/20 text-white' : 'bg-rose-50 text-rose-500 border border-rose-100'}`}>
+            <PhoneCall className={`w-4 h-4 sm:w-5 sm:h-5 ${isScenarioActive ? 'animate-pulse' : ''}`} />
           </div>
           <div className="flex flex-col min-w-0">
-            <span className={`text-sm sm:text-base font-black font-heading tracking-tight truncate ${isScenarioActive ? 'text-white' : 'text-slate-900'}`}>
-              {isScenarioActive ? 'Emergency Services' : '1-Tap Emergency Dispatch'}
+            <span className={`text-xs sm:text-base font-black font-heading tracking-tight truncate ${isScenarioActive ? 'text-white' : 'text-slate-900'}`}>
+              {isScenarioActive ? 'Emergency' : 'Emergency SOS'}
             </span>
-            <span className={`text-[10px] sm:text-[11px] font-mono font-bold uppercase tracking-widest truncate mt-0.5 ${isScenarioActive ? 'text-white/80' : 'text-slate-400'}`}>
+            <span className={`text-[9px] sm:text-[11px] font-mono font-bold uppercase tracking-widest truncate ${isScenarioActive ? 'text-white/80' : 'text-slate-400'}`}>
               Direct Official Lines
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0 w-full sm:w-auto">
+        {/* Right: Action Buttons */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <a
             href="tel:112"
-            className={`flex-1 sm:flex-none px-4 sm:px-6 py-3.5 rounded-2xl font-heading font-black text-sm uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center gap-2 border-none shadow-md ${
+            className={`px-3.5 py-2.5 sm:px-6 sm:py-3.5 rounded-xl sm:rounded-2xl font-heading font-black text-xs sm:text-sm uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center gap-1.5 shadow-md ${
               isScenarioActive
                 ? 'bg-white text-rose-600 hover:bg-rose-50'
                 : 'bg-slate-900 text-white hover:bg-slate-800'
@@ -1117,7 +1155,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
           </a>
           <a
             href="tel:108"
-            className={`flex-1 sm:flex-none px-4 sm:px-6 py-3.5 rounded-2xl font-heading font-black text-sm uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center gap-2 border-none shadow-md ${
+            className={`px-3.5 py-2.5 sm:px-6 sm:py-3.5 rounded-xl sm:rounded-2xl font-heading font-black text-xs sm:text-sm uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center gap-1.5 shadow-md ${
               isScenarioActive
                 ? 'bg-white text-rose-600 hover:bg-rose-50'
                 : 'bg-gradient-to-r from-[#67b2b9] to-[#648d6a] text-white hover:opacity-90'
