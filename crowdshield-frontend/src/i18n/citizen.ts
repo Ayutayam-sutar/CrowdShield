@@ -231,13 +231,7 @@ const citizen: Record<string, Record<SupportedLanguage, string>> = {
   },
 
   // Category options translation (dynamic representation or display)
-  blockedExitOpt: {
-    en: '🚪 Blocked Exit',
-    hi: '🚪 अवरुद्ध निकास',
-    od: '🚪 ଅବରୋଧିତ ପ୍ରସ୍ଥାନ',
-    bn: '🚪 অবরুদ্ধ প্রস্থান',
-    ta: '🚪 தடைபட்ட வெளியேறும் வழி',
-  },
+
   medicalEmergencyOpt: {
     en: '🚑 Medical Emergency',
     hi: '🚑 चिकित्सा आपातकाल',

@@ -102,18 +102,28 @@ export interface SarvamTranslation {
   audioDurationSec: number;
 }
 export interface CitizenReport {
-  id: string;
-  category: string; // Widened so any category string from DB is accepted
-  location: string;
-  photoUrl?: string;
-  videoUrl?: string;
-  mediaType?: 'image' | 'video' | string;
+  id?: string;
+  category: string; // Accepts 'Blocked Exit', 'Medical Emergency', 'Overcrowding', etc.
   description: string;
-  timestamp: string;
-  status: 'PENDING' | 'DISPATCHED' | 'RESOLVED' | 'pending' | 'dispatched' | 'resolved' | string; // Accommodate uppercase from database
-  upvotes: number;
+  location?: string;
+  location_name?: string;
+  venue_id?: string;
   latitude?: number;
   longitude?: number;
+  
+  // Media Fields (Supports both frontend camelCase and backend snake_case)
+  photoUrl?: string;
+  videoUrl?: string;
+  mediaUrl?: string;
+  media_url?: string;
+  mediaType?: 'image' | 'video' | string;
+  media_type?: 'image' | 'video' | string;
+
+  // Metadata & Status
+  timestamp?: string;
+  created_at?: string;
+  status?: 'PENDING' | 'VERIFIED' | 'DISPATCHED' | 'RESOLVED' | 'pending' | 'dispatched' | 'resolved' | string;
+  upvotes?: number;
 }
 
 export type NetworkMode = 'cloud' | 'edge';

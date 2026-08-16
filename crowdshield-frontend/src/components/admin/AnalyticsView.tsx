@@ -470,75 +470,86 @@ export const AnalyticsView: React.FC = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
-                {citizenReports.data.map((report) => (
-                  <div
-                    key={report.id}
-                    className="bg-white border border-slate-200/80 rounded-3xl overflow-hidden shadow-sm hover:shadow-lg transition-all flex flex-col justify-between group"
-                  >
-                    <div>
-                      {/* Image Preview */}
-                      {report.imageUrl && (
-                        <div className="relative h-48 sm:h-56 w-full bg-slate-900 overflow-hidden">
-                          <img
-                            src={report.imageUrl}
-                            alt={report.category}
-                            className="w-full h-full object-cover group-hover:scale-105 group-hover:opacity-90 transition-all duration-500"
-                          />
-                          <button
-                            onClick={() => setSelectedImage(report.imageUrl!)}
-                            className="absolute bottom-3 right-3 px-3 py-1.5 bg-black/60 backdrop-blur-md text-white rounded-xl text-[10px] font-mono font-bold tracking-widest flex items-center gap-1.5 cursor-pointer hover:bg-black/80 transition-colors border border-white/20 shadow-lg"
-                          >
-                            <Eye className="w-3.5 h-3.5" /> ENLARGE
-                          </button>
-                        </div>
-                      )}
+                {citizenReports.data.map((report: any) => {
+                  // 1. Grab whichever image key the backend sends
+                  let mediaSrc = report.media_url || report.photoUrl || report.imageUrl || report.mediaUrl;
+                  
+                  // 2. Ignore toxic blobs that crash the page for other users
+                  if (mediaSrc && mediaSrc.startsWith('blob:')) {
+                    mediaSrc = null; 
+                  }
 
-                      <div className="p-5 sm:p-6 flex flex-col gap-3">
-                        <div className="flex items-center justify-between">
-                          <span className="px-3 py-1 bg-slate-100 border border-slate-200 text-slate-600 font-black rounded-lg text-[9px] sm:text-[10px] uppercase tracking-widest">
-                            {report.category}
-                          </span>
-                          <span className="text-[10px] sm:text-[11px] font-mono font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md">
-                            {report.timestamp}
-                          </span>
-                        </div>
+                  return (
+                    <div
+                      key={report.id || Math.random().toString()}
+                      className="bg-white border border-slate-200/80 rounded-3xl overflow-hidden shadow-sm hover:shadow-lg transition-all flex flex-col justify-between group"
+                    >
+                      <div>
+                        {/* Image Preview */}
+                        {mediaSrc && (
+                          <div className="relative h-48 sm:h-56 w-full bg-slate-900 overflow-hidden">
+                            <img
+                              src={mediaSrc}
+                              alt={report.category || 'Hazard'}
+                              className="w-full h-full object-cover group-hover:scale-105 group-hover:opacity-90 transition-all duration-500"
+                            />
+                            <button
+                              onClick={() => setSelectedImage(mediaSrc)}
+                              className="absolute bottom-3 right-3 px-3 py-1.5 bg-black/60 backdrop-blur-md text-white rounded-xl text-[10px] font-mono font-bold tracking-widest flex items-center gap-1.5 cursor-pointer hover:bg-black/80 transition-colors border border-white/20 shadow-lg"
+                            >
+                              <Eye className="w-3.5 h-3.5" /> ENLARGE
+                            </button>
+                          </div>
+                        )}
 
-                        <h4 className="font-heading font-black text-base sm:text-lg text-slate-900 mt-2 tracking-tight leading-tight">
-                          {report.location}
-                        </h4>
-                        <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
-                          {report.description}
-                        </p>
+                        <div className="p-5 sm:p-6 flex flex-col gap-3">
+                          <div className="flex items-center justify-between">
+                            <span className="px-3 py-1 bg-slate-100 border border-slate-200 text-slate-600 font-black rounded-lg text-[9px] sm:text-[10px] uppercase tracking-widest">
+                              {report.category || 'Hazard'}
+                            </span>
+                            <span className="text-[10px] sm:text-[11px] font-mono font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md">
+                              {report.timestamp}
+                            </span>
+                          </div>
+
+                          <h4 className="font-heading font-black text-base sm:text-lg text-slate-900 mt-2 tracking-tight leading-tight">
+                            {report.location_name || report.location || 'Campus'}
+                          </h4>
+                          <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
+                            {report.description}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Card Footer Actions */}
+                      <div className="px-5 sm:px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                        <span className={`px-3 py-1.5 rounded-lg border font-black text-[9px] sm:text-[10px] uppercase tracking-widest shadow-sm ${getStatusBadge(report.status)}`}>
+                          {report.status}
+                        </span>
+
+                        <div className="flex items-center gap-2">
+                          {report.status === 'PENDING' && (
+                            <button
+                              onClick={() => handleUpdateReportStatus(report.id, 'CONFIRMED')}
+                              className="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider cursor-pointer transition-all shadow-md active:scale-95 border-none"
+                            >
+                              Confirm Alert
+                            </button>
+                          )}
+                          {report.status !== 'RESOLVED' && (
+                            <button
+                              onClick={() => handleUpdateReportStatus(report.id, 'RESOLVED')}
+                              className="px-4 py-2 bg-[#67b2b9] hover:bg-[#5a9c9f] text-white rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider cursor-pointer transition-all shadow-md active:scale-95 border-none"
+                            >
+                              Resolve
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
-
-                    {/* Card Footer Actions */}
-                    <div className="px-5 sm:px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                      <span className={`px-3 py-1.5 rounded-lg border font-black text-[9px] sm:text-[10px] uppercase tracking-widest shadow-sm ${getStatusBadge(report.status)}`}>
-                        {report.status}
-                      </span>
-
-                      <div className="flex items-center gap-2">
-                        {report.status === 'PENDING' && (
-                          <button
-                            onClick={() => handleUpdateReportStatus(report.id, 'CONFIRMED')}
-                            className="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider cursor-pointer transition-all shadow-md active:scale-95 border-none"
-                          >
-                            Confirm Alert
-                          </button>
-                        )}
-                        {report.status !== 'RESOLVED' && (
-                          <button
-                            onClick={() => handleUpdateReportStatus(report.id, 'RESOLVED')}
-                            className="px-4 py-2 bg-[#67b2b9] hover:bg-[#5a9c9f] text-white rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider cursor-pointer transition-all shadow-md active:scale-95 border-none"
-                          >
-                            Resolve
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
+              
               </div>
             )}
           </div>
