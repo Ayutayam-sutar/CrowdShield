@@ -15,8 +15,8 @@ import {
 // ─── SET YOUR ACTIVE HTTPS TUNNEL URL HERE ───
 // Paste your Pinggy, Cloudflare, or Ngrok URL here (No trailing slash)
 const PORT_TUNNELS: Record<string, string> = {
-  "5000": "https://dirty-peaches-battle.loca.lt",       // Camera 1 (ITER Campus / gate_1)
-  "5001": "https://silver-flies-hear.loca.lt", // Camera 2 (Kalinga Stadium / ks_gate_3)
+  "5000": "https://lazy-tables-watch.loca.lt",       // Camera 1 (ITER Campus / gate_1)
+  "5001": "https://lemon-chicken-knock.loca.lt", // Camera 2 (Kalinga Stadium / ks_gate_3)
 };
 interface CamerasViewProps {
   cctvFeeds: CCTVFeed[];
