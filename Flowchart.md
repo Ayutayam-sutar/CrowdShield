@@ -176,7 +176,7 @@ stateDiagram-v2
     OPEN --> DISPATCHED: Admin dispatches<br/>intervention
     OPEN --> RESOLVED: Auto-resolved<br/>(risk drops below threshold)
     
-    DISPATCHED --> RESOLVED: Volunteer confirms<br/>on-site resolution
+    
     DISPATCHED --> DISPATCHED: Escalate severity<br/>(conditions worsen)
     
     RESOLVED --> [*]: Alert archived<br/>+ audit logged
@@ -188,8 +188,7 @@ stateDiagram-v2
     }
 
     state DISPATCHED {
-        [*] --> VolunteerAssigned: Task dispatched<br/>to nearest volunteer
-        VolunteerAssigned --> BroadcastSent: Emergency PA<br/>in 5 languages
+        [*] --> BroadcastSent: Task dispatched<br/>PA broadcast 
         BroadcastSent --> EvacRouteComputed: A* path to<br/>nearest safe exit
         EvacRouteComputed --> MonitoringResponse: Live tracking<br/>of zone density
     }
@@ -221,12 +220,10 @@ flowchart TD
     VERIFY --> ADMIN_REVIEW
     WAIT --> ADMIN_REVIEW
 
-    ADMIN_REVIEW -->|"Confirm"| DISPATCH["Status → DISPATCHED<br/>Volunteer task created"]
+    ADMIN_REVIEW -->|"Confirm"| DISPATCH["Status → DISPATCHED<br/>"]
     ADMIN_REVIEW -->|"Dismiss"| RESOLVE_FALSE["Status → RESOLVED<br/>Marked as false positive"]
 
-    DISPATCH --> VOL_TASK["Volunteer receives task<br/>on Ops View"]
-    VOL_TASK --> ON_SITE["Volunteer arrives<br/>on-site"]
-    ON_SITE --> RESOLVE["Status → RESOLVED<br/>Resolution logged"]
+    DISPATCH -->RESOLVE["Status → RESOLVED<br/>Resolution logged"]
     RESOLVE --> AUDIT["INSERT audit_log<br/>with operator + action"]
 
     style START fill:#e94560,stroke:#1a1a2e,color:#fff

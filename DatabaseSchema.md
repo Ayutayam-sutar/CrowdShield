@@ -6,7 +6,7 @@ erDiagram
         uuid id PK
         string username "email, unique"
         string hashed_password
-        enum role "ADMIN | CITIZEN | VOLUNTEER"
+        enum role "ADMIN | CITIZEN"
         bool is_active
     }
 
