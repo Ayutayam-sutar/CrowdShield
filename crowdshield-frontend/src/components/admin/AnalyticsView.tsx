@@ -169,19 +169,61 @@ export const AnalyticsView: React.FC = () => {
     }
   };
 
-  const handleExportCSV = () => {
-    if (!logs.data || logs.data.length === 0) return;
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      'Log ID,Timestamp,Zone,Peak Density,Intervention Applied\n' + // Removed resolution time
-      logs.data.map((e) => `"${e.id}","${e.timestamp}","${e.zone}","${e.peak_density}","${e.intervention}"`).join('\n');
-    const link = document.createElement('a');
-    link.setAttribute('href', encodeURI(csvContent));
-    link.setAttribute('download', `CrowdShield_Incident_Report_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+const handleExportCSV = () => {
+  if (!logs.data || logs.data.length === 0) {
+    console.warn("No data available to export.");
+    return;
+  }
+
+  // 1. Set the exact headers seen in your Excel screenshot
+  const headers = ["Log ID", "Timestamp", "Zone", "Peak Density", "Intervention Applied"];
+
+  // 2. Map over your data and catch the right variable names (with safe fallbacks)
+  const csvRows = logs.data.map((log: any) => {
+    // We use fallback || operators here to catch whatever format the backend sends
+    const logId = log.id || log.log_id || 'N/A';
+    
+    // Format the timestamp nicely
+    const timestamp = log.timestamp || log.created_at 
+      ? new Date(log.timestamp || log.created_at).toLocaleString() 
+      : 'Unknown Time';
+      
+    const zone = log.zone_id || log.zone || log.location_name || 'Campus';
+    
+    // Grab the density/peak density
+    const peakDensity = log.peak_density || log.density || log.max_density || '0.0';
+    
+    // Grab the intervention/status
+    const intervention = log.intervention_applied || log.intervention || log.status || 'None';
+
+    // Escape commas inside strings so it doesn't break the CSV format
+    return [
+      `"${logId}"`,
+      `"${timestamp}"`,
+      `"${zone}"`,
+      `"${peakDensity}"`,
+      `"${intervention}"`
+    ].join(',');
+  });
+
+  // 3. Combine headers and rows with line breaks
+  const csvString = [headers.join(','), ...csvRows].join('\n');
+
+  // 4. Create the downloadable file
+  const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  
+  // 5. Trigger the download automatically
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', `CrowdShield_System_Logs_${new Date().toISOString().split('T')[0]}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  
+  // Clean up
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
 
   const handleGenerateSummary = async (log: AuditLog) => {
     setSummaryModal({ alertId: log.alertId, text: '', loading: true, error: null });
@@ -486,21 +528,32 @@ export const AnalyticsView: React.FC = () => {
                     >
                       <div>
                         {/* Image Preview */}
-                        {mediaSrc && (
-                          <div className="relative h-48 sm:h-56 w-full bg-slate-900 overflow-hidden">
-                            <img
-                              src={mediaSrc}
-                              alt={report.category || 'Hazard'}
-                              className="w-full h-full object-cover group-hover:scale-105 group-hover:opacity-90 transition-all duration-500"
-                            />
-                            <button
-                              onClick={() => setSelectedImage(mediaSrc)}
-                              className="absolute bottom-3 right-3 px-3 py-1.5 bg-black/60 backdrop-blur-md text-white rounded-xl text-[10px] font-mono font-bold tracking-widest flex items-center gap-1.5 cursor-pointer hover:bg-black/80 transition-colors border border-white/20 shadow-lg"
-                            >
-                              <Eye className="w-3.5 h-3.5" /> ENLARGE
-                            </button>
-                          </div>
-                        )}
+                      {/* Media Preview (Supports Video & Image) */}
+{mediaSrc && (
+  <div className="relative h-48 sm:h-56 w-full bg-slate-900 overflow-hidden group">
+    {report.media_type === 'video' || (typeof mediaSrc === 'string' && (mediaSrc.startsWith('data:video') || mediaSrc.endsWith('.mp4'))) ? (
+      <video
+        src={mediaSrc}
+        controls
+        playsInline
+        className="w-full h-full object-cover"
+      />
+    ) : (
+      <img
+        src={mediaSrc}
+        alt={report.category || 'Hazard'}
+        className="w-full h-full object-cover group-hover:scale-105 group-hover:opacity-90 transition-all duration-500"
+      />
+    )}
+    
+    <button
+      onClick={() => setSelectedImage(mediaSrc)}
+      className="absolute bottom-3 right-3 px-3 py-1.5 bg-black/60 backdrop-blur-md text-white rounded-xl text-[10px] font-mono font-bold tracking-widest flex items-center gap-1.5 cursor-pointer hover:bg-black/80 transition-colors border border-white/20 shadow-lg z-10"
+    >
+      <Eye className="w-3.5 h-3.5" /> ENLARGE
+    </button>
+  </div>
+)}
 
                         <div className="p-5 sm:p-6 flex flex-col gap-3">
                           <div className="flex items-center justify-between">
