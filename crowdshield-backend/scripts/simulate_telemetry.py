@@ -6,7 +6,6 @@ import sys
 
 BASE_URL = "http://127.0.0.1:8000/api/v1/telemetry"
 
-# Real ITER Campus Zones
 ZONES = [
     {"zone_id": "zone_admin_block_rd", "capacity_limit": 500},
     {"zone_id": "zone_library_roundabout", "capacity_limit": 400},

@@ -24,8 +24,6 @@ import {
 import api from '../../utils/api';
 import { SupportedLanguage } from '../../types';
 import { tc } from '../../i18n/citizen';
-
-// ─── TYPES (Untouched) ──────────────────────────────────────────────────
 interface EvacuationStep {
   stepNumber: number;
   title: string;
@@ -38,15 +36,12 @@ interface EvacuationStep {
   lat: number;
   lng: number;
 }
-
 interface EvacuationDrillModeProps {
   userLocation: { lat: number; lng: number };
   venueId?: string;
   isScenarioActive?: boolean;
   language?: SupportedLanguage;
 }
-
-// ─── UTILS (Untouched) ──────────────────────────────────────────────────
 const calculateDistanceMeters = (lat1: number, lng1: number, lat2: number, lng2: number) => {
   const R = 6371e3;
   const p1 = (lat1 * Math.PI) / 180;
@@ -59,8 +54,6 @@ const calculateDistanceMeters = (lat1: number, lng1: number, lat2: number, lng2:
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return Math.round(R * c);
 };
-
-// ─── COMPONENT ──────────────────────────────────────────────
 export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
   userLocation,
   venueId = 'soa-iter-01',
@@ -74,8 +67,6 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
   const [drillCompleted, setDrillCompleted] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [isVoiceGuidanceActive, setIsVoiceGuidanceActive] = useState(true);
-
-  // Fetch live route (Untouched Backend Logic)
   useEffect(() => {
     const fetchLiveRoute = async () => {
       setIsLoading(true);
@@ -155,8 +146,6 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
       .map((step, idx) => `${idx === 0 ? 'M' : 'L'} ${step.xPercent} ${step.yPercent}`)
       .join(' ');
   }, [dynamicSteps]);
-
-  // Timers & Simulation (Untouched)
   useEffect(() => {
     let timer: NodeJS.Timeout | null = null;
     if (isAutoSimulating && !drillCompleted) {
@@ -187,7 +176,6 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
     }
     return () => { if (simInterval) clearInterval(simInterval); };
   }, [isAutoSimulating, drillCompleted, totalSteps, isVoiceGuidanceActive, dynamicSteps]);
-
   const announceStepVoice = (step: EvacuationStep) => {
     if (!isVoiceGuidanceActive || !('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
@@ -196,7 +184,6 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
     utterance.rate = 1.0;
     window.speechSynthesis.speak(utterance);
   };
-
   const handleStartDrill = () => {
     if (dynamicSteps.length === 0) return;
     setCurrentStepIndex(0);
@@ -205,16 +192,13 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
     setIsAutoSimulating(true);
     announceStepVoice(dynamicSteps[0]);
   };
-
   const handlePauseDrill = () => setIsAutoSimulating(false);
-
   const handleResetDrill = () => {
     setIsAutoSimulating(false);
     setCurrentStepIndex(0);
     setDrillCompleted(false);
     setElapsedSeconds(0);
   };
-
   const handleNextStep = () => {
     if (currentStepIndex < totalSteps - 1) {
       const nextIdx = currentStepIndex + 1;
@@ -225,21 +209,17 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
       setIsAutoSimulating(false);
     }
   };
-
   const handlePrevStep = () => {
     if (currentStepIndex > 0) {
       setCurrentStepIndex(currentStepIndex - 1);
       setDrillCompleted(false);
     }
   };
-
   const formatTime = (secs: number) => {
     const mins = Math.floor(secs / 60);
     const remaining = secs % 60;
     return `${mins}m ${remaining < 10 ? '0' : ''}${remaining}s`;
   };
-
-  // ─── LOADING STATE ──────────────────────────────────────
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center p-12 bg-white rounded-3xl border border-slate-200/80 shadow-sm gap-4">
@@ -257,8 +237,6 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
       </div>
     );
   }
-
-  // ─── ERROR STATE ────────────────────────────────────────
   if (dynamicSteps.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-12 bg-red-50 border border-red-100 rounded-3xl gap-4">
@@ -276,7 +254,6 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
       </div>
     );
   }
-
   // ─── MAIN RENDER ────────────────────────────────────────
   return (
     <div className="flex flex-col gap-4 font-body w-full max-w-full">
@@ -316,7 +293,6 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
             </div>
           </div>
         </div>
-
         <button
           onClick={() => setIsVoiceGuidanceActive(!isVoiceGuidanceActive)}
           className={`py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shrink-0 active:scale-95 shadow-sm ${
@@ -329,7 +305,6 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
           <span>{isVoiceGuidanceActive ? tc('voiceOn', language) : tc('voiceOff', language)}</span>
         </button>
       </div>
-
       {/* ── SVG Map Visualizer ── */}
       <div className="bg-white rounded-3xl p-4 sm:p-5 flex flex-col gap-4 border border-slate-200/80 shadow-sm relative overflow-hidden">
         <div className="flex items-center justify-between text-xs font-mono-num gap-2 px-1">
@@ -352,7 +327,6 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
               backgroundSize: '16px 16px',
             }}
           />
-
           {/* Route path SVG */}
           <svg
             className="absolute inset-0 w-full h-full pointer-events-none"
@@ -376,12 +350,10 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
               opacity="0.9"
             />
           </svg>
-
           {/* Step dots */}
           {dynamicSteps.map((step, idx) => {
             const isPassed = idx < currentStepIndex || drillCompleted;
             const isCurrent = idx === currentStepIndex && !drillCompleted;
-
             return (
               <div
                 key={step.stepNumber}
@@ -409,7 +381,6 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
               </div>
             );
           })}
-
           {/* Glowing Blue dot tracker */}
           {!drillCompleted && currentStep && (
             <div
@@ -425,7 +396,6 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
             </div>
           )}
         </div>
-
         {/* HUD Stats */}
         <div className="grid grid-cols-3 gap-3">
           {[
@@ -444,7 +414,6 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
           ))}
         </div>
       </div>
-
       {/* ── Progress Bar ── */}
       <div className="bg-white border border-slate-200/80 rounded-3xl p-5 flex flex-col gap-3 shadow-sm">
         <div className="flex items-center justify-between text-xs font-bold">
@@ -460,8 +429,7 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
           />
         </div>
       </div>
-
-      {/* ── Navigation / Completion Card (Apple Maps Style) ── */}
+      {/* ── Navigation / Completion Card  ── */}
       <AnimatePresence mode="wait">
         {drillCompleted ? (
           <motion.div
@@ -480,7 +448,6 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
                 <strong className="text-emerald-900 font-mono-num bg-emerald-100/50 px-1 rounded">{formatTime(elapsedSeconds)}</strong>.
               </p>
             </div>
-
             <div className="w-full bg-white rounded-2xl p-4 flex items-center justify-around text-xs font-mono-num gap-2 shadow-sm border border-emerald-100 mt-2">
               <div className="text-center">
                 <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">{tc('rating', language)}</span>
@@ -491,8 +458,7 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
                 <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">{tc('waypoints', language)}</span>
                 <strong className="text-slate-800 text-base">{totalSteps} {tc('nodes', language)}</strong>
               </div>
-            </div>
-
+            </div> 
             <button
               onClick={handleResetDrill}
               className="w-full py-4 mt-2 bg-white hover:bg-slate-50 text-slate-800 rounded-2xl font-heading font-bold text-sm flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all border border-slate-200 shadow-sm"
@@ -522,7 +488,6 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
                 ~{currentStep.distanceMeter}m {tc('ahead', language)}
               </span>
             </div>
-
             <div className="pl-2">
               <h3 className="font-heading font-black text-xl sm:text-2xl text-slate-900 flex items-start gap-2.5 tracking-tight leading-tight">
                 <ArrowUpRight className="w-7 h-7 text-indigo-500 shrink-0 mt-0.5" />
@@ -532,7 +497,6 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
                 {currentStep.instruction}
               </p>
             </div>
-
             {/* Huge Mobile-Friendly Navigation Controls */}
             <div className="flex items-center gap-2.5 pt-2 pl-2">
               <button
@@ -546,7 +510,6 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
-
               {isAutoSimulating ? (
                 <button
                   onClick={handlePauseDrill}
@@ -564,7 +527,6 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
                   <span>{tc('startSimulation', language)}</span>
                 </button>
               )}
-
               <button
                 onClick={handleNextStep}
                 className="py-3.5 px-4 sm:px-6 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-heading font-bold text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-lg active:scale-95"
@@ -576,8 +538,6 @@ export const EvacuationDrillMode: React.FC<EvacuationDrillModeProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* ── Pro Tip ── */}
       <div className="bg-white rounded-2xl p-4 flex items-start gap-3 text-xs border border-slate-200/80 shadow-sm mt-1">
         <div className="p-1.5 bg-indigo-50 rounded-lg shrink-0">
           <Info className="w-4 h-4 text-indigo-600" />

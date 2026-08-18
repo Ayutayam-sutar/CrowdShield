@@ -5,13 +5,11 @@ from pydantic import BaseModel, ConfigDict
 from typing import Optional, List, Any
 from datetime import datetime
 from app.models.alert import AlertSeverity, AlertStatus
-
 class RecommendedAction(BaseModel):
     id: str
     actionText: str
     impact: str
     targetGateOrZone: str
-
 class AlertBase(BaseModel):
     title: str
     category: str = "Overcrowding"
@@ -31,7 +29,6 @@ class AlertCreate(AlertBase):
 class AlertUpdate(BaseModel):
     status: AlertStatus
     resolved_by: Optional[str] = None
-
 class AlertResponse(AlertBase):
     id: str
     zone_id: str
@@ -41,5 +38,4 @@ class AlertResponse(AlertBase):
     resolved_by: Optional[str] = None
     created_at: datetime
     resolved_at: Optional[datetime] = None
-
     model_config = ConfigDict(from_attributes=True)

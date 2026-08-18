@@ -8,8 +8,6 @@ from sqlalchemy.orm import Mapped, mapped_column
 import enum
 
 from app.db.base import Base
-
-
 class CameraStatus(str, enum.Enum):
     online = "online"
     warning = "warning"
@@ -30,7 +28,6 @@ class CCTVFeed(Base):
         String(64), ForeignKey("zones.id", ondelete="CASCADE"), nullable=False
     )
 
-    # Camera Metrics
     status: Mapped[CameraStatus] = mapped_column(
         SAEnum(CameraStatus, name="camera_status_enum", create_constraint=True),
         nullable=False,
@@ -40,8 +37,6 @@ class CCTVFeed(Base):
     person_count: Mapped[int] = mapped_column(Integer, default=0)
     image_url: Mapped[str] = mapped_column(String(500), nullable=False, default="")
     edge_node_id: Mapped[str] = mapped_column(String(32), nullable=False, default="")
-
-    # YOLO Detections (stored as JSON array of detection objects)
     yolo_detections_json: Mapped[list | None] = mapped_column(
         JSON, nullable=True,
         doc='[{"id": "d1", "label": "...", "confidence": 0.96, "bbox": {...}, "type": "person"}]',

@@ -32,9 +32,6 @@ import { useAuth } from '../../context/AuthContext';
 import { checkGeofenceIntersections, GeofenceZone } from '../../utils/geofence';
 import { wsService } from '../../services/websocket';
 import api from '../../utils/api';
-
-/* ─── TYPES ──────────────────────────────────────────── */
-
 interface CitizenPortalViewProps {
   reports: CitizenReport[];
   onSubmitReport: (report: Omit<CitizenReport, 'id' | 'upvotes' | 'status' | 'timestamp'>) => Promise<void>;
@@ -45,9 +42,6 @@ interface CitizenPortalViewProps {
   selectedVenue?: VenueInfo | null;
   venues?: VenueInfo[];
 }
-
-/* ─── ZONE COORDINATE MAP (UNTOUCHED) ────────────────── */
-
 const CAMPUS_ZONE_COORDS: Record<string, { lat: number; lng: number }> = {
   'Main Gate': { lat: 20.2512, lng: 85.8018 },
   'Administrative Block Road': { lat: 20.2503, lng: 85.8008 },
@@ -55,9 +49,6 @@ const CAMPUS_ZONE_COORDS: Record<string, { lat: number; lng: number }> = {
   'Sports Complex Road': { lat: 20.2480, lng: 85.7990 },
   'EV Charging Junction (Gate 2)': { lat: 20.2472, lng: 85.7983 },
 };
-
-/* ─── COMPONENT ──────────────────────────────────────── */
-
 export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
   reports,
   onSubmitReport,
@@ -72,18 +63,12 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
   const [activeTab, setActiveTab] = useState<'feed' | 'exit'>('feed');
   const [selectedLang, setSelectedLang] = useState<SupportedLanguage>('en');
   const [isCriticalUI, setIsCriticalUI] = useState(false);
-
-  // Live data
   const [liveReports, setLiveReports] = useState<CitizenReport[]>([]);
   const [notifications, setNotifications] = useState<{ time: string; msg: string }[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
-
-  // Safe exit location picker
   const [selectedExitZone, setSelectedExitZone] = useState<string>('');
   const [exitUserLocation, setExitUserLocation] = useState<{ lat: number; lng: number }>({ lat: 20.2494, lng: 85.8 });
   const [exitRouteTriggered, setExitRouteTriggered] = useState(false);
-
-  // Helper for status badge formatting
   const getStatusBadgeStyle = (status?: string) => {
     const upper = (status || '').toUpperCase();
     if (upper === 'RESOLVED') {
@@ -94,7 +79,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
     }
     return { label: tc('pending', selectedLang), className: 'bg-amber-50 text-amber-600 border-amber-200 font-bold' };
   };
-
   const getCategoryTranslation = (cat?: string, lang: SupportedLanguage = 'en') => {
     const c = (cat || '').trim();
     if (c.toLowerCase().includes('medical') || c === 'Medical Emergency') return tc('medicalEmergencyOpt', lang);
@@ -102,8 +86,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
     if (c.toLowerCase().includes('hazard') || c === 'Hazard') return tc('hazardOpt', lang);
     return cat || tc('hazardOpt', lang);
   };
-
-  // ─── TEAM'S BACKEND LOGIC & HOOKS (100% UNTOUCHED) ───
   useEffect(() => {
     const fetchIncidents = async () => {
       try {
@@ -133,14 +115,12 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
     };
     fetchIncidents();
   }, [selectedVenue?.id]);
-
   const [reportCategory, setReportCategory] = useState<string>('Overcrowding');
   const filteredZones = zones.filter((z: any) => {
     if (!selectedVenue) return true;
     const zVid = z.venueId || z.venue_id;
     return !zVid || zVid === selectedVenue.id;
   });
-
   const activeCampusZones = filteredZones.length > 0 ? filteredZones : [
     { id: 'gate_1', name: 'Main Gate', center: [20.2512, 85.8018] },
     { id: 'zone_admin_block_rd', name: 'Administrative Block Road', center: [20.2503, 85.8008] },
@@ -148,7 +128,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
     { id: 'zone_sports_complex_rd', name: 'Sports Complex Road', center: [20.248, 85.799] },
     { id: 'gate_2', name: 'EV Charging Junction (Gate 2)', center: [20.2472, 85.7983] },
   ];
-
   const currentZoneCoords = useMemo(() => {
     const map: Record<string, { lat: number; lng: number }> = {};
     activeCampusZones.forEach((z: any) => {
@@ -158,7 +137,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
     });
     return map;
   }, [activeCampusZones]);
-
   useEffect(() => {
     if (activeCampusZones.length > 0) {
       const isCurrentZoneValid = activeCampusZones.some((z: any) => z.name === selectedExitZone);
@@ -172,29 +150,22 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
       }
     }
   }, [activeCampusZones, selectedExitZone]);
-
   const [reportLocation, setReportLocation] = useState<string>('');
   const [reportDesc, setReportDesc] = useState('');
   const [reportSubmitted, setReportSubmitted] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [geofenceWarning, setGeofenceWarning] = useState<string | null>(null);
-
   const [userLocation] = useState<{ lat: number; lng: number }>({ lat: 20.2494, lng: 85.8 });
   const [liveAnnouncementText, setLiveAnnouncementText] = useState<string | null>(null);
-
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
   const [mediaFileName, setMediaFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
   const highestRiskZone = zones && zones.length > 0 ? [...zones].sort((a, b) => (b.riskScore || 0) - (a.riskScore || 0))[0] : null;
   const currentZoneName = highestRiskZone?.name || activeCampusZones[2]?.name || 'Central Library Roundabout';
-
   const translation = SARVAM_TRANSLATIONS[selectedLang] || SARVAM_TRANSLATIONS.en;
-
   const [routeWaypoints, setRouteWaypoints] = useState<string[]>([]);
   const [isRouteLoading, setIsRouteLoading] = useState(false);
-
   useEffect(() => {
     const fetchRouteInfo = async () => {
       if (!isScenarioActive) { setRouteWaypoints([]); return; }
@@ -217,7 +188,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
     };
     fetchRouteInfo();
   }, [isScenarioActive, exitUserLocation]);
-
   const getDynamicEvacuationText = () => {
     const startZone = selectedExitZone || 'your location';
     if (routeWaypoints.length < 2) {
@@ -227,37 +197,30 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
       if (selectedLang === 'ta') return `கவனத்திற்கு! நெரிசல் ஆபத்து. தயவுசெய்து அருகிலுள்ள அவசர வழியே வெளியேறவும்.`;
       return `Attention! A stampede risk has been detected at Siksha O Anusandhan University Campus. Please proceed calmly towards the nearest safe exit.`;
     }
-
     const viaZones = routeWaypoints.slice(0, -1).join(', ');
     const destination = routeWaypoints[routeWaypoints.length - 1];
-
     if (selectedLang === 'hi') return `कृपया ध्यान दें! शिक्षा ओ अनुसंधान विश्वविद्यालय परिसर में भगदड़ की आशंका है। ${startZone} से आपका सुरक्षित मार्ग है: ${viaZones}, फिर ${destination}। कृपया शांतिपूर्वक बाहर निकलें।`;
     if (selectedLang === 'od') return `ଧ୍ୟାନ ଦିଅନ୍ତୁ! ଶିକ୍ଷା ଓ ଅନୁସନ୍ଧାନ ବିଶ୍ୱବିଦ୍ୟାଳୟ ପରିସରରେ ଭିଡ଼ ଜନିତ ବିପଦ ଅଛି। ${startZone} ରୁ ଆପଣଙ୍କ ପ୍ରସ୍ଥାନ ମାର୍ଗ ହେଉଛି: ${viaZones}, ଏବଂ ${destination}। ଦୟାକରି ଶାନ୍ତ ଭାବରେ ପ୍ରସ୍ଥାନ କରନ୍ତୁ।`;
     if (selectedLang === 'bn') return `বিশেষ সতর্কবার্তা! শিক্ষা ও অনুসন্ধান বিশ্ববিদ্যালয় চত্বরে হুড়োহুড়ির আশঙ্কা রয়েছে। ${startZone} থেকে আপনার নিরাপদ পথ হলো: ${viaZones}, তারপর ${destination}। অনুগ্রহ করে শান্তভাবে চলুন।`;
     if (selectedLang === 'ta') return `கவனத்திற்கு! சிக்ஷா ஓ அனுசந்தன் பல்கலைக்கழக வளாகத்தில் நெரிசல் ஆபத்து. ${startZone} இலிருந்து உங்களின் அவசர வழி: ${viaZones}, பின்னர் ${destination}. தயவுசெய்து அமைதியாக வெளியேறவும்.`;
     return `Attention! A stampede risk has been detected at Siksha O Anusandhan University Campus. Your safest route from ${startZone} is: ${viaZones}, then pass through ${destination} to successfully evacuate. Please proceed calmly.`;
   };
-
   const activeAnnouncementText = isScenarioActive ? getDynamicEvacuationText() : (liveAnnouncementText || translation.announcementText);
-
   useEffect(() => {
     const unsubscribe = wsService.subscribe((data: any) => {
       if (data.event === 'INTERVENTION_DISPATCHED' || data.event === 'PA_BROADCAST' || data.event === 'BROADCAST_DISPATCHED' || data.event === 'EMERGENCY_BROADCAST') {
         const textToAnnounce = data.announcementText || data.message || data.actionText || data.text || '';
         const langToUse = (data.language as SupportedLanguage) || selectedLang || 'en';
-        
         if (textToAnnounce) {
           setLiveAnnouncementText(textToAnnounce);
           setNotifications((prev) => [
             { time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), msg: textToAnnounce },
             ...prev,
           ]);
-
           if (textToAnnounce.includes('SMS') || textToAnnounce.includes('CRITICAL') || data.actionText?.includes('SMS')) {
             setIsCriticalUI(true);
             setTimeout(() => setIsCriticalUI(false), 20000);
           }
-
           setIsPlayingAudio(true);
           speakAnnouncement(textToAnnounce, langToUse).finally(() => {
               setIsPlayingAudio(false);
@@ -288,10 +251,8 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
         setLiveReports((prev) => [formatted, ...prev.filter((r) => r.id !== formatted.id)]);
       }
     });
-    
     return () => unsubscribe();
   }, [selectedLang]);
-
   useEffect(() => {
     if (isScenarioActive) {
       const gfZones: GeofenceZone[] = activeCampusZones.map((z: any) => ({
@@ -316,22 +277,17 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
       setGeofenceWarning(null);
     }
   }, [isScenarioActive, zones, activeCampusZones, userLocation.lat, userLocation.lng]);
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     setMediaFileName(file.name);
     setMediaType(file.type.startsWith('video') ? 'video' : 'image');
-
-    // Convert to Base64 so any connected device can render it
     const reader = new FileReader();
     reader.onloadend = () => {
       setMediaUrl(reader.result as string);
     };
     reader.readAsDataURL(file);
   };
-
   const handleSimulateSampleImage = () => {
     if (fileInputRef.current) {
       fileInputRef.current.accept = 'image/*';
@@ -339,7 +295,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
       fileInputRef.current.click();
     }
   };
-
   const handleSimulateSampleVideo = () => {
     if (fileInputRef.current) {
       fileInputRef.current.accept = 'video/*';
@@ -347,14 +302,12 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
       fileInputRef.current.click();
     }
   };
-
   const removeMedia = () => {
     setMediaUrl(null);
     setMediaType(null);
     setMediaFileName(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reportDesc.trim()) return;
@@ -404,13 +357,11 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
       setReportSubmitted(false);
     }, 2500);
   };
-
   const playSarvamTTS = async () => {
     setIsPlayingAudio(true);
     await speakAnnouncement(activeAnnouncementText, selectedLang);
     setIsPlayingAudio(false);
   };
-
   const handleExitZoneChange = (zoneName: string) => {
     setSelectedExitZone(zoneName);
     const coords = currentZoneCoords[zoneName];
@@ -419,7 +370,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
     }
     setExitRouteTriggered(false);
   };
-
   const handleFindSafeExit = () => {
     const coords = currentZoneCoords[selectedExitZone];
     if (coords) {
@@ -428,14 +378,11 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
       setActiveTab('exit');
     }
   };
-
-  // ─── UI RENDER ───
   return (
     <div className={`w-full max-w-6xl mx-auto min-h-screen flex flex-col font-body relative transition-colors duration-500 ${
         isScenarioActive ? 'bg-rose-50/50' : 'bg-[#FAFAF7]'
       }`}
     >
-
       {/* ── GEOFENCE WARNING ── */}
       <AnimatePresence>
         {geofenceWarning && (
@@ -458,13 +405,11 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
               >
                 <X className="w-5 h-5" />
               </button>
-
               <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center mb-4 shadow-inner">
                 <ShieldAlert className="w-8 h-8 text-rose-500 animate-pulse" />
               </div>
               <h2 className="text-xl font-heading font-black text-slate-900 mb-2 tracking-tight">Proximity Warning</h2>
               <p className="text-sm text-slate-600 font-medium leading-relaxed mb-6">{geofenceWarning}</p>
-              
               <div className="flex flex-col gap-3 w-full">
                 <button
                   onClick={() => { setGeofenceWarning(null); setActiveTab('exit'); }}
@@ -483,7 +428,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
-
       {/* ── NOTIFICATION DRAWER ── */}
       <AnimatePresence>
         {showNotifications && (
@@ -535,8 +479,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* ── HEADER (Glassmorphic) ── */}
+      {/* ── HEADER ── */}
       <header
         className={`sticky top-0 z-40 px-3 sm:px-6 py-2.5 sm:py-4 flex items-center justify-between border-b transition-colors duration-500 backdrop-blur-xl gap-2 ${
           isScenarioActive
@@ -544,7 +487,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
             : 'bg-white/80 text-slate-900 border-slate-200/80 shadow-sm'
         }`}
       >
-        {/* Left Section: Logo + Title + Truncated Venue */}
+        {/* Left Section */}
         <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1">
           {isScenarioActive ? (
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20 flex items-center justify-center shadow-inner shrink-0">
@@ -557,7 +500,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
               className="w-9 h-9 sm:w-10 sm:h-10 object-contain rounded-xl shadow-sm bg-white shrink-0" 
             />
           )}
-
           <div className="min-w-0 flex-1 flex flex-col">
             <h1 className="font-heading font-black text-xs sm:text-base tracking-tight truncate leading-tight">
               {isScenarioActive ? '⚠ EMERGENCY ACTIVE' : 'CrowdShield Portal'}
@@ -580,7 +522,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
             </div>
           </div>
         </div>
-
         {/* Right Section: Notification & Language Selector */}
         <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
           <button
@@ -600,7 +541,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
               />
             )}
           </button>
-
           <div
             className={`flex items-center gap-1 px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl text-[10px] sm:text-[11px] font-black tracking-wider border transition-all ${
               isScenarioActive
@@ -621,7 +561,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
               <option value="ta" className="text-slate-900 bg-white">தமிழ்</option>
             </select>
           </div>
-
           {onLogout && (
             <button
               onClick={onLogout}
@@ -637,7 +576,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
         </div>
       </header>
 
-      {/* ── TAB NAVIGATION (Brand Gradient segmented control) ── */}
+      {/* ── TAB NAVIGATION ── */}
       <div className="px-4 sm:px-6 pt-5 pb-2">
         <div className="bg-white border border-slate-200/80 rounded-2xl p-1.5 flex gap-1.5 shadow-sm">
           {[
@@ -664,12 +603,9 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
           ))}
         </div>
       </div>
-
       {/* ── MAIN CONTENT ── */}
       <main className="px-4 sm:px-6 pb-28 sm:pb-32 flex flex-col gap-6 flex-1 pt-2">
         <AnimatePresence mode="wait">
-          
-          {/* ── EXIT TAB ── */}
           {activeTab === 'exit' ? (
             <motion.div
               key="exit"
@@ -689,7 +625,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                     <p className="text-[11px] sm:text-xs font-medium text-slate-500">{tc('selectZoneDesc', selectedLang)}</p>
                   </div>
                 </div>
-
                 <select
                   value={selectedExitZone}
                   onChange={(e) => handleExitZoneChange(e.target.value)}
@@ -699,7 +634,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                     <option key={zone} value={zone} className="font-mono">{zone}</option>
                   ))}
                 </select>
-
                 <button
                   onClick={handleFindSafeExit}
                   className="w-full py-4 bg-gradient-to-r from-[#67b2b9] to-[#648d6a] hover:opacity-95 text-white rounded-2xl font-heading font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-[#67b2b9]/30 active:scale-[0.98] border-none"
@@ -709,7 +643,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                   <ArrowRight className="w-5 h-5 ml-1" />
                 </button>
               </div>
-
               <CitizenEvacuationMap
                 isScenarioActive={isScenarioActive}
                 userLocation={exitUserLocation}
@@ -719,7 +652,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                 key={`${exitUserLocation.lat}-${exitUserLocation.lng}`}
                 language={selectedLang}
               />
-
               <EvacuationDrillMode
                 userLocation={exitUserLocation}
                 venueId={selectedVenue?.id || "soa-iter-01"}
@@ -729,8 +661,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
               />
             </motion.div>
           ) : (
-            
-            /* ── FEED TAB ── */
             <motion.div
               key="feed"
               initial={{ opacity: 0, x: -20 }}
@@ -740,7 +670,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
               className="flex flex-col gap-6"
             >
               {role === 'VOLUNTEER' && alerts && <VolunteerTasksView alerts={alerts} />}
-
               {/* ── LOCATION STATUS ── */}
               <motion.div
                 initial={{ opacity: 0, y: 15 }}
@@ -751,7 +680,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                 }`}
               >
                 <div className={`absolute inset-0 opacity-10 bg-gradient-to-r ${isScenarioActive ? 'from-rose-500 to-transparent animate-pulse' : 'from-[#67b2b9] to-transparent'}`} />
-
                 <div className="flex items-center gap-4 min-w-0 relative z-10">
                   <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-inner ${
                     isScenarioActive ? 'bg-rose-500 text-white shadow-rose-600/30' : 'bg-[#67b2b9]/10 text-[#67b2b9] border border-[#67b2b9]/20'
@@ -772,14 +700,12 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                     </div>
                   </div>
                 </div>
-                
                 <div className={`px-3 py-1.5 rounded-lg text-[10px] font-mono font-black uppercase tracking-widest shrink-0 relative z-10 shadow-sm border ${
                   isScenarioActive ? 'bg-rose-600 text-white border-none' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                 }`}>
                   {isScenarioActive ? tc('avoid', selectedLang) : tc('safe', selectedLang)}
                 </div>
               </motion.div>
-
               {/* ── EMERGENCY / ANNOUNCEMENT CARD ── */}
               <motion.div
                 initial={{ opacity: 0, y: 15 }}
@@ -817,7 +743,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                     </span>
                   )}
                 </div>
-
                 <div className={`text-sm sm:text-base leading-relaxed p-5 rounded-2xl border relative z-10 backdrop-blur-sm font-medium ${
                   isCriticalUI 
                     ? 'bg-rose-700/50 border-rose-500/50 text-white font-bold shadow-inner' 
@@ -827,7 +752,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                 }`}>
                   "{activeAnnouncementText}"
                 </div>
-
                 <div className="flex flex-col sm:flex-row gap-3 relative z-10">
                   <motion.button
                     whileTap={{ scale: 0.96 }}
@@ -846,7 +770,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                     <Volume2 className={`w-5 h-5 ${isPlayingAudio ? 'animate-pulse text-emerald-500' : ''}`} />
                     {isPlayingAudio ? tc('speaking', selectedLang) : `${tc('listen', selectedLang)} (${translation.langName})`}
                   </motion.button>
-                  
                   <motion.button
                     whileTap={{ scale: 0.96 }}
                     onClick={() => setActiveTab('exit')}
@@ -856,7 +779,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                   </motion.button>
                 </div>
               </motion.div>
-
               {/* ── REPORT HAZARD ── */}
               <motion.div 
                 initial={{ opacity: 0, y: 20 }}
@@ -873,7 +795,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                     <p className="text-[11px] sm:text-xs font-mono font-medium text-slate-500 uppercase tracking-widest">{tc('alertCampusSecurity', selectedLang)}</p>
                   </div>
                 </div>
-
                 <div className="p-5 sm:p-6 flex flex-col gap-5 bg-white">
                   {reportSubmitted ? (
                     <motion.div
@@ -889,7 +810,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                     </motion.div>
                   ) : (
                     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-                      
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <div className="flex flex-col gap-2">
                           <label className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest ml-1">
@@ -910,7 +830,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                             </div>
                           </div>
                         </div>
-
                         <div className="flex flex-col gap-2">
                           <label className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest ml-1">
                             {tc('zone', selectedLang)}
@@ -931,7 +850,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                           </div>
                         </div>
                       </div>
-
                       <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest ml-1">
                           {tc('whatHappened', selectedLang)}
@@ -945,7 +863,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                           required
                         />
                       </div>
-
                       {mediaUrl ? (
                         <div className="relative rounded-3xl overflow-hidden border border-slate-200 bg-slate-900 h-48 shadow-sm">
                           {mediaType === 'image' ? (
@@ -976,8 +893,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                               <ImageIcon className="w-5 h-5 text-[#67b2b9]" />
                             </div>
                             <span>{tc('photo', selectedLang)}</span>
-                          </motion.button>
-                          
+                          </motion.button>                          
                           <motion.button
                             whileTap={{ scale: 0.95 }}
                             type="button"
@@ -991,9 +907,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                           </motion.button>
                         </div>
                       )}
-
                       <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
-
                       <motion.button
                         whileTap={{ scale: 0.97 }}
                         type="submit"
@@ -1001,12 +915,10 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                       >
                         <Send className="w-5 h-5" /> {tc('sendHazardReport', selectedLang)}
                       </motion.button>
-                      
                     </form>
                   )}
                 </div>
               </motion.div>
-
               {/* ── LIVE REPORTS FEED ── */}
               <div className="flex flex-col gap-5 font-body mt-2">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white border border-slate-200/80 px-5 sm:px-6 py-4 rounded-3xl shadow-sm gap-3">
@@ -1024,7 +936,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                     {tc('live', selectedLang)}
                   </span>
                 </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                   {liveReports.length === 0 ? (
                     <div className="col-span-full text-center py-16 px-6 bg-white border border-dashed border-slate-200 rounded-3xl flex flex-col items-center gap-3">
@@ -1038,20 +949,14 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                     liveReports.map((rawRep, idx) => {
                       const rep = rawRep as any;
                       const badgeStyle = getStatusBadgeStyle(rep.status);
-
-                      // CRITICAL FIX: Extract image/video logic safely & kill toxic blobs
                       let photoSrc = rep.photoUrl || (rep.media_type === 'image' ? rep.media_url : null) || rep.imageUrl || rep.mediaUrl || (!rep.media_url?.endsWith('.mp4') ? rep.media_url : null);
                       let videoSrc = rep.videoUrl || (rep.media_type === 'video' ? rep.media_url : null) || (rep.media_url?.endsWith('.mp4') ? rep.media_url : null);
-
                       if (photoSrc && photoSrc.startsWith('blob:')) photoSrc = null;
                       if (videoSrc && videoSrc.startsWith('blob:')) videoSrc = null;
-
-                      // Failsafe: Move obvious videos out of photo string
                       if (photoSrc && photoSrc.includes('video')) {
                         videoSrc = photoSrc;
                         photoSrc = null;
                       }
-
                       return (
                         <motion.div
                           key={rep.id || idx}
@@ -1101,7 +1006,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                               />
                             </div>
                           )}
-
                           <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-[11px]">
                             <span className={`px-3 py-1.5 rounded-lg text-[9px] font-mono font-black uppercase tracking-widest border shadow-sm ${badgeStyle.className}`}>
                               {badgeStyle.label}
@@ -1117,16 +1021,14 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
           )}
         </AnimatePresence>
       </main>
-
       {/* ── EMERGENCY BOTTOM BAR ── */}
       <div
         className={`fixed bottom-0 left-0 right-0 w-full max-w-6xl mx-auto px-4 py-2.5 sm:px-6 sm:py-4 z-40 flex items-center justify-between gap-3 border-t transition-colors duration-500 backdrop-blur-xl ${
           isScenarioActive
             ? 'bg-rose-600/95 text-white border-rose-500 shadow-[0_-10px_40px_rgba(244,63,94,0.3)]'
             : 'bg-white/90 text-slate-900 border-slate-200 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]'
-        }`}
-      >
-        {/* Left: Compact Emergency Title */}
+        }`}> 
+       {/* Left: Compact Emergency Title */}
         <div className="flex items-center gap-2.5 min-w-0">
           <div className={`p-2 rounded-xl shadow-inner shrink-0 ${isScenarioActive ? 'bg-white/20 text-white' : 'bg-rose-50 text-rose-500 border border-rose-100'}`}>
             <PhoneCall className={`w-4 h-4 sm:w-5 sm:h-5 ${isScenarioActive ? 'animate-pulse' : ''}`} />
@@ -1140,7 +1042,6 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
             </span>
           </div>
         </div>
-
         {/* Right: Action Buttons */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <a

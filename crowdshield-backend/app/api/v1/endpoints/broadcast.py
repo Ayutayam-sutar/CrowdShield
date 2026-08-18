@@ -48,7 +48,6 @@ async def broadcast_message(request: BroadcastRequest):
 
     translated_text = f"🔊 {request.text}"
 
-    # Broadcast to all connected citizen apps to trigger the UI notification
     await ws_manager.broadcast({
         "event": "INTERVENTION_DISPATCHED",
         "actionText": "Sarvam AI Multilingual PA Broadcast",
@@ -72,11 +71,7 @@ async def dispatch_sms_alert(payload: SMSRequest):
     """
     if not payload.message.strip():
         raise HTTPException(status_code=400, detail="SMS message cannot be empty.")
-
-    # Simulate carrier network processing time (0.5 seconds)
     await asyncio.sleep(0.5)
-
-    # Trigger the Citizen UI Emergency Drawer via WebSocket
     await ws_manager.broadcast({
         "event": "INTERVENTION_DISPATCHED",
         "actionText": "CRITICAL SMS ALERT",
@@ -98,7 +93,6 @@ async def generate_sarvam_tts(request: SarvamTTSRequest):
     Relay request to Sarvam AI Text-to-Speech API using Bulbul v3 model and ashutosh speaker.
     Returns base64 encoded audio. Falls back to mock if API key is not present.
     """
-    # Map target language to Sarvam BCP-47 codes
     lang_map = {
         "en": "en-IN",
         "hi": "hi-IN",
@@ -109,8 +103,6 @@ async def generate_sarvam_tts(request: SarvamTTSRequest):
     sarvam_lang = lang_map.get(request.target_language.lower(), "en-IN")
 
     api_key = getattr(settings, "SARVAM_API_KEY", None)
-
-    # Guard: Return MOCK warning if key is unset so frontend knows to execute local fallback
     if not api_key or len(api_key.strip()) < 5:
         return {
             "status": "MOCK",
@@ -138,7 +130,6 @@ async def generate_sarvam_tts(request: SarvamTTSRequest):
     )
 
     try:
-        # Request audio bytes from Sarvam AI REST API
         with urllib.request.urlopen(req, timeout=15) as response:
             res_body = response.read().decode("utf-8")
             data = json.loads(res_body)
@@ -164,11 +155,7 @@ async def dispatch_to_twitter(payload: SocialMediaRequest):
     """
     if not payload.message.strip():
         raise HTTPException(status_code=400, detail="Social media message cannot be empty.")
-
-    # Simulate network processing time
     await asyncio.sleep(0.8)
-
-    # Broadcast internal WebSocket event that social media was updated
     await ws_manager.broadcast({
         "event": "SOCIAL_MEDIA_DISPATCHED",
         "actionText": f"Broadcasted to {', '.join(payload.platforms)}",

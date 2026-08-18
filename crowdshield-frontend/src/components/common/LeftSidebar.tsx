@@ -23,7 +23,6 @@ interface LeftSidebarProps {
   isMobileOpen?: boolean;
   onCloseMobile?: () => void;
 }
-
 export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   currentRoute,
   onNavigate,
@@ -51,7 +50,6 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
     onNavigate(route);
     if (onCloseMobile) onCloseMobile();
   };
-
   return (
     <>
       {/* ── Mobile Dark Backdrop Overlay (Glassmorphism) ── */}
@@ -61,7 +59,6 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
           className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 lg:hidden animate-in fade-in duration-300"
         />
       )}
-
       {/* ── Sidebar / Mobile Drawer Container ── */}
       <aside className={`
         bg-white flex flex-col justify-between shrink-0 font-body select-none
@@ -70,15 +67,12 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
           ? 'fixed inset-y-0 left-0 w-[280px] sm:w-80 z-50 h-full shadow-2xl animate-in slide-in-from-left duration-300 flex' 
           : 'hidden lg:flex'}
       `}>
-        
-        {/* Top Branding & Main Nav (Scrollable Area) */}
         <div className="flex flex-col gap-6 flex-1 min-h-0 overflow-y-auto smooth-scroll p-5 sm:p-6">
           
           {/* Brand Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3.5">
            <div className="relative w-12 h-12 shrink-0">
-  {/* Put your logo image here */}
   <img 
     src="/photos/crowdshieldlogo1.png" 
     alt="Logo" 
@@ -94,8 +88,6 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
                 </span>
               </div>
             </div>
-
-            {/* Mobile Drawer Close Button */}
             {onCloseMobile && (
               <button
                 onClick={onCloseMobile}

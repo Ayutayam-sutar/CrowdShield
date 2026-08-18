@@ -16,11 +16,6 @@
  *   zone_sports_complex_rd:  lat 20.248000, lng 85.799000
  *   gate_2:                  lat 20.247200, lng 85.798300
  *   zone_e_block_lawn_rd:    lat 20.248800, lng 85.800800
- *
- * If you edit venue_graph.json (e.g. once you get more accurate GPS via
- * Google Maps "What's here?"), re-run the same formula and update the x/y
- * values below to match. Everything else in this file (edges, helper
- * functions) stays the same regardless of coordinates.
  */
 
 export interface TopologyNode {
@@ -47,7 +42,7 @@ export const VENUE_TOPOLOGY: TopologyNode[] = [
   { id: 'gate_2', name: 'EV Charging / Food Court Junction', shortLabel: 'Gate 2', x: 10.0, y: 90.0, isGate: true, isExit: true },
   { id: 'zone_e_block_lawn_rd', name: 'E Block Lawn / F Block Road', shortLabel: 'E Block Rd', x: 67.1, y: 58.0, isGate: false, isExit: false },
 
-  // --- KALINGA STADIUM (Projected from updated GPS) ---
+  // --- KALINGA STADIUM ---
   { id: 'ks_gate_3', name: 'Gate 3 (Main Entrance)', shortLabel: 'Gate 3', x: 90.0, y: 74.5, isGate: true, isExit: true },
   { id: 'ks_sky_walk', name: 'Sky Walk', shortLabel: 'Sky Walk', x: 49.8, y: 90.0, isGate: true, isExit: true },
   { id: 'ks_swimming', name: 'Hockey stadium entrance', shortLabel: 'Hockey Ent', x: 58.8, y: 39.7, isGate: false, isExit: false },
@@ -55,8 +50,6 @@ export const VENUE_TOPOLOGY: TopologyNode[] = [
   { id: 'ks_parking', name: 'Gate 8B (Way to parking)', shortLabel: 'Gate 8B', x: 21.3, y: 12.2, isGate: true, isExit: true },
   { id: 'ks_badminton', name: 'Badminton stadium junction', shortLabel: 'Badminton', x: 40.9, y: 10.0, isGate: false, isExit: false }
 ];
-
-// Must match the "edges" array in venue_graph.json exactly - keep in sync.
 export const VENUE_EDGES: TopologyEdge[] = [
   // --- ITER EDGES ---
   { source: 'gate_1', target: 'zone_admin_block_rd' },
@@ -78,10 +71,6 @@ export const VENUE_EDGES: TopologyEdge[] = [
 export function getTopologyNode(id: string): TopologyNode | undefined {
   return VENUE_TOPOLOGY.find((n) => n.id === id);
 }
-
-// Unweighted adjacency, used ONLY as a visual fallback when no live
-// evacuationRoute has arrived yet from the backend. This is explicitly NOT
-// the real AI-weighted route - the UI labels it as a fallback whenever shown.
 export function buildAdjacency(): Map<string, string[]> {
   const adj = new Map<string, string[]>();
   VENUE_TOPOLOGY.forEach((n) => adj.set(n.id, []));

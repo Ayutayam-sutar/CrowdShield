@@ -6,7 +6,6 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict
 from app.models.incident import ReportCategory, ReportStatus
 
-
 class IncidentCreate(BaseModel):
     category: ReportCategory
     description: str
@@ -19,7 +18,7 @@ class IncidentCreate(BaseModel):
 
 
 class IncidentStatusUpdate(BaseModel):
-    status: str  # Accepts 'CONFIRMED', 'VERIFIED', 'RESOLVED', 'PENDING'
+    status: str  
 
 
 class IncidentResponse(IncidentCreate):

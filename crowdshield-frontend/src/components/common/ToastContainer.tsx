@@ -1,32 +1,26 @@
 import React from 'react';
 import { ToastNotification } from '../../types';
 import { ShieldAlert, AlertTriangle, Info, X, ArrowRight } from 'lucide-react';
-
 interface ToastContainerProps {
   toasts: ToastNotification[];
   onDismiss: (id: string) => void;
   onInspectAlert?: (zoneId?: string) => void;
-  // Added userRole so we can hide admin-specific actions from citizens
   userRole?: 'admin' | 'citizen'; 
 }
-
 export const ToastContainer: React.FC<ToastContainerProps> = ({
   toasts,
   onDismiss,
   onInspectAlert,
-  userRole = 'admin', // Defaults to admin if not provided
+  userRole = 'admin',
 }) => {
   if (toasts.length === 0) return null;
-
   return (
     <div className="fixed top-16 sm:top-20 left-4 right-4 sm:left-auto sm:right-6 z-[100] flex flex-col gap-3 sm:max-w-[380px] w-auto font-body pointer-events-none">
       {toasts.map((toast) => {
-        // Default styling (Info)
         let borderClass = 'border-l-[#2C7BE5]';
         let iconBg = 'bg-[#2C7BE5]/10';
         let icon = <Info className="w-5 h-5 text-[#2C7BE5]" />;
         let badgeTextClass = 'text-[#2C7BE5]';
-
         if (toast.type === 'critical') {
           borderClass = 'border-l-[#FF3B5C]';
           iconBg = 'bg-[#FF3B5C]/15';
@@ -38,7 +32,6 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
           icon = <AlertTriangle className="w-5 h-5 text-[#FF7A45]" />;
           badgeTextClass = 'text-[#FF7A45]';
         }
-
         return (
           <div
             key={toast.id}
@@ -80,13 +73,12 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
                 {toast.message}
               </p>
             </div>
-
             {/* Footer Actions */}
             <div className="flex items-center justify-between pt-2 mt-1.5 border-t border-[#E7E5DD]/70 pl-12">
               <span className="text-[10px] text-[#5B5F73] font-mono-num font-medium">
                 {toast.timestamp}
               </span>
-              
+      
               {/* Render Inspect Button ONLY if role is Admin */}
               {onInspectAlert && userRole !== 'citizen' && (
                 <button

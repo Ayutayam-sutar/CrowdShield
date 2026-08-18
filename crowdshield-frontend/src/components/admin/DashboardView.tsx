@@ -19,9 +19,7 @@ import {
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { t } from '../../i18n/dashboard';
-
 const isLegacyPhantomZone = (id: string): boolean => /^z-0?\d$/i.test(id || '');
-
 interface DashboardViewProps {
   selectedVenue?: VenueInfo | null;
   zones: VenueZone[];
@@ -33,7 +31,6 @@ interface DashboardViewProps {
   recentLogs?: { timestamp: string; action: string; source: string; type: 'success' | 'warning' | 'info' }[];
   language?: SupportedLanguage;
 }
-
 export const DashboardView: React.FC<DashboardViewProps> = ({
   selectedVenue,
   zones,
@@ -46,8 +43,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   language = 'en',
 }) => {
   const L = language;
-
-  // ─── TEAM'S BACKEND LOGIC (100% UNTOUCHED) ───
   const cleanZones = React.useMemo(() => {
     return zones.filter((z) => {
       if (isLegacyPhantomZone(z.id)) return false;
@@ -62,20 +57,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       return !z.id.startsWith('ks_');
     });
   }, [zones, selectedVenue]);
-
   const totalHeadcount = cleanZones.reduce((acc, z) => acc + (z.currentHeadcount ?? 0), 0);
   const totalMaxCapacity = cleanZones.reduce((acc, z) => acc + (z.maxCapacity ?? 500), 0);
   const campusLoadPercent = totalMaxCapacity > 0 ? Math.min(100, Math.round((totalHeadcount / totalMaxCapacity) * 100)) : 0;
-
   const [trendData, setTrendData] = useState<
     { time: string; meanDensity: number; predicted: number; totalHeadcount: number }[]
   >([]);
-
   const zonesRef = React.useRef(cleanZones);
   useEffect(() => {
     zonesRef.current = cleanZones;
   }, [cleanZones]);
-
   const sample = React.useCallback(() => {
     const currentZones = zonesRef.current;
     const currentTimeString = new Date().toLocaleTimeString([], {
@@ -83,12 +74,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       minute: '2-digit',
       second: '2-digit',
     });
-
     if (!currentZones || currentZones.length === 0) {
       setTrendData((prev) => [...prev, { time: currentTimeString, meanDensity: 0, predicted: 0, totalHeadcount: 0 }].slice(-20));
       return;
     }
-
     const meanDensity = Number(
       (currentZones.reduce((acc, z) => acc + (z.density || 0), 0) / currentZones.length).toFixed(2)
     );
@@ -96,16 +85,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       (currentZones.reduce((acc, z) => acc + (z.density || 0) * (1 + (z.riskScore || 0) / 100), 0) / currentZones.length).toFixed(2)
     );
     const totalHeadcountNow = currentZones.reduce((acc, z) => acc + (z.currentHeadcount ?? 0), 0);
-
     setTrendData((prev) => [...prev, { time: currentTimeString, meanDensity, predicted, totalHeadcount: totalHeadcountNow }].slice(-20));
   }, []);
-
   useEffect(() => {
     sample();
     const interval = setInterval(sample, 15000);
     return () => clearInterval(interval);
   }, [sample]);
-
   const lastSampledHeadcountRef = React.useRef<number | null>(null);
   useEffect(() => {
     if (lastSampledHeadcountRef.current === null) {
@@ -117,14 +103,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       sample();
     }
   }, [totalHeadcount, sample]);
-
   const totalZoneRisk = cleanZones.reduce((acc, z) => acc + (z.riskScore || 0), 0);
   const averageZoneRisk = cleanZones.length > 0 ? Math.round(totalZoneRisk / cleanZones.length) : 0;
   const venueRiskScore = averageZoneRisk;
-
   const reportingZonesCount = cleanZones.filter((z) => (z.currentHeadcount ?? 0) > 0).length;
   const hasLiveTelemetry = reportingZonesCount > 0;
-
   const headcountFiveMinAgo = trendData.length > 0 ? trendData[0].totalHeadcount : totalHeadcount;
   const headcountPercentChange =
     headcountFiveMinAgo > 0
@@ -132,7 +115,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       : totalHeadcount > 0
       ? 100
       : 0;
-
   const getRiskLevelBadge = (level: RiskLevel, score: number) => {
     switch (level) {
       case 'critical':
@@ -166,19 +148,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         );
     }
   };
-
-  // ─── UI RENDER ───
   return (
     <div className="bg-[#FAFAF7] min-h-screen text-slate-900 p-4 sm:p-6 lg:p-8 flex flex-col gap-6 lg:gap-8 font-body">
-      
       {/* ── Top Row: Footfall & Safety Status ── */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
-        
         {/* Real-time Headcount Focus Card */}
         <div className="xl:col-span-2 bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col justify-between relative overflow-hidden group">
-          {/* Decorative glow */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-[#67b2b9]/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none transition-opacity duration-500 group-hover:opacity-100 opacity-60" />
-
           <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 gap-4 relative z-10">
             <div className="flex items-center gap-3.5">
               <div className="p-3 bg-gradient-to-br from-[#67b2b9]/20 to-[#648d6a]/20 border border-[#67b2b9]/30 text-[#648d6a] rounded-2xl shadow-inner">
@@ -189,7 +165,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <h2 className="text-base sm:text-lg font-heading font-black text-slate-900 tracking-tight">{t('aggregatedAttendance', L)}</h2>
               </div>
             </div>
-
             <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
               <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse" />
               <span className="text-slate-600 font-mono font-bold text-[10px] sm:text-xs tracking-wider">
@@ -197,7 +172,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </span>
             </div>
           </div>
-
           <div className="py-6 sm:py-8 flex flex-col md:flex-row md:items-end justify-between gap-6 relative z-10">
             <div className="flex flex-col gap-3">
               <div className="flex items-baseline gap-3">
@@ -206,7 +180,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </span>
                 <span className="text-xs sm:text-sm font-mono font-bold text-slate-400">/ {totalMaxCapacity.toLocaleString()} {t('paxMax', L)}</span>
               </div>
-
               <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2">
                 {trendData.length > 1 ? (
                   <span className={`inline-flex items-center gap-1.5 font-mono font-bold text-[10px] sm:text-xs px-3 py-1.5 rounded-xl border shadow-sm ${
@@ -229,7 +202,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </span>
               </div>
             </div>
-
             {/* Brand Gradient Progress Bar */}
             <div className="w-full md:w-64 flex flex-col gap-2 shrink-0 bg-slate-50 p-4 rounded-2xl border border-slate-100">
               <div className="flex justify-between text-[11px] font-mono font-black uppercase tracking-wider">
@@ -250,7 +222,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
             </div>
           </div>
-
           <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-[10px] sm:text-xs font-mono text-slate-400 font-bold uppercase tracking-wider relative z-10">
             <span className="flex items-center gap-2">
               <Cpu className="w-4 h-4 text-[#67b2b9]" /> {t('yoloEdgeProcessing', L)}
@@ -260,7 +231,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </span>
           </div>
         </div>
-
         {/* AI Safety Index Gauge Card */}
         <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col justify-between relative overflow-hidden">
           <div className="flex items-center justify-between border-b border-slate-100 pb-4 relative z-10">
@@ -269,7 +239,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               SENTINEL v3.4
             </span>
           </div>
-
           <div className="py-6 sm:py-8 flex flex-col items-center justify-center text-center relative z-10">
             <div className={`w-32 h-32 sm:w-40 sm:h-40 rounded-full border-8 flex flex-col items-center justify-center bg-white shadow-xl my-2 transition-all duration-500 ${
               venueRiskScore >= 80 ? 'border-rose-500 text-rose-500 shadow-rose-500/20' :
@@ -281,14 +250,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 {venueRiskScore >= 80 ? t('critical', L) : venueRiskScore >= 50 ? t('warning', L) : t('secure', L)}
               </span>
             </div>
-
             <p className="text-[11px] sm:text-xs font-mono font-medium text-slate-500 mt-4 max-w-[200px] leading-relaxed">
               {venueRiskScore >= 80 
                 ? t('highCrowdCrush', L) 
                 : t('campusSafe', L)}
             </p>
           </div>
-
           <button
             onClick={onNavigateToAlerts}
             className="w-full py-3 sm:py-3.5 bg-slate-50 hover:bg-slate-100 text-slate-800 rounded-2xl font-heading font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer border border-slate-200 active:scale-95 shadow-sm relative z-10"
@@ -297,12 +264,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span>{t('inspectSentinel', L)}</span>
           </button>
         </div>
-
       </div>
-
       {/* ── Middle Row: Sector Risk Distribution & Recharts Density Stream ── */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
-        
         {/* Left Column: Sector Risk Distribution List */}
         <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col justify-between">
           <div>
@@ -312,7 +276,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </span>
               <span className="text-[10px] font-mono font-bold bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100 text-slate-600">{cleanZones.length} {t('sectors', L)}</span>
             </div>
-
             <div className="mt-5 flex flex-col gap-3 max-h-[300px] overflow-y-auto pr-2 smooth-scroll">
               {cleanZones.length > 0 ? (
                 cleanZones.map((z) => {
@@ -340,13 +303,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               )}
             </div>
           </div>
-
           <div className="mt-5 pt-4 border-t border-slate-100 text-[9px] sm:text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
             <span>{t('graphPathfinderActive', L)}</span>
             <span className="text-emerald-500 bg-emerald-50 px-2 py-1 rounded-md">{t('aStarReroutingReady', L)}</span>
           </div>
         </div>
-
         {/* Right 2 Columns: Recharts 5-Minute Live Density Stream */}
         <div className="xl:col-span-2 bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col justify-between">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 gap-4">
@@ -361,7 +322,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 {t('samplingDescription', L)}
               </p>
             </div>
-            
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-[10px] sm:text-xs font-mono font-bold tracking-wider uppercase bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
               <span className="flex items-center gap-2 text-[#67b2b9]">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#67b2b9] shadow-sm" /> {t('meanDensity', L)}
@@ -371,7 +331,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </span>
             </div>
           </div>
-
           <div className="h-64 sm:h-72 w-full mt-6">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -398,10 +357,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </ResponsiveContainer>
           </div>
         </div>
-
       </div>
-
-      {/* ── Sector Risk & Density Matrix Table (Responsive wrapper) ── */}
+      {/* ── Sector Risk & Density Matrix Table ── */}
       <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col gap-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 gap-3">
           <div>
@@ -416,7 +373,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </p>
           </div>
         </div>
-
         <div className="overflow-x-auto smooth-scroll rounded-xl border border-slate-100">
           <table className="w-full text-left text-xs sm:text-sm font-mono whitespace-nowrap min-w-[800px]">
             <thead className="bg-slate-50">
@@ -448,7 +404,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   const z: any = zone;
                   const reverseFlow = z.reverseFlowDetected !== undefined ? z.reverseFlowDetected : zone.density >= 3.5;
                   const flowConflict = z.flowConflict !== undefined ? z.flowConflict : (zone.riskScore > 50 && zone.density < 3.5);
-
                   return (
                     <tr key={zone.id} className="hover:bg-slate-50/80 transition-colors bg-white">
                       <td className="py-4 px-5 font-black text-slate-900">
@@ -509,8 +464,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </table>
         </div>
       </div>
-
-      {/* ── Terminal Audit Feed (Dark / High-Tech Mode) ── */}
+      {/* ── Terminal Audit Feed ── */}
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl flex flex-col gap-4 font-mono text-xs text-slate-300">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-4 gap-2">
           <div className="flex items-center gap-3">
@@ -525,7 +479,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {t('liveEdgeLogging', L).toUpperCase()}
           </span>
         </div>
-
         <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-4 sm:p-5 h-48 overflow-y-auto space-y-2.5 text-[11px] sm:text-xs select-text shadow-inner">
           {recentLogs && recentLogs.length > 0 ? (
             recentLogs.map((log, i) => (
@@ -545,7 +498,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           )}
         </div>
       </div>
-
     </div>
   );
 };

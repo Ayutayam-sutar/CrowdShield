@@ -49,23 +49,16 @@ class CitizenReport(Base):
     venue_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
     latitude: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     longitude: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
-
-    # Media Attachments
     media_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     media_type: Mapped[str | None] = mapped_column(
         String(16), nullable=True, doc="image | video"
     )
-
-    # Community Validation
     upvotes: Mapped[int] = mapped_column(Integer, default=0)
-
-    # Status Lifecycle
     status: Mapped[ReportStatus] = mapped_column(
         SAEnum(ReportStatus, name="report_status_enum", create_constraint=True),
         nullable=False,
         default=ReportStatus.PENDING,
     )
-
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

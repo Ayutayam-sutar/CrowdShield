@@ -12,11 +12,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from ultralytics import YOLO
 from dotenv import load_dotenv
-
 load_dotenv()
-
 app = FastAPI(title="CrowdShield Edge - Railway Node")
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -63,8 +60,6 @@ CAMERAS = {
         "venue": "kalinga-stadium-01",
     }
 }
-
-# Calibration & Telemetry Configuration
 FPS = 30.0
 TELEMETRY_INTERVAL_FRAMES = int(FPS * 2)
 ZONE_POLYGON = np.array([[100, 100], [1180, 100], [1180, 620], [100, 620]], np.float32)
@@ -73,11 +68,8 @@ METRIC_POLYGON = np.array([[0.0, 0.0], [10.0, 0.0], [10.0, 10.0], [0.0, 10.0]], 
 HOMOGRAPHY_MATRIX = cv2.getPerspectiveTransform(ZONE_POLYGON, METRIC_POLYGON)
 ZONE_AREA_SQM = 100.0
 EXIT_VECTOR = np.array([0, 1])
-
-# This will point to your deployed Render backend
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 NODE_TOKEN = os.getenv("NODE_AUTH_TOKEN", "")
-
 def send_telemetry_async(payload):
     """Sends telemetry payload asynchronously."""
     try:
@@ -247,6 +239,5 @@ def health():
 
 if __name__ == "__main__":
     import uvicorn
-    # Railway automatically assigns the PORT environment variable
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)

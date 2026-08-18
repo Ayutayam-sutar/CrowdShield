@@ -16,19 +16,12 @@ import {
   ChevronDown,
   Activity
 } from 'lucide-react';
-
-// ─── SET YOUR ACTIVE HTTPS TUNNEL URL HERE ───
-// Paste your Pinggy, Cloudflare, or Ngrok URL here (No trailing slash)
 const PORT_TUNNELS: Record<string, string> = {};
-
-// ─── MAP UPDATER (UNTOUCHED) ───
 const MapUpdater: React.FC<{ center: [number, number]; resizeTrigger?: unknown }> = ({ center, resizeTrigger }) => {
   const map = useMap();
-
   React.useEffect(() => {
     map.setView(center, map.getZoom());
   }, [center, map]);
-
   React.useEffect(() => {
     const t1 = setTimeout(() => map.invalidateSize(), 100);
     const t2 = setTimeout(() => map.invalidateSize(), 500);
@@ -37,20 +30,15 @@ const MapUpdater: React.FC<{ center: [number, number]; resizeTrigger?: unknown }
       clearTimeout(t2);
     };
   }, [map, resizeTrigger]);
-
   React.useEffect(() => {
     const handleResize = () => map.invalidateSize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [map]);
-
   return null;
 };
-
-// ─── LOCATE ME CONTROL (UI ENHANCED) ───
 const LocateMeControl = ({ onLocate, onError }: { onLocate: (loc: [number, number]) => void, onError: (msg: string) => void }) => {
   const map = useMap();
-
   const handleLocate = () => {
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
@@ -67,7 +55,6 @@ const LocateMeControl = ({ onLocate, onError }: { onLocate: (loc: [number, numbe
       onError('Geolocation is not supported by your browser.');
     }
   };
-
   return (
     <div className="absolute top-4 right-4 z-[400]">
       <button
@@ -81,20 +68,16 @@ const LocateMeControl = ({ onLocate, onError }: { onLocate: (loc: [number, numbe
     </div>
   );
 };
-
-// ─── UTILS (UNTOUCHED) ───
 export const getRiskColor = (riskLevel: string): string => {
   switch ((riskLevel || '').toLowerCase()) {
-    case 'critical': return '#FF3B5C'; // Red
-    case 'warning': return '#FF7A45'; // Orange
-    case 'caution': return '#FFB627'; // Yellow
+    case 'critical': return '#FF3B5C'; 
+    case 'warning': return '#FF7A45'; 
+    case 'caution': return '#FFB627'; 
     case 'safe':
-    default: return '#22D3A6'; // Green
+    default: return '#22D3A6'; 
   }
 };
-
 const isLegacyPhantomZone = (id: string): boolean => /^z-0?\d$/i.test(id || '');
-
 const getTightPolygon = (center: [number, number], existingPolygon?: any[]): [number, number][] => {
   if (Array.isArray(existingPolygon) && existingPolygon.length >= 3) {
     const lats = existingPolygon.map(p => Number(p[0]));
@@ -107,7 +90,6 @@ const getTightPolygon = (center: [number, number], existingPolygon?: any[]): [nu
   const lng = Number(center[1]);
   const dLat = 0.0003; 
   const dLng = 0.0004; 
-
   return [
     [lat + dLat, lng - dLng],
     [lat + dLat, lng + dLng],
@@ -115,7 +97,6 @@ const getTightPolygon = (center: [number, number], existingPolygon?: any[]): [nu
     [lat - dLat, lng - dLng],
   ];
 };
-
 interface LiveMapViewProps {
   selectedVenue: VenueInfo | null;
   zones: VenueZone[];
@@ -124,7 +105,6 @@ interface LiveMapViewProps {
   onToggleCctvExpanded: () => void;
 }
 
-// ─── MAIN COMPONENT ───
 export const LiveMapView: React.FC<LiveMapViewProps> = ({
   selectedVenue,
   zones = [],
@@ -137,30 +117,20 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({
   const [streamCacheBusters, setStreamCacheBusters] = useState<Record<string, number>>({});
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [localToast, setLocalToast] = useState<string | null>(null);
-
-  // Resolves local URLs (localhost/127.0.0.1) to the secure Tunnel URL for Netlify
 const resolveStreamUrl = (url: string, feedId: string): string => {
   if (!url) return '';
-
-  // Extract port from original feed URL (e.g., http://127.0.0.1:5001/video_feed)
   const portMatch = url.match(/:(\d+)\//);
   const port = portMatch ? portMatch[1] : (feedId.includes('ks_') ? '5001' : '5000');
-
   const activeTunnel = PORT_TUNNELS[port];
   if (!activeTunnel) return url;
-
-  // Extract endpoint path (e.g., /video_feed)
   const path = url.replace(/^https?:\/\/[^/]+/, '') || '/video_feed';
   return `${activeTunnel}${path}`;
 };
-
-  // ─── LOGIC (UNTOUCHED) ───
   const centerCoords: [number, number] = useMemo(() => {
     if (selectedVenue?.centerCoords) return selectedVenue.centerCoords;
     const isKalingaSelected = selectedVenue?.id?.includes('kalinga') || selectedVenue?.name?.includes('Kalinga');
     return isKalingaSelected ? [20.2880, 85.8238] : [20.2494, 85.8000];
   }, [selectedVenue]);
-
   const filteredCctvFeeds = useMemo(() => {
     const isKalingaSelected = selectedVenue?.id?.includes('kalinga') || selectedVenue?.name?.includes('Kalinga');
     return cctvFeeds.filter((feed) => {
@@ -169,7 +139,6 @@ const resolveStreamUrl = (url: string, feedId: string): string => {
       return !isKalingaFeed;
     });
   }, [cctvFeeds, selectedVenue]);
-
   const cleanZones = useMemo(() => {
     return zones.filter((z) => {
       if (isLegacyPhantomZone(z.id)) return false;
@@ -182,7 +151,6 @@ const resolveStreamUrl = (url: string, feedId: string): string => {
       return !z.id.startsWith('ks_');
     });
   }, [zones, selectedVenue]);
-
   const activeEvacuationRoute = useMemo(() => {
     for (const zone of cleanZones) {
       const route = (zone as any).evacuationRoute;
@@ -192,27 +160,22 @@ const resolveStreamUrl = (url: string, feedId: string): string => {
     }
     return null;
   }, [cleanZones]);
-
   const showToastError = (msg: string) => {
     setLocalToast(msg);
     setTimeout(() => setLocalToast(null), 3500);
   };
-
   const handleImageError = (feedId: string) => {
     setFailedFeeds((prev) => ({ ...prev, [feedId]: true }));
   };
-
   const handleRetryFeed = (feedId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     setStreamCacheBusters((prev) => ({ ...prev, [feedId]: Date.now() }));
     setFailedFeeds((prev) => ({ ...prev, [feedId]: false }));
   };
-
   const getPortFromUrl = (url: string, defaultPort: string = '5000') => {
     const match = url.match(/:(\d+)\//);
     return match ? match[1] : defaultPort;
   };
-
   const findMatchedZone = (feed: CCTVFeed): VenueZone | null => {
     if (!cleanZones || cleanZones.length === 0) return null;
     const camNum = feed.id.replace(/\D/g, '');
@@ -228,13 +191,11 @@ const resolveStreamUrl = (url: string, feedId: string): string => {
       return false;
     }) || null;
   };
-
   const createZoneMarkerIcon = (code: string, density: number, riskLevel: string) => {
     let colorClass = 'bg-[#22D3A6] text-white border-white/20';
     if (riskLevel === 'critical') colorClass = 'bg-[#FF3B5C] text-white animate-pulse border-white/50 shadow-[0_0_15px_rgba(255,59,92,0.6)]';
     else if (riskLevel === 'warning') colorClass = 'bg-[#FF7A45] text-white border-white/30';
     else if (riskLevel === 'caution') colorClass = 'bg-[#FFB627] text-slate-900 border-white/30';
-
     return L.divIcon({
       className: 'custom-leaflet-marker bg-transparent border-0',
       html: `
@@ -248,11 +209,10 @@ const resolveStreamUrl = (url: string, feedId: string): string => {
     });
   };
 
-  // ─── UI RENDER ───
   return (
     <div className="flex flex-col h-full w-full relative font-body select-none bg-slate-50">
       
-      {/* ── MAP HEADER (Premium Glassmorphism) ── */}
+      {/* ── MAP HEADER ── */}
       <div className="bg-white/80 backdrop-blur-xl border-b border-slate-200/80 px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center justify-between z-10 shadow-sm gap-2 sm:gap-0">
         <div className="flex items-center gap-3">
           <div className="p-1.5 rounded-lg bg-gradient-to-br from-[#67b2b9] to-[#648d6a] text-white shadow-inner shrink-0">
@@ -405,8 +365,7 @@ const resolveStreamUrl = (url: string, feedId: string): string => {
             </Polyline>
           )}
         </MapContainer>
-
-        {/* ── SECTOR LIVE STATUS (Mobile Constrained & Scrollable) ── */}
+        {/* ── SECTOR LIVE STATUS ── */}
         <div className="absolute top-4 left-4 z-[400] bg-white/90 backdrop-blur-xl border border-slate-200/80 rounded-2xl p-4 shadow-2xl max-w-[calc(100vw-2rem)] sm:max-w-xs w-full flex flex-col font-body max-h-[35vh] sm:max-h-[50vh]">
           <div className="flex items-center justify-between border-b border-slate-200/80 pb-3 mb-3 shrink-0">
             <span className="font-heading font-black text-xs text-slate-800 uppercase tracking-widest flex items-center gap-2">
@@ -414,7 +373,6 @@ const resolveStreamUrl = (url: string, feedId: string): string => {
             </span>
             <span className="w-2.5 h-2.5 rounded-full bg-[#22D3A6] shadow-[0_0_8px_rgba(34,211,166,0.8)] animate-pulse" />
           </div>
-
           <div className="flex flex-col gap-2.5 overflow-y-auto pr-1 smooth-scroll">
             {cleanZones.length > 0 ? (
               cleanZones.map((z) => {
@@ -458,7 +416,7 @@ const resolveStreamUrl = (url: string, feedId: string): string => {
         </div>
       </div>
 
-      {/* ── CCTV BOTTOM PANEL (Responsive Grid & Brand Gradient) ── */}
+      {/* ── CCTV BOTTOM PANEL── */}
       <div className={`bg-slate-900 text-white z-[400] flex flex-col transition-all duration-300 ease-in-out shadow-[0_-10px_30px_rgba(0,0,0,0.15)] ${isCctvExpanded ? 'p-4 sm:p-5 gap-4' : 'p-0'}`}>
         
         {/* Toggle Bar */}
@@ -491,14 +449,11 @@ const resolveStreamUrl = (url: string, feedId: string): string => {
               const port = getPortFromUrl(feed.imageUrl);
               const matchedZone = findMatchedZone(feed);
               const isOffline = failedFeeds[feed.id];
-              const cacheBuster = streamCacheBusters[feed.id];
-              
+              const cacheBuster = streamCacheBusters[feed.id];              
               const rawUrl = resolveStreamUrl(feed.imageUrl, feed.id);
-              const streamUrl = cacheBuster ? `${rawUrl}${rawUrl.includes('?') ? '&' : '?'}t=${cacheBuster}` : rawUrl;
-              
+              const streamUrl = cacheBuster ? `${rawUrl}${rawUrl.includes('?') ? '&' : '?'}t=${cacheBuster}` : rawUrl; 
               const headcount = matchedZone ? matchedZone.currentHeadcount : (feed.personCount || 0);
               const density = matchedZone ? matchedZone.density : 0;
-
               return (
                 <div
                   key={feed.id}
@@ -527,7 +482,6 @@ const resolveStreamUrl = (url: string, feedId: string): string => {
                       className="w-full h-full object-cover group-hover:scale-105 group-hover:opacity-80 transition-all duration-500"
                     />
                   )}
-
                   {!isOffline && (
                     <div className="absolute inset-0 pointer-events-none p-1">
                       {feed.yoloDetections?.map((det) => (
@@ -561,12 +515,9 @@ const resolveStreamUrl = (url: string, feedId: string): string => {
           </div>
         )}
       </div>
-
-      {/* ── EXPANDED CAMERA MODAL ── */}
       {activeCameraModal && (
         <div className="fixed inset-0 z-[600] flex items-center justify-center bg-slate-950/90 backdrop-blur-sm p-4 sm:p-8 font-body animate-fadeIn">
           <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-5xl w-full overflow-hidden flex flex-col text-white shadow-2xl">
-            
             <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
               <div className="flex flex-col gap-1">
                 <h3 className="font-heading font-black text-xl text-white tracking-wide">
@@ -585,7 +536,6 @@ const resolveStreamUrl = (url: string, feedId: string): string => {
                 <X className="w-5 h-5" />
               </button>
             </div>
-
             <div className="relative aspect-video bg-black w-full overflow-hidden">
               {failedFeeds[activeCameraModal.id] ? (
                 <div className="w-full h-full bg-slate-950 flex flex-col items-center justify-center gap-3 text-slate-400 p-6 text-center">
@@ -610,7 +560,6 @@ const resolveStreamUrl = (url: string, feedId: string): string => {
                   className="w-full h-full object-contain"
                 />
               )}
-
               {!failedFeeds[activeCameraModal.id] && (
                 <div className="absolute inset-0 p-4 pointer-events-none">
                   {activeCameraModal.yoloDetections?.map((det) => (
@@ -629,7 +578,6 @@ const resolveStreamUrl = (url: string, feedId: string): string => {
                 </div>
               )}
             </div>
-
             <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs font-mono text-slate-400 bg-slate-950 border-t border-slate-800">
               <span className="uppercase tracking-widest font-bold">YOLO11 Edge Stream</span>
               <span className="flex items-center gap-2 text-slate-300">

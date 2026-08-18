@@ -1,7 +1,5 @@
 """ML Telemetry Ingestion endpoint."""
-
 import uuid
-
 from app.core.websocket import ws_manager
 from app.db.session import get_db
 from app.models.alert import AlertSeverity, AlertStatus, CrowdAlert
@@ -15,15 +13,7 @@ from app.services.risk_engine import risk_engine
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
 router = APIRouter()
-
-# ---------------------------------------------------------------------------
-# Single canonical venue: ITER, Siksha 'O' Anusandhan University.
-# Real campus coordinates (Khandagiri, Bhubaneswar) — replace the per-zone
-# lat/lng below with exact values pulled from Google Maps "What's here?" on
-# each real gate/block for full accuracy.
-# ---------------------------------------------------------------------------
 CANONICAL_VENUE_ID = "soa-iter-01"
 CANONICAL_VENUE = {
     "id": CANONICAL_VENUE_ID,
@@ -33,10 +23,6 @@ CANONICAL_VENUE = {
     "gps_center_lng": 85.7988,
     "total_capacity": 15000,
 }
-
-# Registry of the real zones for this venue, matching venue_graph.json.
-# Only zone_ids listed here may be auto-created on first telemetry — anything
-# else is rejected rather than silently invented.
 ZONE_REGISTRY = {
     "gate_1": {
         "name": "Main Gate",
@@ -81,8 +67,6 @@ ZONE_REGISTRY = {
         "center_lng": 85.7921,
     },
 }
-
-
 async def _get_or_create_canonical_venue(db: AsyncSession) -> Venue:
     """Fetches the single canonical ITER/SOA venue, creating it once if absent."""
     result = await db.execute(
@@ -94,8 +78,6 @@ async def _get_or_create_canonical_venue(db: AsyncSession) -> Venue:
         db.add(venue)
         await db.flush()
     return venue
-
-
 @router.post("/", response_model=TelemetryResponse)
 async def create_telemetry(
     telemetry: TelemetryCreate, db: AsyncSession = Depends(get_db)
@@ -105,8 +87,6 @@ async def create_telemetry(
   Calculates risk, updates zone, updates A* pathfinding weights, generates
   alerts, and broadcasts via WS.
   """
-  # 1. Get Zone. Auto-create only if it's a known real zone for this venue;
-  #    reject anything else instead of inventing a mock "General Zone".
   result = await db.execute(select(Zone).where(Zone.id == telemetry.zone_id))
   zone = result.scalars().first()
 
@@ -144,8 +124,6 @@ async def create_telemetry(
     )
     db.add(zone)
     await db.flush()
-
-  # 2. Calculate Density & Capacity Ratio
   area_sqm = zone.capacity_limit / 5.0 if zone.capacity_limit else 100.0
   density = telemetry.person_count / area_sqm
   capacity_ratio = (
@@ -154,7 +132,6 @@ async def create_telemetry(
       else 0.0
   )
 
-  # Surge score calculation
   surge_score = getattr(telemetry, "surge_score", 0.0)
   if not surge_score:
     surge_score = min(
@@ -163,7 +140,6 @@ async def create_telemetry(
         1.0,
     )
 
-  # 3. XGBoost Risk Engine Inference
   (
       final_risk_score,
       calculated_risk_level,
@@ -177,14 +153,12 @@ async def create_telemetry(
       surge_score=surge_score,
   )
 
-  # Update Zone DB fields
   zone.current_headcount = telemetry.person_count
   zone.density = density
   zone.risk_score = final_risk_score
   zone.reverse_flow_detected = telemetry.reverse_flow_detected
   zone.flow_conflict = telemetry.flow_conflict
 
-  # Map string return to Enum
   risk_enum_map = {
       "safe": RiskLevel.safe,
       "caution": RiskLevel.caution,
@@ -199,7 +173,6 @@ async def create_telemetry(
   pathfinder.update_live_telemetry([zone])
   evacuation_route = pathfinder.compute_safest_evacuation(zone.id)
 
-  # 5. Save TelemetryLog
   log = TelemetryLog(
       zone_id=telemetry.zone_id,
       person_count=telemetry.person_count,
@@ -211,12 +184,11 @@ async def create_telemetry(
       calculated_risk_score=final_risk_score,
   )
   db.add(log)
-  await db.flush()  # flush to generate log.id
+  await db.flush() 
 
-  # 6. Generate Alert if WARNING or CRITICAL
   new_alert_dict = None
   if calculated_risk_level in ["warning", "critical"]:
-    # Check if an OPEN alert already exists for this zone
+
     alert_result = await db.execute(
         select(CrowdAlert)
         .where(CrowdAlert.zone_id == zone.id)
@@ -282,8 +254,6 @@ async def create_telemetry(
           "recommendedActions": new_alert.recommended_actions,
           "evacuationRoute": evacuation_route,
       }
-
-  # 7. WebSocket Broadcast to Dashboard & Citizen PWA
   prediction = await predict_density(zone.id, db)
   predictive_10m_curve = (
       prediction.get("projected", [])
@@ -324,10 +294,7 @@ async def create_telemetry(
   }
   if new_alert_dict:
     payload["alert"] = new_alert_dict
-
   await ws_manager.broadcast(payload)
-
-  # Commit database changes
   await db.commit()
 
   return TelemetryResponse(

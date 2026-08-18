@@ -1,11 +1,5 @@
-/**
- * Dashboard i18n Translation Dictionary
- * Supports: English (en), Hindi (hi), Odia (od), Bengali (bn), Tamil (ta)
- */
 import { SupportedLanguage } from '../types';
-
 const dashboard: Record<string, Record<SupportedLanguage, string>> = {
-  // ── Top Warning Banner ──
   awaitingTelemetryPrefix: {
     en: 'Awaiting camera telemetry feed across',
     hi: 'कैमरा टेलीमेट्री फीड की प्रतीक्षा',
@@ -27,8 +21,6 @@ const dashboard: Record<string, Record<SupportedLanguage, string>> = {
     bn: 'YOLO ভিডিও পাইপলাইন বা সংকট সিমুলেশন সংযোগ না হওয়া পর্যন্ত বেসলাইন হার্ডওয়্যার টেলিমেট্রিতে চলছে।',
     ta: 'YOLO வீடியோ பைப்லைன்கள் அல்லது நெருக்கடி சிமுலேஷன்கள் இணைக்கும் வரை அடிப்படை வன்பொருள் டெலிமெட்ரியில் இயங்குகிறது.',
   },
-
-  // ── Live Campus Footfall Card ──
   liveCampusFootfall: {
     en: 'Live Campus Footfall',
     hi: 'लाइव कैम्पस फुटफॉल',
@@ -157,8 +149,6 @@ const dashboard: Record<string, Record<SupportedLanguage, string>> = {
     bn: 'সেন্টিনেল ইন্টেলিজেন্স পরীক্ষা করুন',
     ta: 'செண்டினல் நுண்ணறிவை ஆய்வு செய்யுங்கள்',
   },
-
-  // ── Risk Level Badges ──
   riskCritical: {
     en: 'CRITICAL',
     hi: 'गंभीर',
@@ -187,8 +177,6 @@ const dashboard: Record<string, Record<SupportedLanguage, string>> = {
     bn: 'নিরাপদ',
     ta: 'பாதுகாப்பு',
   },
-
-  // ── Sector Risk Distribution Card ──
   sectorRiskDistribution: {
     en: 'Sector Risk Distribution',
     hi: 'क्षेत्र जोखिम वितरण',
@@ -224,8 +212,6 @@ const dashboard: Record<string, Record<SupportedLanguage, string>> = {
     bn: 'A* রিরাউটিং প্রস্তুত',
     ta: 'A* மறுவழி தயார்',
   },
-
-  // ── 5-Min Live Density Stream ──
   fiveMinDensityStream: {
     en: '5-Minute Live Density Stream',
     hi: '5-मिनट लाइव घनत्व स्ट्रीम',
@@ -268,8 +254,6 @@ const dashboard: Record<string, Record<SupportedLanguage, string>> = {
     bn: 'জটিল নিরাপত্তা সীমা (4.0 p/m²)',
     ta: 'முக்கிய பாதுகாப்பு வரம்பு (4.0 p/m²)',
   },
-
-  // ── Sector Risk & Density Matrix Table ──
   sectorRiskDensityMatrix: {
     en: 'Sector Risk & Density Matrix',
     hi: 'क्षेत्र जोखिम और घनत्व मैट्रिक्स',
@@ -375,8 +359,6 @@ const dashboard: Record<string, Record<SupportedLanguage, string>> = {
     bn: 'নোড পরীক্ষা করুন ➔',
     ta: 'நோடை ஆய்வு செய்யுங்கள் ➔',
   },
-
-  // ── Terminal Audit Feed ──
   operationsAuditFeed: {
     en: 'Operations & Command Audit Feed',
     hi: 'संचालन और कमांड ऑडिट फीड',
@@ -399,11 +381,6 @@ const dashboard: Record<string, Record<SupportedLanguage, string>> = {
     ta: 'உள்வரும் எட்ஜ் நிகழ்வுகளுக்கு காத்திருக்கிறது...',
   },
 };
-
-/**
- * Returns the translated string for a given key and language.
- * Falls back to English if a translation is missing.
- */
 export function t(key: string, lang: SupportedLanguage): string {
   const entry = dashboard[key];
   if (!entry) return key;

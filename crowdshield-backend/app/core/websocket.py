@@ -3,13 +3,11 @@ WebSocket ConnectionManager for real-time telemetry broadcasting.
 Manages active WebSocket connections and broadcasts JSON payloads
 to all connected Admin Dashboard and Citizen Mobile App clients.
 """
-
 import json
 import logging
 from fastapi import WebSocket
 
 logger = logging.getLogger("crowdshield.websocket")
-
 
 class ConnectionManager:
     """
@@ -62,6 +60,4 @@ class ConnectionManager:
         """Number of currently connected WebSocket clients."""
         return len(self.active_connections)
 
-
-# ─── Singleton Instance ───
 ws_manager = ConnectionManager()

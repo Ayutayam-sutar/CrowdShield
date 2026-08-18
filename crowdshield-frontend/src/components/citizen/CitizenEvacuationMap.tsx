@@ -6,9 +6,6 @@ import { Navigation, Footprints, Clock, AlertTriangle, Maximize2, Minimize2, Rou
 import api from '../../utils/api';
 import { VenueZone, SupportedLanguage } from '../../types';
 import { tc } from '../../i18n/citizen';
-
-/* ─── MAP HELPERS ────────────────────────────────────── */
-
 const MapUpdater: React.FC<{ center: [number, number]; resizeTrigger?: boolean }> = ({ center, resizeTrigger }) => {
   const map = useMap();
   useEffect(() => { map.setView(center, map.getZoom()); }, [center, map]);
@@ -19,7 +16,6 @@ const MapUpdater: React.FC<{ center: [number, number]; resizeTrigger?: boolean }
   }, [map, resizeTrigger]);
   return null;
 };
-
 const RouteBoundsFitter: React.FC<{ coordinates: [number, number][] }> = ({ coordinates }) => {
   const map = useMap();
   useEffect(() => {
@@ -30,7 +26,6 @@ const RouteBoundsFitter: React.FC<{ coordinates: [number, number][] }> = ({ coor
   }, [coordinates, map]);
   return null;
 };
-
 const getRiskColor = (riskLevel: string): string => {
   switch ((riskLevel || '').toLowerCase()) {
     case 'critical': return '#EF4444';
@@ -40,9 +35,6 @@ const getRiskColor = (riskLevel: string): string => {
     default: return '#10B981';
   }
 };
-
-/* ─── CUSTOM ICONS ───────────────────────────────────── */
-
 const createBlueDotIcon = () =>
   L.divIcon({
     className: 'custom-blue-dot',
@@ -54,7 +46,6 @@ const createBlueDotIcon = () =>
     iconSize: [24, 24],
     iconAnchor: [12, 12],
   });
-
 const createExitIcon = (label: string) =>
   L.divIcon({
     className: 'custom-exit-icon',
@@ -65,9 +56,6 @@ const createExitIcon = (label: string) =>
     iconSize: [85, 28],
     iconAnchor: [42, 14],
   });
-
-/* ─── PROPS ──────────────────────────────────────────── */
-
 interface CitizenEvacuationMapProps {
   isScenarioActive: boolean;
   userLocation: { lat: number; lng: number };
@@ -76,9 +64,6 @@ interface CitizenEvacuationMapProps {
   venueName?: string;
   language?: SupportedLanguage;
 }
-
-/* ─── COMPONENT ──────────────────────────────────────── */
-
 export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({
   isScenarioActive,
   userLocation,
@@ -162,7 +147,6 @@ export const CitizenEvacuationMap: React.FC<CitizenEvacuationMapProps> = ({
             </p>
           </div>
         </div>
-
         <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
           <span
             className={`px-2.5 py-1 rounded-full font-mono-num font-bold text-[10px] sm:text-[11px] flex items-center gap-1.5 ${

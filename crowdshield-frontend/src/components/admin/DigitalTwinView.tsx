@@ -22,12 +22,10 @@ import {
   Search,
   Terminal
 } from 'lucide-react';
-
 interface DigitalTwinViewProps {
-  zones: any[]; // Or VenueZone[] depending on your types
+  zones: any[];
   selectedVenue?: VenueInfo | null; 
 }
-
 interface QueriedRoute {
   status: 'SUCCESS' | 'BLOCKED' | 'ERROR';
   message: string;
@@ -35,8 +33,6 @@ interface QueriedRoute {
   cost: number;
   target_exit?: string;
 }
-
-// ─── TEAM'S LOGIC (100% UNTOUCHED) ───
 function useMergedNodes(zones: any[], activeNodes: any[]) {
   return useMemo(() => {
     const byId = new Map(zones.map((z: any) => [z.id, z]));
@@ -56,7 +52,6 @@ function useMergedNodes(zones: any[], activeNodes: any[]) {
     });
   }, [zones, activeNodes]); 
 }
-
 const riskColor = (risk: string) => {
   switch (risk) {
     case 'critical': return '#FF3B5C';
@@ -65,37 +60,29 @@ const riskColor = (risk: string) => {
     default: return '#22D3A6';
   }
 };
-
 export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones, selectedVenue }) => {
-  
   const activeNodes = useMemo(() => {
     const isKalinga = selectedVenue?.id?.includes('kalinga') || selectedVenue?.name?.includes('Kalinga');
     return VENUE_TOPOLOGY.filter(node => 
       isKalinga ? node.id.startsWith('ks_') : !node.id.startsWith('ks_')
     );
   }, [selectedVenue]);
-
   const activeEdges = useMemo(() => {
     const isKalinga = selectedVenue?.id?.includes('kalinga') || selectedVenue?.name?.includes('Kalinga');
     return VENUE_EDGES.filter(edge => 
       isKalinga ? edge.source.startsWith('ks_') : !edge.source.startsWith('ks_')
     );
   }, [selectedVenue]);
-
   const mergedNodes = useMergedNodes(zones, activeNodes);
-  
   const defaultNodeId = activeNodes.length > 0 ? activeNodes[0].id : '';
-
   const [selectedZoneId, setSelectedZoneId] = useState<string>(defaultNodeId);
   const [showHeatmap, setShowHeatmap] = useState(true);
   const [is3dActive, setIs3dActive] = useState(true);
-
   const [queryStartId, setQueryStartId] = useState<string>(defaultNodeId);
   const [queryTargetId, setQueryTargetId] = useState<string>(''); 
   const [queriedRoute, setQueriedRoute] = useState<any | null>(null);
   const [isQuerying, setIsQuerying] = useState(false);
   const [queryError, setQueryError] = useState<string | null>(null);
-
   useEffect(() => {
     if (activeNodes.length > 0) {
       setSelectedZoneId(activeNodes[0].id);
@@ -104,14 +91,11 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones, selecte
       setQueriedRoute(null);
     }
   }, [activeNodes]);
-
   useEffect(() => {
     let cancelled = false;
     if (!queryStartId) return;
-
     setIsQuerying(true);
     setQueryError(null);
-
     api
       .post('/routing/query', {
         start_zone_id: queryStartId,
@@ -130,42 +114,31 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones, selecte
       .finally(() => {
         if (!cancelled) setIsQuerying(false);
       });
-
     return () => {
       cancelled = true;
     };
   }, [queryStartId, queryTargetId]);
-
   const selected = mergedNodes.find((n:any) => n.id === selectedZoneId) || mergedNodes[0];
-
   const hasQueriedRoute = queriedRoute?.status === 'SUCCESS' && queriedRoute.path_nodes.length > 1;
   const passiveLiveRoute = selected?.live?.evacuationRoute;
   const hasPassiveLiveRoute = !hasQueriedRoute && passiveLiveRoute?.status === 'SUCCESS' && (passiveLiveRoute.path_nodes?.length ?? 0) > 1;
-
   const fallbackExit = nearestExit(selectedZoneId);
   const fallbackPath = fallbackExit ? fallbackShortestPath(selectedZoneId, fallbackExit) : [];
-
   const displayPath: string[] = hasQueriedRoute
     ? queriedRoute!.path_nodes
     : hasPassiveLiveRoute
     ? (passiveLiveRoute!.path_nodes as string[])
     : fallbackPath;
-
-  // Integrated brand color for success routes
   const routeSourceLabel = hasQueriedRoute
     ? { text: 'Live A* route — manual query', color: '#67b2b9' }
     : hasPassiveLiveRoute
     ? { text: 'Live A* route — from last telemetry', color: '#67b2b9' }
     : { text: 'Static fallback — no live route yet', color: '#f59e0b' };
-
-  // ─── UI RENDER ───
   return (
     <div className="p-4 sm:p-6 lg:p-8 flex flex-col gap-6 lg:gap-8 font-body text-slate-800 bg-[#FAFAF7] min-h-screen">
-      
       {/* ── Top Header ── */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-5 bg-white p-6 md:p-8 rounded-3xl border border-slate-200/80 shadow-sm relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-[#67b2b9]/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none opacity-60" />
-        
         <div className="relative z-10">
           <h1 className="font-heading font-black text-2xl sm:text-3xl text-slate-900 tracking-tight flex items-center gap-3">
             <div className="p-2 bg-gradient-to-br from-[#67b2b9]/20 to-[#648d6a]/20 text-[#648d6a] rounded-xl shadow-inner">
@@ -177,7 +150,6 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones, selecte
             Real venue topology (gates, interior zones) with live A* evacuation routing powered by the backend risk engine.
           </p>
         </div>
-        
         <div className="flex flex-wrap items-center gap-3 relative z-10 mt-2 md:mt-0">
           <button
             onClick={() => setIs3dActive(!is3dActive)}
@@ -208,7 +180,6 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones, selecte
           <Search className="w-4 h-4 text-[#67b2b9]" />
           Pathfinder Query
         </span>
-
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto flex-1">
           <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 w-full sm:w-auto flex-1">
             <span className="text-[10px] sm:text-[11px] font-black text-slate-400 uppercase tracking-widest shrink-0">Start:</span>
@@ -224,9 +195,7 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones, selecte
               ))}
             </select>
           </div>
-
           <ArrowRight className="w-4 h-4 text-slate-300 hidden sm:block shrink-0" />
-
           <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 w-full sm:w-auto flex-1">
             <span className="text-[10px] sm:text-[11px] font-black text-slate-400 uppercase tracking-widest shrink-0">Target:</span>
             <select
@@ -243,7 +212,6 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones, selecte
             </select>
           </div>
         </div>
-
         <div className="flex items-center gap-3 w-full sm:w-auto shrink-0 justify-between sm:justify-end">
           {isQuerying && <Loader2 className="w-5 h-5 text-[#67b2b9] animate-spin" />}
           {queryError && <span className="text-[10px] sm:text-[11px] font-mono font-bold text-rose-500 bg-rose-50 px-2 py-1 rounded border border-rose-200">{queryError}</span>}
@@ -252,7 +220,6 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones, selecte
               Path Blocked: {queriedRoute.message}
             </span>
           )}
-
           <button
             onClick={() => setSelectedZoneId(queryStartId)}
             className="text-[10px] sm:text-xs font-black text-[#648d6a] hover:text-[#5a9c9f] uppercase tracking-widest bg-transparent border-none cursor-pointer ml-auto"
@@ -264,10 +231,8 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones, selecte
 
       {/* ── Main Dashboard Grid ── */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 lg:gap-8">
-        
         {/* ── Left Column: 3D and 2D Visualizers ── */}
         <div className="xl:col-span-8 flex flex-col gap-6 lg:gap-8">
-          
           {is3dActive && (
             <div className="bg-white border border-slate-200/80 rounded-3xl overflow-hidden shadow-sm h-[400px] sm:h-[500px]">
               <ThreeDigitalTwinCanvas
@@ -279,7 +244,6 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones, selecte
               />
             </div>
           )}
-
           {/* 2D SVG Blueprint */}
           <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col h-full">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
@@ -294,7 +258,6 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones, selecte
                 {routeSourceLabel.text}
               </span>
             </div>
-
             <div className="relative w-full aspect-square sm:aspect-video bg-[#FAFAF7] rounded-2xl border border-slate-200/80 overflow-hidden shadow-inner flex-1">
               {/* Subtle Grid Background */}
               <div
@@ -310,7 +273,6 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones, selecte
                   const b = getTopologyNode(edge.target)!;
                   return <line key={`edge-${i}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#e2e8f0" strokeWidth="1.5" />;
                 })}
-
                 {displayPath.length > 1 && displayPath.map((id, i) => {
                   if (i === displayPath.length - 1) return null;
                   const a = getTopologyNode(id);
@@ -327,12 +289,10 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones, selecte
                     />
                   );
                 })}
-
                 {mergedNodes.map((node:any) => {
                   const isSelected = node.id === selected.id;
                   const onPath = displayPath.includes(node.id);
                   const color = node.hasTelemetry ? riskColor(node.riskLevel) : '#94a3b8';
-
                   return (
                     <g key={node.id} transform={`translate(${node.x}, ${node.y})`} onClick={() => setSelectedZoneId(node.id)} className="cursor-pointer group">
                       {node.isGate ? (
@@ -350,7 +310,6 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones, selecte
                 })}
               </svg>
             </div>
-
             <div className="flex flex-wrap items-center gap-4 mt-4 text-[10px] sm:text-[11px] font-mono font-bold text-slate-500 uppercase tracking-widest">
               <span className="flex items-center gap-1.5"><span className="w-3 h-3 bg-slate-400 rounded-full inline-block shadow-sm" /> No telemetry</span>
               <span className="flex items-center gap-1.5"><CircleDot className="w-3.5 h-3.5 text-slate-600" /> Zone Node</span>
@@ -358,10 +317,8 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones, selecte
             </div>
           </div>
         </div>
-
         {/* ── Right Column: Node Details & Terminal ── */}
         <div className="xl:col-span-4 flex flex-col gap-6 lg:gap-8">
-          
           {/* Node Inspector Card */}
           <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 flex flex-col gap-6 shadow-sm h-fit">
             <div className="flex items-start justify-between border-b border-slate-100 pb-4">
@@ -377,7 +334,6 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones, selecte
                 </span>
               )}
             </div>
-
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200/80 shadow-inner flex flex-col items-center text-center">
                 <div className="text-[10px] sm:text-[11px] font-mono font-bold text-slate-400 uppercase tracking-widest mb-1">Density</div>
@@ -392,7 +348,6 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones, selecte
                 </div>
               </div>
             </div>
-
             {selected.maxCapacity > 0 && (
               <div className="flex flex-col gap-2.5 p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
                 <div className="flex items-center justify-between text-xs">
@@ -409,7 +364,6 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones, selecte
                 </div>
               </div>
             )}
-
             {selected.isGate && (
               <div className="pt-2 flex items-center justify-between">
                 <span className="text-[11px] font-mono font-bold text-slate-500 uppercase tracking-widest">Gate Actuator:</span>
@@ -421,7 +375,6 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones, selecte
                 </span>
               </div>
             )}
-
             {/* Tactical AI Terminal Readout */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col gap-3 font-mono mt-2">
               <span className="text-[11px] font-black text-[#67b2b9] flex items-center gap-2 uppercase tracking-widest border-b border-slate-800 pb-3">
@@ -438,7 +391,6 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones, selecte
               </p>
             </div>
           </div>
-
           {/* Node Quick Selectors */}
           <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm flex flex-col gap-4">
             <span className="font-heading font-black text-sm text-slate-800 tracking-tight">Quick Inspect</span>
@@ -496,7 +448,6 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({ zones, selecte
               })}
             </div>
           </div>
-
         </div>
       </div>
     </div>

@@ -7,7 +7,6 @@ export interface NLPCommandResult {
 export const parseVoiceCommand = (transcript: string): NLPCommandResult | null => {
   const lowerTranscript = transcript.toLowerCase();
 
-  // Pattern 1: Unlock Gate/Auxiliary
   if (lowerTranscript.includes('unlock') && (lowerTranscript.includes('gate 4') || lowerTranscript.includes('auxiliary 4'))) {
     return {
       action: 'UNLOCK_GATE',
@@ -24,7 +23,6 @@ export const parseVoiceCommand = (transcript: string): NLPCommandResult | null =
     };
   }
 
-  // Pattern 2: Dispatch Broadcast
   if (lowerTranscript.includes('dispatch') && lowerTranscript.includes('broadcast')) {
     return {
       action: 'DISPATCH_BROADCAST',

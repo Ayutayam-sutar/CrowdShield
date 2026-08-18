@@ -37,25 +37,18 @@ import { CamerasView } from './components/admin/CamerasView';
 import { AlertsView } from './components/admin/AlertsView';
 import { AnalyticsView } from './components/admin/AnalyticsView';
 import { DigitalTwinView } from './components/admin/DigitalTwinView';
-
-// Citizen View
 import { CitizenPortalView } from './components/citizen/CitizenPortalView';
-
 import api from './utils/api';
-// Bhubaneswar zone offsets so each zone gets distinct map placement
 function mapBackendZoneToFrontend(raw: any): VenueZone {
-  // Bhubaneswar zone offsets so each zone gets distinct map placement
   const ZONE_OFFSETS: Record<string, [number, number]> = {
     'z-1': [20.2516, 85.7968], 'z-01': [20.2516, 85.7968],
     'z-2': [20.2476, 85.7968], 'z-02': [20.2476, 85.7968],
     'z-3': [20.2516, 85.8008], 'z-03': [20.2516, 85.8008],
     'z-4': [20.2476, 85.8008], 'z-04': [20.2476, 85.8008],
   };
-  
   const fallback = ZONE_OFFSETS[(raw.id || '').toLowerCase()] || [20.2496, 85.7988];
   const centerLat = raw.center_lat || (Array.isArray(raw.center) ? raw.center[0] : fallback[0]);
   const centerLng = raw.center_lng || (Array.isArray(raw.center) ? raw.center[1] : fallback[1]);
-  
   return {
     id: raw.id,
     name: raw.name || raw.code || raw.id,
@@ -69,8 +62,6 @@ function mapBackendZoneToFrontend(raw: any): VenueZone {
     riskLevel: (raw.risk_level ?? raw.riskLevel ?? 'safe').toLowerCase() as any,
     trend: (raw.trend ?? 'stable').toLowerCase() as any,
     avg_speed: raw.avg_speed ?? raw.flow_rate ?? raw.flowRate ?? 0,
-    // REVERTED: Calculate the polygon dynamically around the exact center point.
-    // This guarantees the box will always snap perfectly to the label!
     polygon: raw.polygon || [
       [centerLat - 0.0008, centerLng - 0.0008],
       [centerLat + 0.0008, centerLng - 0.0008],
@@ -90,7 +81,6 @@ function mapBackendVenueToFrontend(raw: any): VenueInfo {
   const mappedZones = (raw.zones || []).map(mapBackendZoneToFrontend);
   const totalHeadcount = mappedZones.reduce((acc: number, z: VenueZone) => acc + z.currentHeadcount, 0);
   const affected = mappedZones.filter((z: VenueZone) => z.riskLevel === 'warning' || z.riskLevel === 'critical').length;
-
   return {
     id: raw.id,
     name: raw.name,
@@ -103,19 +93,12 @@ function mapBackendVenueToFrontend(raw: any): VenueInfo {
    
   };
 }
-
 export default function App() {
   const { isAuthenticated, role, logout } = useAuth();
-// Inside App.tsx (near your other useState calls)
-
-  // State
-  // Read initial viewMode from localStorage so refreshes don't reset your screen
   const [viewMode, setViewModeState] = useState<ViewMode>(() => {
     const saved = localStorage.getItem('crowdshield_view_mode');
     return (saved as ViewMode) || 'auth';
   });
-
-  // Helper to sync viewMode changes with localStorage
   const setViewMode = (mode: ViewMode) => {
     setViewModeState(mode);
     localStorage.setItem('crowdshield_view_mode', mode);
@@ -129,21 +112,16 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isCloudSyncLost, setIsCloudSyncLost] = useState<boolean>(false);
   const [isCctvExpanded, setIsCctvExpanded] = useState<boolean>(true);
-
   const [isCrisisMode, setIsCrisisMode] = useState<boolean>(false);
-  // Core Data Collections State
   const [zones, setZones] = useState<VenueZone[]>([]);
   const [alerts, setAlerts] = useState<CrowdAlert[]>(INITIAL_ALERTS);
   const [cctvFeeds, setCctvFeeds] = useState<CCTVFeed[]>(INITIAL_CCTV_FEEDS);
-
   const [lastTelemetryUpdate, setLastTelemetryUpdate] = useState<Record<string, number>>({});
   const [ticker, setTicker] = useState<number>(0);
-
 useEffect(() => {
     const unsubscribe = wsService.subscribe((data) => {
       if (data.event === 'NEW_ALERT' && data.alert) {
         setAlerts((prev) => {
-          // Prevent duplicate alert insertions if already present
           if (prev.some((a) => a.id === data.alert!.id)) return prev;
           return [data.alert!, ...prev];
         });
@@ -165,10 +143,7 @@ useEffect(() => {
 
     return () => unsubscribe();
   }, []);
-
-
-
-
+  
   useEffect(() => {
     const timer = setInterval(() => {
       setTicker((t) => t + 1);
@@ -208,11 +183,7 @@ useEffect(() => {
     });
   }, [cctvFeeds, lastTelemetryUpdate, isScenarioActive, ticker]);
   const [citizenReports, setCitizenReports] = useState<CitizenReport[]>(INITIAL_CITIZEN_REPORTS);
-
-  // Toast Notifications State
   const [toasts, setToasts] = useState<ToastNotification[]>([]);
-
-  // Audit Logs State
   const [recentLogs, setRecentLogs] = useState<{ timestamp: string; action: string; source: string; type: 'success' | 'warning' | 'info' }[]>([
     { timestamp: new Date(Date.now() - 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), source: 'OPERATOR_01', action: 'INITIATED REMOTE UNLOCK: GATE B TURNSTILES', type: 'info' },
     { timestamp: new Date(Date.now() - 120000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), source: 'SENTINEL_AI', action: 'ESCALATED RISK LEVEL TO CRITICAL FOR SECTOR 7G', type: 'warning' },
@@ -220,13 +191,9 @@ useEffect(() => {
     { timestamp: new Date(Date.now() - 240000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), source: 'A_STAR_ROUTER', action: 'DYNAMIC REROUTE ACTIVE: DIVERTED 1,200 PAX TO AUX GATE 4', type: 'success' },
     { timestamp: new Date(Date.now() - 300000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), source: 'SYSTEM_NODE', action: 'EDGE SQLITE DB SYNC OK · 0 LOSS PACKETS', type: 'info' },
   ]);
-
-  // Modals & Drawers
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isEmergencyBroadcastOpen, setIsEmergencyBroadcastOpen] = useState(false);
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
-
-  // Helper function to dispatch Toast Notifications for Admins
   const addToastNotification = (
     title: string,
     message: string,
@@ -243,7 +210,6 @@ useEffect(() => {
     };
     setToasts((prev) => [newToast, ...prev]);
 
-    // Auto dismiss toast after 8 seconds
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== newToast.id));
     }, 8000);
@@ -252,11 +218,6 @@ useEffect(() => {
   const handleDismissToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
-
-  // Automatic Crowd Alert Generation if Zone Density Exceeds 85% Threshold
-
-
-  // Fetch Live Venues and Zones from FastAPI backend
   useEffect(() => {
     const fetchLiveData = async () => {
       try {
@@ -272,13 +233,10 @@ useEffect(() => {
           api.get('/venues').catch(() => ({ data: [] })),
           api.get(activeVenueId ? `/zones?venue_id=${activeVenueId}` : '/zones').catch(() => ({ data: [] })),
         ]);
-
         const rawVenues = Array.isArray(venuesRes.data) ? venuesRes.data : [];
         const rawZones = Array.isArray(zonesRes.data) ? zonesRes.data : [];
-
         const mappedVenues = rawVenues.map(mapBackendVenueToFrontend);
         const mappedZones = rawZones.map(mapBackendZoneToFrontend);
-
         setVenues(mappedVenues);
         if (mappedVenues.length > 0) {
           const activeVenue = activeVenueId ? mappedVenues.find(v => v.id === activeVenueId) : null;
@@ -286,7 +244,6 @@ useEffect(() => {
         } else {
           setSelectedVenue(null);
         }
-
         if (mappedZones.length > 0) {
           setZones(mappedZones);
           wsService.subscribeToZone(mappedZones[0].id);
@@ -297,13 +254,10 @@ useEffect(() => {
         console.error('[API] Failed to fetch live venues and zones from backend:', err);
       }
     };
-
     if (isAuthenticated) {
       fetchLiveData();
     }
   }, [isAuthenticated]);
-
-  // Handle Venue selection and subscribe to its primary zone
   const handleSelectVenue = (venue: VenueInfo) => {
     setSelectedVenue(venue);
     setAlerts([]);
@@ -324,26 +278,16 @@ useEffect(() => {
       console.error('[API] Failed to fetch zones for selected venue:', err);
     });
   };
-
-  // Monitor zones for threshold breaches
   useEffect(() => {
-    
   }, [processedZones]);
-
-  // Keep a ref to the selected venue for the WebSocket closure
   const selectedVenueRef = useRef<VenueInfo | null>(null);
   useEffect(() => {
     selectedVenueRef.current = selectedVenue;
   }, [selectedVenue]);
-
-  // WebSocket Connection & Real-Time Telemetry Subscription
   useEffect(() => {
     if (isAuthenticated) {
-      // Re-establish WebSocket to ensure we use the newly authenticated token
       wsService.disconnect();
       wsService.connect();
-
-      // Fetch the active scenario status to sync state on page reload
       api.get('/interventions/scenario/status').then((res) => {
         if (res.data && res.data.active !== undefined) {
           setIsScenarioActive(res.data.active);
@@ -357,44 +301,33 @@ useEffect(() => {
       }).catch((err) => {
         console.error('Failed to sync scenario status:', err);
       });
-
       const unsubscribe = wsService.subscribe((data) => {
         if (data.event === 'TELEMETRY_UPDATE' && data.zone) {
           const updatedZone = mapBackendZoneToFrontend(data.zone);
-          
-          // Ignore telemetry updates for zones outside the currently viewed venue
           if (updatedZone.venueId && selectedVenueRef.current && updatedZone.venueId !== selectedVenueRef.current.id) {
             return;
           }
-
           setLastTelemetryUpdate((prev) => ({
             ...prev,
             [updatedZone.id]: Date.now()
           }));
-
-          // Update existing zone or dynamically insert new zone (e.g., z-3)
           setZones((prevZones) => {
             const exists = prevZones.some((z) => z.id === updatedZone.id);
             if (exists) {
               return prevZones.map((z) => (z.id === updatedZone.id ? { ...z, ...updatedZone } : z));
             } else {
-              // Only insert if we are absolutely sure this venue is currently active, 
-              // or if there are no prev zones but we want to dynamically load
               if (selectedVenueRef.current && updatedZone.venueId === selectedVenueRef.current.id) {
                 return [...prevZones, updatedZone];
               }
               return prevZones;
             }
           });
-
-          // Handle new alerts
           if (data.alert) {
             setAlerts((prevAlerts) => {
               const exists = prevAlerts.find(a => a.id === data.alert!.id || (a.zoneId === data.alert!.zoneId && a.status === 'active'));
               if (exists) return prevAlerts;
               return [data.alert!, ...prevAlerts];
             });
-
             addToastNotification(
               `CROWD SURGE ALERT`,
               `Zone ${data.zone.id} flagged by ML Risk Engine. Overrides applied.`,
@@ -410,15 +343,12 @@ useEffect(() => {
                 : a
             )
           );
-
           addToastNotification(
             `ALERT RESOLVED`,
             `Alert #${data.alert_id} was resolved by volunteer ${data.resolved_by || 'Unknown'}`,
             'info'
           );
         } else if (data.event === 'INTERVENTION_DISPATCHED' && data.zone_id) {
-          // Backend resolves ALL open alerts in this zone on dispatch — mirror that here
-          // instead of waiting for the next TELEMETRY_UPDATE to overwrite stale alert state.
           setAlerts((prevAlerts) =>
             prevAlerts.map((a) =>
               a.zoneId === data.zone_id && a.status === 'active'
@@ -426,7 +356,6 @@ useEffect(() => {
                 : a
             )
           );
-
           addToastNotification(
             '✅ Intervention Dispatched',
             data.message || `${data.actionText} deployed for ${data.zoneName}.`,
@@ -451,25 +380,21 @@ useEffect(() => {
           }).catch(e => console.error('[API] Failed to fetch zones for new venue:', e));
         }
       });
-
       return () => {
         unsubscribe();
         wsService.disconnect();
       };
     }
   }, [isAuthenticated]);
-
 useEffect(() => {
     const handleNetworkStatus = (e: Event) => {
       const customEvent = e as CustomEvent;
       setIsCloudSyncLost(customEvent.detail.status === 'offline');
     };
-
     const handleVoiceCommandEvent = (e: Event) => {
       const customEvent = e as CustomEvent;
       addToastNotification('🎙️ Voice Command Recognized', customEvent.detail, 'info');
     };
-
     const handleSystemDispatchEvent = (e: Event) => {
       const customEvent = e as CustomEvent;
       const { type, message } = customEvent.detail || {};
@@ -488,18 +413,14 @@ useEffect(() => {
         ...prev
       ]);
     };
-
-    // THIS IS THE NEW LISTENER: It catches the WS signal and forces the app into crisis mode!
     const handleScenarioChange = (e: Event) => {
       const customEvent = e as CustomEvent;
       setIsScenarioActive(customEvent.detail.active);
     };
-
     window.addEventListener('network_status', handleNetworkStatus);
     window.addEventListener('voice_command_executed', handleVoiceCommandEvent);
     window.addEventListener('system_dispatch', handleSystemDispatchEvent);
     window.addEventListener('scenario_state_change', handleScenarioChange);
-
     return () => {
       window.removeEventListener('network_status', handleNetworkStatus);
       window.removeEventListener('voice_command_executed', handleVoiceCommandEvent);
@@ -507,12 +428,9 @@ useEffect(() => {
       window.removeEventListener('scenario_state_change', handleScenarioChange);
     };
   }, []); 
-
-  // Handlers
   const handleTriggerScenario = async () => {
-    setIsScenarioActive(true); // Optimistic local update
+    setIsScenarioActive(true); 
     try {
-      // Tell the backend to broadcast the stampede globally
       await api.post('/interventions/scenario', { action: 'trigger' });
       addToastNotification(
         'SYSTEM OVERRIDE', 
@@ -523,11 +441,9 @@ useEffect(() => {
       console.error('Failed to trigger scenario on backend:', err);
     }
   };
-
   const handleResetScenario = async () => {
-    setIsScenarioActive(false); // Optimistic local update
+    setIsScenarioActive(false);
     try {
-      // Tell the backend to stand down
       await api.post('/interventions/scenario', { action: 'reset' });
       addToastNotification(
         'SYSTEM NORMAL', 
@@ -537,7 +453,6 @@ useEffect(() => {
     } catch (err) {
       console.error('Failed to reset scenario on backend:', err);
     }
-
     api.get('/zones').then((res) => {
       const rawZones = Array.isArray(res.data) ? res.data : [];
       setZones(rawZones.map(mapBackendZoneToFrontend));
@@ -545,11 +460,9 @@ useEffect(() => {
       console.error('[API] Failed to reload zones after reset:', err);
     });
   }; 
-
   const handleToggleNetworkMode = () => {
     setNetworkMode((prev) => (prev === 'cloud' ? 'edge' : 'cloud'));
   };
-
   const handleAddCitizenReport = async (
     report: Omit<CitizenReport, 'id' | 'timestamp' | 'status' | 'upvotes'>
   ) => {
@@ -563,7 +476,6 @@ useEffect(() => {
         media_url: report.photoUrl || report.videoUrl,
         media_type: report.mediaType,
       });
-
       const newReport: CitizenReport = {
         ...report,
         id: res.data.id || `rep-${Date.now()}`,
@@ -572,8 +484,6 @@ useEffect(() => {
         upvotes: 1,
       };
       setCitizenReports((prev) => [newReport, ...prev]);
-
-      // Inject into Alerts queue
       const newAlert: CrowdAlert = {
         id: `alert-citizen-${Date.now()}`,
         title: `CITIZEN REPORT: ${report.category}`,
@@ -591,7 +501,6 @@ useEffect(() => {
       setAlerts((prev) => [newAlert, ...prev]);
     } catch (err) {
       console.error('Failed to submit citizen report:', err);
-      // Fallback local update
       const newReport: CitizenReport = {
         ...report,
         id: `rep-${Date.now()}`,
@@ -614,14 +523,10 @@ useEffect(() => {
   };
 
   const activeAlertCount = alerts.filter((a) => a.status === 'active').length;
-
-  // Safe filtering: Add optional chaining to prevent silent UI crashes if a zone name is missing
   const displayedZones = processedZones.filter((z) =>
     (z?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
     (z?.code || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  // Render Auth View
   if (!isAuthenticated) {
     return (
       <AuthView
@@ -629,8 +534,6 @@ useEffect(() => {
       />
     );
   }
-
-  // Render Citizen View
   if (role === 'CITIZEN' || role === 'VOLUNTEER' || viewMode === 'citizen') {
     return (
       <div className="min-h-screen bg-[#FAFAF7]">
@@ -641,7 +544,6 @@ useEffect(() => {
   onDismiss={handleDismissToast}
   onInspectAlert={(zoneId) => setViewMode('admin')} 
 />
-        
         <CitizenPortalView
           reports={citizenReports}
           onSubmitReport={handleAddCitizenReport}
@@ -664,10 +566,7 @@ useEffect(() => {
       </div>
     );
   }
-
-  // Render Admin Layout
-  if (role !== 'ADMIN') return null; // Safety check
-
+  if (role !== 'ADMIN') return null; 
   return (
     <div className="h-screen bg-brand-bg flex flex-row font-body text-slate-800 overflow-hidden relative">
       {/* Toast Notifications */}
@@ -676,7 +575,6 @@ useEffect(() => {
         onDismiss={handleDismissToast}
         onInspectAlert={(zoneId) => setAdminRoute('alerts')}
       />
-
       {/* Left Sticky Sidebar / Mobile Drawer */}
       <LeftSidebar
         currentRoute={adminRoute}
@@ -687,7 +585,6 @@ useEffect(() => {
         isMobileOpen={isMobileMenuOpen}
         onCloseMobile={() => setIsMobileMenuOpen(false)}
       />
-
       {/* Main Layout Area containing Header + Content */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
         {/* Cloud Sync Lost Amber Banner */}
@@ -697,7 +594,6 @@ useEffect(() => {
             Cloud Sync Lost. Operating on Local Edge Cache.
           </div>
         )}
-
         {/* Top Header Bar */}
         <HeaderTopBar
           venues={venues}
@@ -717,7 +613,6 @@ useEffect(() => {
           onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           onNotificationClick={() => setAdminRoute('alerts')}
         />
-
         {/* Dynamic Route Content Area */}
         <main className={`flex-1 min-w-0 h-full ${adminRoute === 'map' ? 'overflow-hidden flex flex-col' : 'overflow-y-auto p-4 sm:p-6 pb-28'}`}>
           {adminRoute === 'dashboard' && (
@@ -733,7 +628,6 @@ useEffect(() => {
               language={language}
             />
           )}
-
           {adminRoute === 'map' && (
             <LiveMapView
               selectedVenue={selectedVenue}
@@ -743,7 +637,6 @@ useEffect(() => {
               onToggleCctvExpanded={() => setIsCctvExpanded(!isCctvExpanded)}
             />
           )}
-
           {adminRoute === 'cameras' && (
             <CamerasView 
               cctvFeeds={displayedCctvFeeds} 
@@ -751,7 +644,6 @@ useEffect(() => {
               selectedVenue={selectedVenue} 
             />
           )}
-
           {adminRoute === 'alerts' && (
             <AlertsView
               alerts={alerts}
@@ -762,19 +654,15 @@ useEffect(() => {
               onOpenEmergencyBroadcast={() => setIsEmergencyBroadcastOpen(true)}
             />
           )}
-
           {adminRoute === 'analytics' && <AnalyticsView />}
-
           {adminRoute === 'twin' && (
             <DigitalTwinView
               selectedVenue={selectedVenue}
               zones={displayedZones}
             />
           )}
-
         </main>
       </div>
-
       {/* Role Switcher Pill */}
       <RoleSwitcher
         currentView={viewMode}
@@ -789,7 +677,6 @@ useEffect(() => {
             : undefined
         }
       />
-
       {/* Global Modals */}
       <EmergencyBroadcastModal
         isOpen={isEmergencyBroadcastOpen}
@@ -798,7 +685,6 @@ useEffect(() => {
         zones={zones}
         venueName={selectedVenue?.name}
       />
-
       <VoiceAssistantModal
         isOpen={isVoiceModalOpen}
         onClose={() => setIsVoiceModalOpen(false)}
@@ -807,4 +693,3 @@ useEffect(() => {
     </div>
   );
 }
-

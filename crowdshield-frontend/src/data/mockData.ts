@@ -1,11 +1,8 @@
 import { VenueZone, CCTVFeed, CrowdAlert, CitizenReport, VenueInfo} from '../types';
 import { SupportedLanguage, SarvamTranslation } from '../types';
-// These remain empty because your FastAPI backend is now serving the real Venues and Zones!
 export const INITIAL_VENUES: VenueInfo[] = [];
 export const INITIAL_ZONES: VenueZone[] = [];
 export const INITIAL_ALERTS: CrowdAlert[] = [];
-
-// ALL cameras for ALL venues live here. The UI will filter them automatically.
 export const INITIAL_CCTV_FEEDS: CCTVFeed[] = [
   // --- ITER CAMPUS CAMERAS ---
   {

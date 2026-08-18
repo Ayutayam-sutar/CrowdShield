@@ -26,14 +26,12 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(None)):
         
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
-        # We could also fetch user here if needed, but for now verifying signature is enough
     except JWTError:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
     await ws_manager.connect(websocket)
     try:
-        # Push initial state on connect
         async with async_session() as db:
             result = await db.execute(select(Zone))
             zones = result.scalars().all()
@@ -49,12 +47,8 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(None)):
                 ]
             }
         await ws_manager.send_personal(initial_state, websocket)
-        
-        # Keep connection open
+
         while True:
-            # We wait for messages from the client (e.g., ping) just to keep the loop active
             data = await websocket.receive_text()
-            # Could handle client commands here if needed
-            
     except WebSocketDisconnect:
         ws_manager.disconnect(websocket)

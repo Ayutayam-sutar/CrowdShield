@@ -17,7 +17,6 @@ import { SupportedLanguage, VenueZone } from '../../types';
 import { SARVAM_TRANSLATIONS } from '../../data/mockData';
 import api from '../../utils/api';
 import { speakAnnouncement } from '../../utils/speech';
-
 interface EmergencyBroadcastModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -25,7 +24,6 @@ interface EmergencyBroadcastModalProps {
   zones?: VenueZone[];
   venueName?: string;
 }
-
 export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = ({
   isOpen,
   onClose,
@@ -40,51 +38,40 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
   const [isGuardsDispatched, setIsGuardsDispatched] = useState(false);
   const [isSocialMediaSent, setIsSocialMediaSent] = useState(false);
   const [dispatchLog, setDispatchLog] = useState<string[]>([]);
-
   if (!isOpen) return null;
-
   const currentTranslation = SARVAM_TRANSLATIONS[activeLang] || SARVAM_TRANSLATIONS['en'];
   const supportedLanguages = Object.keys(SARVAM_TRANSLATIONS) as SupportedLanguage[];
-
   const highestRiskZone = zones && zones.length > 0 
     ? [...zones].sort((a, b) => (b.riskScore || 0) - (a.riskScore || 0))[0]
     : null;
-
   const targetZoneName = venueName || highestRiskZone?.name || highestRiskZone?.code || 'Central Library Roundabout';
   const targetZoneId = highestRiskZone?.id || 'zone_library_roundabout';
   const targetHeadcount = highestRiskZone?.currentHeadcount || 0;
   const formattedHeadcount = targetHeadcount.toLocaleString();
-
   const getDynamicScript = () => {
     return currentTranslation.announcementText || '';
   };
-
-  // ─── TEAM'S BACKEND LOGIC (100% UNTOUCHED) ───
   const handlePlayPA = async () => {
     const script = getDynamicScript();
     setIsPlayingAudio(true);
     speakAnnouncement(script, activeLang);
-
     try {
       await api.post('/broadcast/', { 
         text: script,
         target_language: activeLang,
         zone_id: targetZoneId
       });
-
       const message = `Sarvam AI PA Broadcast (${currentTranslation.langName}) dispatched to ${targetZoneName}.`;
       window.dispatchEvent(new CustomEvent('system_dispatch', { detail: { type: 'info', message } }));
       setDispatchLog((prev) => [`[${new Date().toLocaleTimeString()}] ${message}`, ...prev]);
     } catch (error) {
       console.warn('Intervention logged locally:', error);
     }
-
     const estimatedDurationMs = Math.max(script.length * 75, 3000);
     setTimeout(() => {
       setIsPlayingAudio(false);
     }, estimatedDurationMs);
   };
-
   const handleSendSMS = async () => {
     const script = getDynamicScript();
     try {
@@ -104,7 +91,6 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
       setTimeout(() => setIsCellBroadcastSent(false), 3000);
     }
   };
-
   const handleUnlockGates = async () => {
     try {
       await api.post('/interventions/dispatch', { 
@@ -125,7 +111,6 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
       setTimeout(() => setIsGateUnlocked(false), 3000);
     }
   };
-
   const handleDeployGuards = async () => {
     try {
       await api.post('/interventions/dispatch', { 
@@ -146,7 +131,6 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
       setTimeout(() => setIsGuardsDispatched(false), 3000);
     }
   };
-
   const handleSendSocial = async () => {
     const script = getDynamicScript();
     try {
@@ -158,7 +142,6 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
       const message = `Emergency Alert dispatched to social media platforms (Twitter/X).`;
       window.dispatchEvent(new CustomEvent('system_dispatch', { detail: { type: 'success', message } }));
       setDispatchLog((prev) => [`[${new Date().toLocaleTimeString()}] ${message}`, ...prev]);
-      
       setTimeout(() => setIsSocialMediaSent(false), 3000); 
     } catch (error) {
       console.warn('Intervention logged locally:', error);
@@ -166,13 +149,11 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
       setTimeout(() => setIsSocialMediaSent(false), 3000);
     }
   };
-
-  // ─── UI RENDER ───
   return (
     <div className="fixed inset-0 z-[700] flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 sm:p-6 font-body animate-fadeIn">
       <div className="bg-white border-2 border-rose-500 rounded-3xl shadow-2xl max-w-3xl w-full overflow-hidden flex flex-col max-h-[92vh] text-slate-800">
         
-        {/* Header (High-Risk Red Banner with Brand Touch) */}
+        {/* Header */}
         <div className="bg-gradient-to-r from-rose-600 to-red-700 text-white p-5 sm:p-6 flex items-center justify-between shadow-md relative overflow-hidden">
           <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16 pointer-events-none" />
           
@@ -189,7 +170,6 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
               </p>
             </div>
           </div>
-
           <button
             onClick={onClose}
             className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer border border-white/20 shadow-sm relative z-10 active:scale-95"
@@ -197,10 +177,8 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
             <X className="w-5 h-5" />
           </button>
         </div>
-
         {/* Modal Body */}
-        <div className="p-5 sm:p-7 overflow-y-auto flex flex-col gap-6 bg-slate-50/50 smooth-scroll">
-          
+        <div className="p-5 sm:p-7 overflow-y-auto flex flex-col gap-6 bg-slate-50/50 smooth-scroll">       
           {/* Section 1: Multilingual Sarvam AI PA Audio */}
           <div className="bg-white border border-slate-200/80 rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
@@ -222,14 +200,12 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
                 ))}
               </div>
             </div>
-
             <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 text-xs sm:text-sm text-slate-700 font-mono shadow-inner leading-relaxed">
               <span className="font-black text-[#648d6a] block mb-1 text-[10px] uppercase tracking-widest">
                 Script ({currentTranslation.langName}):
               </span>
               "{getDynamicScript()}"
             </div>
-
             <button
               onClick={handlePlayPA}
               disabled={isPlayingAudio}
@@ -252,10 +228,8 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
               )}
             </button>
           </div>
-
-          {/* Section 2: Direct Interventions Grid (Admin Friendly, Polished Cards) */}
+          {/* Section 2: Direct Interventions Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            
             {/* SMS Cell Broadcast */}
             <div className="bg-white border border-slate-200/80 rounded-2xl p-4 flex flex-col justify-between gap-4 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex flex-col gap-1">
@@ -274,8 +248,7 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
                 <span>{isCellBroadcastSent ? 'Dispatched' : 'Push SMS Alert'}</span>
               </button>
             </div>
-
-            {/* Gate Exit Override (Easier admin terminology) */}
+            {/* Gate Exit Override */}
             <div className="bg-white border border-slate-200/80 rounded-2xl p-4 flex flex-col justify-between gap-4 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex flex-col gap-1">
                 <span className="font-heading font-black text-xs text-slate-900 tracking-tight">Gate Exit Override</span>
@@ -293,7 +266,6 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
                 <span>{isGateUnlocked ? 'Unlocked' : 'Unlock Exits'}</span>
               </button>
             </div>
-
             {/* Response Guards */}
             <div className="bg-white border border-slate-200/80 rounded-2xl p-4 flex flex-col justify-between gap-4 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex flex-col gap-1">
@@ -312,7 +284,6 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
                 <span>{isGuardsDispatched ? 'En Route' : 'Dispatch Guards'}</span>
               </button>
             </div>
-
             {/* Social Media Broadcast */}
             <div className="bg-white border border-slate-200/80 rounded-2xl p-4 flex flex-col justify-between gap-4 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex flex-col gap-1">
@@ -332,8 +303,7 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
               </button>
             </div>
           </div>
-
-          {/* Live Dispatch Audit Log (IBM Plex Mono High-Tech Terminal) */}
+          {/* Live Dispatch Audit Log */}
           <div className="bg-slate-900 border border-slate-800 text-slate-300 p-5 rounded-3xl font-mono text-xs flex flex-col gap-3 shadow-xl">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <span className="text-[#67b2b9] font-black text-[11px] uppercase tracking-widest flex items-center gap-2">
@@ -358,7 +328,6 @@ export const EmergencyBroadcastModal: React.FC<EmergencyBroadcastModalProps> = (
             )}
           </div>
         </div>
-
         {/* Footer */}
         <div className="bg-white border-t border-slate-200/80 p-4 sm:p-5 flex justify-end gap-3 shadow-sm">
           <button

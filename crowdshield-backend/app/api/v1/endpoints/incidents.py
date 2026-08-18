@@ -14,10 +14,7 @@ from app.schemas.incident import (
     IncidentResponse,
     IncidentStatusUpdate,
 )
-
 router = APIRouter()
-
-
 @router.post("/", response_model=IncidentResponse)
 async def create_incident(
     incident: IncidentCreate, db: AsyncSession = Depends(get_db)
@@ -41,8 +38,6 @@ async def create_incident(
 
     await db.commit()
     await db.refresh(db_incident)
-
-    # Safe real-time WebSocket broadcast
     try:
         await ws_manager.broadcast({
             "event": "CITIZEN_HAZARD_SUBMITTED",
@@ -63,7 +58,6 @@ async def create_incident(
         print(f"WebSocket broadcast warning: {ws_err}")
 
     return db_incident
-
 
 @router.get("/", response_model=List[IncidentResponse])
 async def read_incidents(
@@ -98,8 +92,6 @@ async def update_incident_status(
         raise HTTPException(status_code=404, detail="Incident not found")
 
     target_status = status_update.status.upper()
-
-    # Map incoming frontend strings to database Enum
     if target_status in ["CONFIRMED", "VERIFIED"]:
         incident.status = ReportStatus.VERIFIED
     elif target_status == "RESOLVED":
@@ -118,8 +110,6 @@ async def update_incident_status(
 
     status_str = incident.status.value if hasattr(incident.status, "value") else str(incident.status)
     frontend_status = "CONFIRMED" if status_str == "VERIFIED" else status_str
-
-    # Safe broadcast across WebSockets
     try:
         await ws_manager.broadcast({
             "event": "HAZARD_STATUS_UPDATED",

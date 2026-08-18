@@ -24,29 +24,19 @@ interface CamerasViewProps {
 export const CamerasView: React.FC<CamerasViewProps> = ({ cctvFeeds, zones = [], selectedVenue }) => {
   const [showDetections, setShowDetections] = useState(true);
   const [selectedFeed, setSelectedFeed] = useState<CCTVFeed | null>(null);
-  
-  // ─── TEAM's BACKEND LOGIC (100% PRESERVED) ───
   const [failedFeeds, setFailedFeeds] = useState<Record<string, boolean>>({});
   const [streamCacheBusters, setStreamCacheBusters] = useState<Record<string, number>>({});
   const [uploadingFeeds, setUploadingFeeds] = useState<Record<string, boolean>>({});
   const [uploadStatus, setUploadStatus] = useState<Record<string, string>>({});
-
-  // Resolves local URLs (localhost/127.0.0.1) to the secure Tunnel URL for Netlify
 const resolveStreamUrl = (url: string, feedId: string): string => {
   if (!url) return '';
-
-  // Extract port from original feed URL (e.g., http://127.0.0.1:5001/video_feed)
   const portMatch = url.match(/:(\d+)\//);
   const port = portMatch ? portMatch[1] : (feedId.includes('ks_') ? '5001' : '5000');
-
   const activeTunnel = PORT_TUNNELS[port];
   if (!activeTunnel) return url;
-
-  // Extract endpoint path (e.g., /video_feed)
   const path = url.replace(/^https?:\/\/[^/]+/, '') || '/video_feed';
   return `${activeTunnel}${path}`;
 };
-
   const filteredFeeds = useMemo(() => {
     const isKalingaSelected = selectedVenue?.id?.includes('kalinga') || selectedVenue?.name?.includes('Kalinga');
     return cctvFeeds.filter((feed) => {
@@ -55,38 +45,29 @@ const resolveStreamUrl = (url: string, feedId: string): string => {
       return !isKalingaFeed;
     });
   }, [cctvFeeds, selectedVenue]);
-
   const handleImageError = (feedId: string) => {
     setFailedFeeds((prev) => ({ ...prev, [feedId]: true }));
   };
-
   const handleRetryFeed = (feedId: string) => {
     setStreamCacheBusters((prev) => ({ ...prev, [feedId]: Date.now() }));
     setFailedFeeds((prev) => ({ ...prev, [feedId]: false }));
   };
-
   const getPortFromUrl = (url: string, defaultPort: string = '5000') => {
     const match = url.match(/:(\d+)\//);
     return match ? match[1] : defaultPort;
   };
-
 const handleFileUpload = async (feedId: string, port: string, file: File) => {
   if (!file) return;
   setUploadingFeeds((prev) => ({ ...prev, [feedId]: true }));
   setUploadStatus((prev) => ({ ...prev, [feedId]: `Uploading ${file.name}...` }));
-
   const formData = new FormData();
   formData.append('file', file);
-
-  // Dynamically target the correct port's tunnel when deployed, or localhost during local dev
   const uploadBase = PORT_TUNNELS[port] || `http://127.0.0.1:${port}`;
-
   try {
     const response = await fetch(`${uploadBase}/upload`, {
       method: 'POST',
       body: formData,
     });
-
     if (response.ok) {
       setUploadStatus((prev) => ({ ...prev, [feedId]: `Hot-swapped: ${file.name}` }));
       handleRetryFeed(feedId);
@@ -103,7 +84,6 @@ const handleFileUpload = async (feedId: string, port: string, file: File) => {
     }, 4000);
   }
 };
-
   const findMatchedZone = (feed: CCTVFeed): VenueZone | null => {
     if (!zones || zones.length === 0) return null;
     const camNum = feed.id.replace(/\D/g, '');
@@ -121,7 +101,6 @@ const handleFileUpload = async (feedId: string, port: string, file: File) => {
       return false;
     }) || null;
   };
-
   const getRiskBadge = (riskLevel: string = 'safe') => {
     switch (riskLevel) {
       case 'critical': return 'bg-rose-100 text-rose-700 border-rose-200 animate-pulse';
@@ -131,14 +110,11 @@ const handleFileUpload = async (feedId: string, port: string, file: File) => {
       default: return 'bg-emerald-100 text-emerald-700 border-emerald-200';
     }
   };
-
   return (
     <div className="p-4 md:p-6 lg:p-8 flex flex-col gap-6 lg:gap-8 font-body text-slate-800 bg-slate-50/50 min-h-full">
-      
       {/* ── Header Section ── */}
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 bg-white p-6 md:p-8 rounded-3xl border border-slate-200/80 shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 rounded-full blur-3xl -mr-20 -mt-20 opacity-60 pointer-events-none" />
-        
+        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 rounded-full blur-3xl -mr-20 -mt-20 opacity-60 pointer-events-none" /> 
         <div className="flex flex-col gap-1.5 relative z-10">
           <div className="flex items-center gap-2 mb-2">
             <span className="p-1.5 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-lg shadow-inner">
@@ -155,7 +131,6 @@ const handleFileUpload = async (feedId: string, port: string, file: File) => {
             Real-time optical sensors streaming multi-port MJPEG video with live crowd telemetry, velocity vectors, and neural detection.
           </p>
         </div>
-
         <div className="flex items-center relative z-10">
           <button
             onClick={() => setShowDetections(!showDetections)}
@@ -170,7 +145,6 @@ const handleFileUpload = async (feedId: string, port: string, file: File) => {
           </button>
         </div>
       </div>
-
       {/* ── Camera Grid ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 xl:gap-8">
         {filteredFeeds.map((feed) => {
@@ -180,14 +154,11 @@ const handleFileUpload = async (feedId: string, port: string, file: File) => {
           const isUploading = uploadingFeeds[feed.id];
           const currentStatus = uploadStatus[feed.id];
           const cacheBuster = streamCacheBusters[feed.id];
-          
           const rawUrl = resolveStreamUrl(feed.imageUrl, feed.id);
           const streamUrl = cacheBuster ? `${rawUrl}${rawUrl.includes('?') ? '&' : '?'}t=${cacheBuster}` : rawUrl;
-
           const headcount = matchedZone?.currentHeadcount || feed.personCount || 0;
           const density = matchedZone?.density || (feed as any).density || 0;
           const riskLevel = matchedZone?.riskLevel || 'safe';
-
           return (
             <div
               key={feed.id}
@@ -213,7 +184,6 @@ const handleFileUpload = async (feedId: string, port: string, file: File) => {
                     )}
                   </div>
                 </div>
-                
                 {/* Risk Badge */}
                 <div className="shrink-0 ml-3">
                   <span className={`px-3 py-1.5 rounded-lg border font-bold uppercase text-[9px] sm:text-[10px] tracking-wider shadow-sm whitespace-nowrap ${
@@ -223,7 +193,6 @@ const handleFileUpload = async (feedId: string, port: string, file: File) => {
                   </span>
                 </div>
               </div>
-
               {/* Video Stream Area */}
               <div className="relative aspect-video bg-slate-900 w-full overflow-hidden border-y border-slate-200 animate-bounce-top">
                 {isOffline ? (
@@ -265,7 +234,6 @@ const handleFileUpload = async (feedId: string, port: string, file: File) => {
                     className="w-full h-full object-cover"
                   />
                 )}
-
                 {/* YOLO Bounding Boxes Overlay */}
                 {showDetections && !isOffline && (
                   <div className="absolute inset-0 p-2 pointer-events-none">
@@ -293,8 +261,7 @@ const handleFileUpload = async (feedId: string, port: string, file: File) => {
                     ))}
                   </div>
                 )}
-
-                {/* Hover Glassmorphism Controls */}
+                {/* Hover Controls */}
                 {!isOffline && (
                   <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center gap-4">
                     <button
@@ -321,7 +288,6 @@ const handleFileUpload = async (feedId: string, port: string, file: File) => {
                   </div>
                 )}
               </div>
-
               {/* Stats Footer */}
               <div className="grid grid-cols-2 divide-x divide-slate-200/60 bg-slate-50 border-t border-slate-100 rounded-b-3xl">
                 <div className="flex flex-col items-center justify-center py-4">
@@ -330,7 +296,6 @@ const handleFileUpload = async (feedId: string, port: string, file: File) => {
                     {isOffline ? '--' : headcount}
                   </span>
                 </div>
-
                 <div className="flex flex-col items-center justify-center py-4">
                   <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider mb-1">Density</span>
                   <div className={`flex items-baseline gap-1 ${isOffline ? 'text-slate-300' : 'text-slate-800'}`}>
@@ -345,7 +310,6 @@ const handleFileUpload = async (feedId: string, port: string, file: File) => {
           );
         })}
       </div>
-
       {/* ── Expanded Feed Modal ── */}
       {selectedFeed && (
         <div className="fixed inset-0 z-[600] flex items-center justify-center bg-slate-900/90 backdrop-blur-sm p-4 md:p-8 font-body animate-fadeIn">
@@ -370,7 +334,6 @@ const handleFileUpload = async (feedId: string, port: string, file: File) => {
                 <X className="w-5 h-5" />
               </button>
             </div>
-
             <div className="relative w-full bg-black flex-1 aspect-video flex items-center justify-center">
               <img
                 src={resolveStreamUrl(selectedFeed.imageUrl, selectedFeed.id)}
