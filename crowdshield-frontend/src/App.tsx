@@ -578,7 +578,7 @@ useEffect(() => {
         id: `alert-citizen-${Date.now()}`,
         title: `CITIZEN REPORT: ${report.category}`,
         zoneId: 'z-general',
-        zoneName: report.location,
+        zoneName: report.location || 'General Campus',
         riskLevel: 'warning',
         density: 0,
         flowRate: 0,

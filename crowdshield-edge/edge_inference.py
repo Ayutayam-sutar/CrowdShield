@@ -46,8 +46,17 @@ PORT = args.port
 
 # Load environment variables
 # Load environment variables with live Render fallbacks
+# ---------------------------------------------------------
+# BACKEND TARGETS (Dual-Broadcast: Local + Cloud)
+# ---------------------------------------------------------
 load_dotenv()
-BACKEND_URL = os.getenv("BACKEND_URL", "https://crowdshield-uw8r.onrender.com")
+
+# Read comma-separated URLs from .env or fallback to both Local and Render
+raw_backend_urls = os.getenv(
+    "BACKEND_URLS", 
+    "http://localhost:8000,https://crowdshield-uw8r.onrender.com"
+)
+BACKEND_URLS = [url.strip().rstrip("/") for url in raw_backend_urls.split(",") if url.strip()]
 NODE_TOKEN = os.getenv("NODE_AUTH_TOKEN", "technova_demo_key_9988")
 # ---------------------------------------------------------
 # CONSTANTS & PHYSICAL CALIBRATION (IPM)
@@ -116,19 +125,37 @@ pixel_history = defaultdict(lambda: deque(maxlen=15))
 metric_history = defaultdict(lambda: deque(maxlen=15))
 
 
-def send_telemetry_async(payload, token, backend_url):
-    """Sends telemetry data asynchronously to the backend service."""
+# ---------------------------------------------------------
+# ASYNC TELEMETRY DISPATCHERS (Dual Broadcasting)
+# ---------------------------------------------------------
+def send_telemetry_to_single_backend(backend_url: str, payload: dict, token: str):
+    """Sends telemetry data to a single backend target with graceful timeout handling."""
     try:
         headers = {"Authorization": f"Bearer {token}"} if token else {}
         url = f"{backend_url}/api/v1/telemetry/"
+        
+        # Increased timeout to 5.0s to accommodate cloud latency spikes
         res = requests.post(url, json=payload, headers=headers, timeout=5.0)
+        
         if res.status_code in [200, 201]:
-            print(f"[Telemetry Sync] {payload}")
+            print(f"[Telemetry Sync -> {backend_url}] Success (200)")
         else:
-            print(f"[Telemetry Warning] Status {res.status_code}: {res.text}")
-    except Exception as e:
-        print(f"[Telemetry Request Failed] Backend unreachable: {e}")
+            print(f"[Telemetry Warning -> {backend_url}] HTTP {res.status_code}: {res.text}")
+            
+    except requests.exceptions.Timeout:
+        # Cloud server took slightly longer to reply; next frame will catch it
+        print(f"[Telemetry Lag -> {backend_url}] Latency spike (request timed out)")
+    except requests.exceptions.RequestException:
+        print(f"[Telemetry Offline -> {backend_url}] Server unreachable")
 
+def broadcast_telemetry_async(payload: dict, token: str, backend_urls: list):
+    """Broadcasts telemetry to all configured backends concurrently."""
+    for url in backend_urls:
+        threading.Thread(
+            target=send_telemetry_to_single_backend,
+            args=(url, payload, token),
+            daemon=True,
+        ).start()
 
 # ---------------------------------------------------------
 # FASTAPI MJPEG STREAMING SERVER
@@ -362,6 +389,7 @@ def generate_mjpeg_stream():
                 latest_surge_score = surge_score
                 latest_avg_speed = avg_speed
 
+                # 2. Telemetry Aggregation & Dual Async Backend Sync
                 payload = {
                     "zone_id": ZONE_ID,
                     "venue_id": VENUE_ID,
@@ -374,9 +402,10 @@ def generate_mjpeg_stream():
                     "inference_ms": round(inference_ms, 1),
                 }
 
+                # Broadcast to both Localhost and Render
                 threading.Thread(
-                    target=send_telemetry_async,
-                    args=(payload, NODE_TOKEN, BACKEND_URL),
+                    target=broadcast_telemetry_async,
+                    args=(payload, NODE_TOKEN, BACKEND_URLS),
                     daemon=True,
                 ).start()
 
