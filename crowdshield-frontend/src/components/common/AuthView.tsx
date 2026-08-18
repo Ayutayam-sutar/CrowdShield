@@ -47,6 +47,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [activeModal, setActiveModal] = useState<'privacy' | 'terms' | null>(null);
 
   // Login Credentials State
   const [email, setEmail] = useState('');
@@ -554,8 +555,12 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
       {/* Brand Column (Left - 2 Columns on Desktop) */}
       <div className="lg:col-span-2 flex flex-col gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#2C7BE5] text-white flex items-center justify-center shadow-md font-bold shrink-0">
-            <ShieldCheck className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-xl shadow-md shrink-0 overflow-hidden">
+            <img 
+              src="/photos/crowdshieldlogo1.png" 
+              alt="CrowdShield Logo" 
+              className="w-full h-full object-cover" 
+            />
           </div>
           <span className="font-heading font-bold text-lg sm:text-xl text-[#151726]">
             CrowdShield
@@ -649,18 +654,66 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
     <div className="flex flex-col sm:flex-row items-center justify-between text-[11px] text-[#5B5F73] gap-3 text-center sm:text-left">
       <span>© 2026 CrowdShield AI Infrastructure. All rights reserved.</span>
       <div className="flex flex-wrap justify-center items-center gap-4 font-medium">
-        <span className="hover:text-[#151726] transition-colors cursor-pointer">
+        <button 
+          onClick={() => setActiveModal('privacy')}
+          className="hover:text-[#151726] transition-colors cursor-pointer focus:outline-none"
+        >
           Privacy Policy
-        </span>
+        </button>
         <span className="text-[#E7E5DD] hidden sm:inline">•</span>
-        <span className="hover:text-[#151726] transition-colors cursor-pointer">
+        <button 
+          onClick={() => setActiveModal('terms')}
+          className="hover:text-[#151726] transition-colors cursor-pointer focus:outline-none"
+        >
           Terms of Service
-        </span>
+        </button>
       </div>
     </div>
 
   </div>
 </footer>
+
+      {/* Policies Modals */}
+      {activeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-body animate-fadeIn">
+          <div className="bg-white border border-[#E7E5DD] rounded-2xl shadow-2xl max-w-4xl w-full h-[85vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center border-b border-[#E7E5DD] px-6 py-4 bg-[#FAFAF7]">
+              <div className="flex items-center gap-2 text-[#2C7BE5] font-heading font-bold text-base">
+                <ShieldCheck className="w-5 h-5" />
+                <span>
+                  {activeModal === 'privacy' ? 'Privacy Policy — CrowdShield' : 'Terms of Service — CrowdShield'}
+                </span>
+              </div>
+              <button 
+                onClick={() => setActiveModal(null)} 
+                className="p-1 rounded-lg hover:bg-[#FAFAF7] text-[#5B5F73] transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            {/* Modal Body (Iframe containing static HTML optimized for embed) */}
+            <div className="flex-1 bg-white p-4 overflow-y-auto">
+              <iframe 
+                src={activeModal === 'privacy' ? '/privacy-policy.html' : '/terms-of-service.html'} 
+                title={activeModal === 'privacy' ? 'Privacy Policy' : 'Terms of Service'}
+                className="w-full h-full border-0"
+              />
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-[#E7E5DD] px-6 py-3.5 flex justify-end bg-white">
+              <button
+                onClick={() => setActiveModal(null)}
+                className="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs rounded-xl transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

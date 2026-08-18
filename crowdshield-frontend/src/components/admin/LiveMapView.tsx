@@ -19,10 +19,7 @@ import {
 
 // ─── SET YOUR ACTIVE HTTPS TUNNEL URL HERE ───
 // Paste your Pinggy, Cloudflare, or Ngrok URL here (No trailing slash)
-const PORT_TUNNELS: Record<string, string> = {
-   "5000": "https://face-acdbentity-viking-marijuana.trycloudflare.com",       // Camera 1 (ITER Campus / gate_1)
-  "5001": "https://greatly-contributor-providers-surfing.trycloudflare.com", // Camera 2 (Kalinga Stadium / ks_gate_3)
-};
+const PORT_TUNNELS: Record<string, string> = {};
 
 // ─── MAP UPDATER (UNTOUCHED) ───
 const MapUpdater: React.FC<{ center: [number, number]; resizeTrigger?: unknown }> = ({ center, resizeTrigger }) => {
