@@ -15,15 +15,12 @@ import {
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { speakAnnouncement } from '../../utils/speech';
-
-// ─── TEAM'S INTERFACES (100% UNTOUCHED) ───
 interface InterventionResult {
   status: string;
   message: string;
   resolved_alerts_count: number;
 }
 interface BroadcastResult { original_text: string; translated_text: string; language: string; status: string; }
-
 interface AlertsViewProps {
   alerts: CrowdAlert[];
   cctvFeeds: CCTVFeed[];
@@ -32,7 +29,6 @@ interface AlertsViewProps {
   onChangeLanguage: (lang: SupportedLanguage) => void;
   onOpenEmergencyBroadcast: () => void;
 }
-
 export const AlertsView: React.FC<AlertsViewProps> = ({
   alerts,
   cctvFeeds,
@@ -53,8 +49,6 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
   const [announcementText, setAnnouncementText] = useState('');
   const [broadcastState, setBroadcastState] = useState<{ loading: boolean; error: string | null; result: BroadcastResult | null }>({ loading: false, error: null, result: null });
   const [historyData, setHistoryData] = useState<{ time: string; density: number }[]>([]);
-
-  // ─── TEAM'S LOGIC (100% UNTOUCHED) ───
   const activeVenueAlerts = alerts.filter(alert => {
     return zones.some(z => {
       const zid = (z.id || '').toLowerCase();
@@ -65,7 +59,6 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
       return !isNaN(zNum) && !isNaN(targetNum) && zNum === targetNum;
     });
   });
-
   useEffect(() => {
     if (activeVenueAlerts.length > 0) {
       if (!selectedAlertId || !activeVenueAlerts.find(a => a.id === selectedAlertId)) {
@@ -75,9 +68,7 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
       if (selectedAlertId !== '') setSelectedAlertId('');
     }
   }, [alerts, zones, selectedAlertId]);
-
   const selectedAlert = activeVenueAlerts.find((a) => a.id === selectedAlertId) || activeVenueAlerts[0] || null;
-
   const activeZone = selectedAlert
     ? zones.find((z) => {
         const zid = (z.id || '').toLowerCase();
@@ -88,7 +79,6 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
         return !isNaN(zNum) && !isNaN(targetNum) && zNum === targetNum;
       })
     : null;
-
   const displayDensity = activeZone ? activeZone.density : (selectedAlert?.density || 0);
   const displayFlowRate = activeZone ? activeZone.flowRate : (selectedAlert?.flowRate || 0);
 
@@ -97,14 +87,12 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
     const feed = cctvFeeds.find(f => f.zoneId === zoneId);
     return feed?.imageUrl || 'http://localhost:5000/video_feed';
   };
-
   useEffect(() => {
     if (selectedAlert) {
       setAnnouncementText('');
       setBroadcastState({ loading: false, error: null, result: null });
     }
   }, [selectedAlert?.id]);
-
   useEffect(() => {
     if (!selectedAlert) return;
     const fetchHistory = async () => {
@@ -139,7 +127,6 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
     };
     fetchHistory();
   }, [selectedAlert?.id, displayDensity]); 
-
   const handleExecuteAction = async () => {
     if (!confirmationModalAction || !selectedAlert) return;
     setDispatchState({ loading: true, error: null });
@@ -158,7 +145,6 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
       setDispatchState({ loading: false, error: detail });
     }
   };
-
   const handleBroadcast = async () => {
     if (!selectedAlert || !announcementText.trim()) return;
     setBroadcastState({ loading: true, error: null, result: null });
@@ -179,11 +165,8 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
       });
     }
   };
-
-  // ─── UI RENDER ───
   return (
     <div className="p-4 sm:p-6 lg:p-8 flex flex-col gap-6 lg:gap-8 font-body text-slate-800 bg-[#FAFAF7] min-h-screen">
-      
       {/* ── Top Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 bg-white p-6 md:p-8 rounded-3xl border border-slate-200/80 shadow-sm relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-[#67b2b9]/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none opacity-60" />
@@ -195,7 +178,6 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
             Real-time incident queue integrated with Sentinel AI risk breakdown and Sarvam AI Multilingual PA.
           </p>
         </div>
-
         <button
           onClick={onOpenEmergencyBroadcast}
           className="relative z-10 w-full sm:w-auto px-6 py-3.5 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white rounded-2xl font-heading font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-rose-500/30 transition-all cursor-pointer active:scale-95 border-none"
@@ -204,7 +186,6 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
           <span>Emergency Broadcast</span>
         </button>
       </div>
-
       {/* ── Main Intelligent Grid ── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
         
@@ -216,7 +197,6 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
             </span>
             <span className={`w-2.5 h-2.5 rounded-full shadow-sm ${activeVenueAlerts.length > 0 ? 'bg-rose-500 animate-pulse shadow-rose-500/50' : 'bg-[#648d6a]'}`} />
           </div>
-
           <div className="flex flex-col gap-3">
             {activeVenueAlerts.length === 0 ? (
               <div className="py-16 text-center text-slate-400 flex flex-col items-center justify-center gap-3 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
@@ -240,7 +220,6 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
                   borderClass = 'border-l-4 border-[#648d6a]';
                   badgeBg = 'bg-[#67b2b9]/10 text-[#648d6a] border-[#67b2b9]/30';
                 }
-
                 return (
                   <div
                     key={alert.id}
@@ -259,15 +238,12 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
                         {alert.timestamp || 'Live'}
                       </span>
                     </div>
-
                     <span className="font-heading font-black text-sm text-slate-800 line-clamp-2 leading-snug tracking-tight">
                       {alert.title}
                     </span>
-
                     <span className="text-[10px] sm:text-[11px] text-slate-500 font-mono font-bold truncate">
                       {alert.zoneName}
                     </span>
-
                     <div className="flex items-center justify-between mt-1">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span className={`px-2 py-0.5 rounded font-mono font-black text-[9px] uppercase tracking-widest border shadow-sm ${badgeBg}`}>
@@ -287,7 +263,6 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
             )}
           </div>
         </div>
-
         {/* ── Right Section: Detail View & AI Panel ── */}
         {activeVenueAlerts.length === 0 ? (
           <div className="lg:col-span-7 xl:col-span-9 bg-white border border-slate-200/80 rounded-3xl p-8 sm:p-16 shadow-sm flex flex-col items-center justify-center text-center gap-5">

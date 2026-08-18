@@ -2,7 +2,6 @@ import asyncio
 import sys
 import os
 
-# Add the project root to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from app.db.session import async_session, engine
@@ -36,13 +35,6 @@ async def seed_venues():
             iter_venue.gps_center_lng = 85.800000
             print(f"🔄 Updated Venue: {iter_venue.name}")
 
-        # Tight spatial coordinates for ITER Campus
-        # -------------------------------------------------------------------
-        # CALIBRATED ITER CAMPUS COORDINATES
-        # -------------------------------------------------------------------
-       # -------------------------------------------------------------------
-        # CALIBRATED ITER CAMPUS COORDINATES
-        # -------------------------------------------------------------------
         iter_zones = [
             {
                 "id": "gate_1", "code": "G-1", "name": "Main Gate", "sector": "gate",
@@ -95,8 +87,6 @@ async def seed_venues():
                 zone.center_lng = z_data["center_lng"]
                 print(f"   └─ Updated Zone: {zone.name} ({zone.code})")
 
-        # -------------------------------------------------------------------
-        # 2. VENUE 2: Kalinga International Stadium
 # -------------------------------------------------------------------
         # 2. VENUE 2: Kalinga International Stadium
         # -------------------------------------------------------------------
@@ -147,12 +137,10 @@ async def seed_venues():
             }
         ]
 
-        # Get existing Kalinga zones in DB to remove any stale/duplicate ones
         existing_ks_result = await session.execute(select(Zone).where(Zone.venue_id == kalinga_venue_id))
         existing_ks_zones = existing_ks_result.scalars().all()
         valid_ks_ids = [z["id"] for z in kalinga_zones]
 
-        # Delete old zones that are no longer in our list to clear duplicates
         for ez in existing_ks_zones:
             if ez.id not in valid_ks_ids:
                 await session.delete(ez)
@@ -215,7 +203,6 @@ async def seed_venues():
         else:
             print("👤 Default admin user already exists.")
             
-        # --- THE FIX: Put the commit here so it saves EVERYTHING (Zones + Users) ---
         await session.commit() 
         print("💾 Successfully committed all changes to Neon DB!")
         print("✨ Multi-venue database seeding complete.")

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ViewMode } from '../../types';
 import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
-import { ParallaxHeroImages } from '../ui/parallax-hero-images'; // Added Aceternity Import
+import { ParallaxHeroImages } from '../ui/parallax-hero-images';
 import { 
   ShieldCheck, 
   Lock, 
@@ -26,12 +26,9 @@ import {
   Eye,
   EyeOff
 } from 'lucide-react';
-
 interface AuthViewProps {
   onLogin: (mode: ViewMode) => void;
 }
-
-// Added the images array for the Parallax component
 const HERO_IMAGES = [
   "/photos/back1.png",
   "/photos/back2.png",
@@ -40,7 +37,6 @@ const HERO_IMAGES = [
   "/photos/back5.png",
   "/photos/back6.png",
 ];
-
 export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
   const { login } = useAuth();
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
@@ -48,18 +44,13 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [activeModal, setActiveModal] = useState<'privacy' | 'terms' | null>(null);
-
-  // Login Credentials State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-
-  // Register Credentials State
   const [registerName, setRegisterName] = useState('');
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
-
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -69,7 +60,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
         email,
         password,
       });
-      
       login(response.data.access_token);
       const role = response.data.role;
       onLogin(role === 'ADMIN' ? 'admin' : 'citizen');
@@ -79,7 +69,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
       setIsLoading(false);
     }
   };
-
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -108,24 +97,18 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
 
   return (
     <div className="min-h-screen bg-[#FAFAF7] text-[#151726] flex flex-col font-body relative overflow-x-hidden w-full selection:bg-[#2C7BE5]/20">
-     {/* ACETERNITY PARALLAX BACKGROUND INTEGRATION */}
       <div 
         className="hidden md:block absolute top-0 left-0 w-full h-[800px] overflow-hidden pointer-events-none z-0 opacity-70"
         style={{
-          // This mask hides the images directly behind the text and fades them at the edges
           maskImage: 'radial-gradient(circle at center, transparent 8%, black 60%, transparent 100%)',
           WebkitMaskImage: 'radial-gradient(circle at center, transparent 25%, black 60%, transparent 100%)'
         }}
       >
         <ParallaxHeroImages images={HERO_IMAGES} />
-        {/* Gradient fade out at the bottom to blend seamlessly into the login cards below */}
         <div className="absolute bottom-0 left-0 w-full h-40 bg-gradient-to-t from-[#FAFAF7] to-transparent z-10" />
       </div>
-
-      {/* Light Ambient Decorative Background Gradients */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-[400px] sm:h-[500px] bg-gradient-to-b from-[#2C7BE5]/10 via-[#7C6CFF]/5 to-transparent blur-3xl pointer-events-none z-0" />
       <div className="absolute top-[600px] right-0 w-60 sm:w-[500px] h-60 sm:h-[500px] bg-[#22D3A6]/10 rounded-full blur-3xl pointer-events-none overflow-hidden z-0" />
-
       {/* Top Navbar */}
       <header className="relative z-50 bg-white/80 backdrop-blur-md border-b border-[#E7E5DD] px-4 sm:px-6 py-3 sm:py-4 shadow-xs w-full">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
@@ -148,7 +131,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
               </span>
             </div>
           </div>
-
           {/* Desktop Nav Links */}
           <nav className="hidden lg:flex items-center gap-8 text-sm font-semibold text-[#5B5F73] font-mono animate-tracking-in-expand">
             <button onClick={() => scrollToSection('features')} className="hover:text-[#2C7BE5] transition-colors cursor-pointer bg-transparent border-none ">
@@ -164,7 +146,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
               NDRF Compliance
             </button>
           </nav>
-
           {/* Action CTAs */}
          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
   <button
@@ -177,7 +158,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
     <Smartphone className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
     <span>Register</span>
   </button>
-
   <button
     onClick={() => {
       setAuthMode('login');
@@ -228,8 +208,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
             <span>Register Citizen Account</span>
           </button>
         </div>
-
-        {/* Real-time System Key Statistics Cards */}
         <div className="mt-10 sm:mt-16 w-full max-w-5xl grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 p-4 sm:p-6 bg-white/95 backdrop-blur-md border border-[#E7E5DD] rounded-2xl sm:rounded-3xl shadow-sm">
           <div className="flex flex-col items-center p-2 sm:p-3 border-r border-b sm:border-b-0 border-[#E7E5DD]">
             <span className="font-mono-num text-xl sm:text-3xl font-bold text-[#2C7BE5]">Real-Time</span>
@@ -273,14 +251,12 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
 
           {/* Login/Register Card Container */}
           <div className="w-full max-w-md bg-[#FAFAF7] border border-[#E7E5DD] rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-md relative">
-            {/* Enhanced Error Banner */}
             {errorMsg && (
               <div className="mb-5 p-3 sm:p-4 rounded-xl bg-red-50 border border-red-500/50 flex items-start gap-3 text-red-700 text-xs font-semibold animate-fadeIn shadow-sm">
                 <AlertCircle className="w-5 h-5 shrink-0 text-red-600" />
                 <span className="mt-0.5 leading-relaxed">{errorMsg}</span>
               </div>
             )}
-
             {authMode === 'login' ? (
               <form onSubmit={handleLoginSubmit} className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1 border-b border-[#E7E5DD] pb-3">
@@ -289,7 +265,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
                     <span>Secure Sign In</span>
                   </h3>
                 </div>
-
                 <div>
                   <label className="text-[11px] font-semibold text-[#5B5F73] uppercase tracking-wider flex items-center gap-1.5">
                     <Mail className="w-3.5 h-3.5 text-[#2C7BE5]" />
@@ -304,7 +279,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
                     required
                   />
                 </div>
-
                 <div>
                   <label className="text-[11px] font-semibold text-[#5B5F73] uppercase tracking-wider flex items-center gap-1.5">
                     <KeyRound className="w-3.5 h-3.5 text-[#2C7BE5]" />
@@ -473,7 +447,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
             <span className="text-[11px] font-mono-num text-[#2C7BE5] font-bold">NVIDIA CUDA Accelerated</span>
           </div>
 
-          {/* Card 2 */}
           <div className="bg-white border border-[#E7E5DD] rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-xs hover:border-[#7C6CFF]/50 transition-all flex flex-col justify-between gap-4">
             <div className="flex flex-col gap-3">
               <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-[#7C6CFF]/10 text-[#7C6CFF] border border-[#7C6CFF]/30 flex items-center justify-center shrink-0">
@@ -487,7 +460,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
             <span className="text-[11px] font-mono-num text-[#7C6CFF] font-bold">Vector Dynamic Physics</span>
           </div>
 
-          {/* Card 3 */}
           <div className="bg-white border border-[#E7E5DD] rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-xs hover:border-[#059669]/50 transition-all flex flex-col justify-between gap-4">
             <div className="flex flex-col gap-3">
               <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-[#22D3A6]/20 text-[#059669] border border-[#22D3A6]/40 flex items-center justify-center shrink-0">
@@ -501,7 +473,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
             <span className="text-[11px] font-mono-num text-[#059669] font-bold">5 Language Neural Voice</span>
           </div>
 
-          {/* Card 4 */}
           <div className="bg-white border border-[#E7E5DD] rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-xs hover:border-[#FF7A45]/50 transition-all flex flex-col justify-between gap-4">
             <div className="flex flex-col gap-3">
               <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-[#FF7A45]/10 text-[#FF7A45] border border-[#FF7A45]/30 flex items-center justify-center shrink-0">
@@ -515,7 +486,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
             <span className="text-[11px] font-mono-num text-[#FF7A45] font-bold">Image & Video Evidence</span>
           </div>
 
-          {/* Card 5 */}
           <div className="bg-white border border-[#E7E5DD] rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-xs hover:border-[#D97706]/50 transition-all flex flex-col justify-between gap-4">
             <div className="flex flex-col gap-3">
               <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-[#FFB627]/15 text-[#D97706] border border-[#FFB627]/40 flex items-center justify-center shrink-0">
@@ -529,7 +499,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
             <span className="text-[11px] font-mono-num text-[#D97706] font-bold">Live Data Processing </span>
           </div>
 
-          {/* Card 6 */}
           <div className="bg-white border border-[#E7E5DD] rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-xs hover:border-[#FF3B5C]/50 transition-all flex flex-col justify-between gap-4">
             <div className="flex flex-col gap-3">
               <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-[#FF3B5C]/10 text-[#FF3B5C] border border-[#FF3B5C]/30 flex items-center justify-center shrink-0">
@@ -548,11 +517,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
       {/* Multi-Column Footer */}
 <footer className="relative bg-white border-t border-[#E7E5DD] text-[#5B5F73] font-body pt-12 sm:pt-16 pb-8 sm:pb-12 px-4 sm:px-6 z-20 w-full">
   <div className="max-w-7xl mx-auto flex flex-col gap-8">
-    
-    {/* Main Grid Section */}
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 sm:gap-10 pb-10 border-b border-[#E7E5DD] items-start">
-      
-      {/* Brand Column (Left - 2 Columns on Desktop) */}
       <div className="lg:col-span-2 flex flex-col gap-4">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl shadow-md shrink-0 overflow-hidden">
@@ -566,15 +531,11 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
             CrowdShield
           </span>
         </div>
-
         <p className="text-xs text-[#5B5F73] leading-relaxed max-w-sm">
           CrowdShield combines YOLO11-based computer vision, multi-object tracking, crowd-flow analysis, and predictive risk modeling to provide real-time crowd monitoring and early warnings.
         </p>
-
-        
       </div>
-
-      {/* NDRF Compliance Column (Middle - 1 Column on Desktop) */}
+      {/* NDRF Compliance Column */}
       <div className="flex flex-col gap-3">
         <span className="font-heading font-bold text-xs text-[#151726] uppercase tracking-wider">
           NDRF Compliance
@@ -622,23 +583,18 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
           </li>
         </ul>
       </div>
-
-      {/* Powered By Team JUGGERNAUT Badge (Visible on Mobile & Laptop) */}
       <div className="flex lg:col-span-2 flex-col items-start lg:items-end justify-start">
         <div className="w-full lg:max-w-xs p-4 rounded-2xl bg-gradient-to-br from-[#2C7BE5]/5 via-[#7C6CFF]/5 to-transparent border border-[#E7E5DD] flex flex-col gap-2 text-left lg:text-right shadow-xs hover:border-[#2C7BE5]/40 transition-all">
           <div className="flex items-center justify-start lg:justify-end gap-1.5 text-[#2C7BE5] text-xs font-heading font-bold">
 
             <span className="uppercase tracking-wider">Innovation & Safety</span>
           </div>
-          
           <p className="text-[11px] text-[#5B5F73] leading-relaxed">
             Architected for high-density public safety & early surge intervention.
           </p>
-
           <span className="text-[13px] font-mono text-[#7C6CFF] italic font-semibold">
             "New day, New error, New learning"
           </span>
-
           <div className="pt-2 border-t border-[#E7E5DD]/70 flex items-center justify-start lg:justify-end gap-1.5">
             <span className="text-[11px] font-medium text-[#5B5F73]">Powered by</span>
             <span className="text-xs font-heading font-extrabold bg-gradient-to-r from-[#2C7BE5] via-[#7C6CFF] to-[#059669] bg-clip-text text-transparent tracking-wide uppercase">
@@ -647,9 +603,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
           </div>
         </div>
       </div>
-
     </div>
-
     {/* Bottom Bar */}
     <div className="flex flex-col sm:flex-row items-center justify-between text-[11px] text-[#5B5F73] gap-3 text-center sm:text-left">
       <span>© 2026 CrowdShield AI Infrastructure. All rights reserved.</span>
@@ -669,10 +623,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
         </button>
       </div>
     </div>
-
   </div>
 </footer>
-
       {/* Policies Modals */}
       {activeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-body animate-fadeIn">
@@ -701,7 +653,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
                 className="w-full h-full border-0"
               />
             </div>
-
             {/* Modal Footer */}
             <div className="border-t border-[#E7E5DD] px-6 py-3.5 flex justify-end bg-white">
               <button

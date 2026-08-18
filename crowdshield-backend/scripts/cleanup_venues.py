@@ -21,14 +21,13 @@ CORRECT_LOCATION = "Bhubaneswar, Odisha"
 
 async def cleanup():
     async with async_session() as session:
-        # 1. List all venues currently in the DB
+      
         result = await session.execute(select(Venue))
         all_venues = result.scalars().all()
         print(f"Found {len(all_venues)} venue(s) in database:")
         for v in all_venues:
             print(f"  - id={v.id}  name={v.name}  location={v.location}")
 
-        # 2. Re-assign any zones pointing at other venues to KEEP_VENUE_ID
         other_ids = [v.id for v in all_venues if v.id != KEEP_VENUE_ID]
         if other_ids:
             print(f"\nRe-assigning zones from {other_ids} -> {KEEP_VENUE_ID}")
@@ -38,14 +37,12 @@ async def cleanup():
                 .values(venue_id=KEEP_VENUE_ID)
             )
 
-        # 3. Delete all venues except the canonical one
         if other_ids:
             print(f"Deleting duplicate venues: {other_ids}")
             await session.execute(
                 delete(Venue).where(Venue.id.in_(other_ids))
             )
 
-        # 4. Rename the canonical venue to the correct name
         result2 = await session.execute(select(Venue).where(Venue.id == KEEP_VENUE_ID))
         keep_venue = result2.scalars().first()
         if keep_venue:
@@ -66,13 +63,11 @@ async def cleanup():
 
         await session.commit()
 
-        # 5. Verify
         result3 = await session.execute(select(Venue))
         final = result3.scalars().all()
         print(f"\nFinal state: {len(final)} venue(s):")
         for v in final:
             print(f"  - id={v.id}  name={v.name}")
-
 
 async def main():
     try:

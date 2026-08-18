@@ -229,9 +229,6 @@ const citizen: Record<string, Record<SupportedLanguage, string>> = {
     bn: 'বিপদ রিপোর্ট পাঠান',
     ta: 'ஆபத்து அறிக்கையை அனுப்பவும்',
   },
-
-  // Category options translation (dynamic representation or display)
-
   medicalEmergencyOpt: {
     en: '🚑 Medical Emergency',
     hi: '🚑 चिकित्सा आपातकाल',
@@ -283,8 +280,6 @@ const citizen: Record<string, Record<SupportedLanguage, string>> = {
     bn: 'নিশ্চিত',
     ta: 'உறுதி செய்யப்பட்டது',
   },
-
-  // Status badges inside feed
   resolved: {
     en: 'RESOLVED',
     hi: 'सुलझाया गया',
@@ -650,11 +645,6 @@ const citizen: Record<string, Record<SupportedLanguage, string>> = {
     ta: 'இல்',
   },
 };
-
-/**
- * Returns the translated string for a given key and language in Citizen Portal.
- * Falls back to English if a translation is missing.
- */
 export function tc(key: string, lang: SupportedLanguage): string {
   const entry = citizen[key];
   if (!entry) return key;

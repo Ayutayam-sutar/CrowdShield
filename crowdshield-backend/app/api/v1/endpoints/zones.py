@@ -24,7 +24,6 @@ async def read_zones(skip: int = 0, limit: int = 100, venue_id: str | None = Non
     result = await db.execute(query)
     zones = result.scalars().all()
     return zones
-
 @router.get("/{zone_id}", response_model=ZoneResponse)
 async def read_zone(zone_id: str, db: AsyncSession = Depends(get_db)):
     """

@@ -3,8 +3,6 @@ import signal
 import subprocess
 import sys
 import time
-
-# Define your 6 camera inputs, their target zones, and streaming ports
 cameras = [
     # 📷 Camera 1: ITER Campus
     {
@@ -59,9 +57,6 @@ def cleanup_processes(signum=None, frame=None):
 
   print("✅ Cleanup complete. All edge nodes stopped.")
   sys.exit(0)
-
-
-# Register signal handlers for graceful shutdown
 signal.signal(signal.SIGINT, cleanup_processes)
 signal.signal(signal.SIGTERM, cleanup_processes)
 
@@ -69,15 +64,13 @@ if __name__ == "__main__":
   print("🚀 Booting up CrowdShield Multi-Venue Matrix...")
   env = os.environ.copy()
   env["PYTHONUNBUFFERED"] = "1"
-
-  # Boot each camera as an independent process
   for idx, cam in enumerate(cameras, start=1):
     cmd = [
         sys.executable,
         "edge_inference.py",
         "--video", cam["video"],
         "--zone", cam["zone"],
-        "--venue", cam["venue"],  # 🚨 NEW: Pass the venue dynamically!
+        "--venue", cam["venue"], 
         "--port", str(cam["port"]),
     ]
 
@@ -89,8 +82,6 @@ if __name__ == "__main__":
   print(
       "\n📡 All 6 Edge streams are live! Press CTRL+C to shut them all down.\n"
   )
-
-  # Active Health Monitoring Loop
   try:
     while True:
       time.sleep(2)

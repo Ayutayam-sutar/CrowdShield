@@ -33,11 +33,7 @@ async def get_historical_analytics(db: AsyncSession = Depends(get_db)):
     Returns empty data if no camera feed is actively running (no telemetry in the last 60s).
     """
     from datetime import datetime, timedelta, timezone
-    
     now = datetime.now(timezone.utc)
-
-    # Guard: if no telemetry has been ingested in the last 60 seconds,
-    # the camera feed is not running — return zeros.
     latest_query = select(func.max(TelemetryLog.timestamp))
     latest_result = await db.execute(latest_query)
     latest_ts = latest_result.scalar()
@@ -46,8 +42,6 @@ async def get_historical_analytics(db: AsyncSession = Depends(get_db)):
         return []
 
     twenty_four_hours_ago = now - timedelta(hours=24)
-
-    # 1. Footfall query (max headcount per hour) - FIXED GROUPING
     footfall_query = (
         select(
             func.date_trunc(text("'hour'"), TelemetryLog.timestamp).label('hour_ts'),
@@ -59,8 +53,6 @@ async def get_historical_analytics(db: AsyncSession = Depends(get_db)):
     )
     footfall_result = await db.execute(footfall_query)
     footfall_rows = footfall_result.all()
-
-    # 2. Alerts query for bottlenecks - FIXED GROUPING
     alerts_query = (
         select(
             func.date_trunc(text("'hour'"), CrowdAlert.created_at).label('hour_ts'),
@@ -71,10 +63,7 @@ async def get_historical_analytics(db: AsyncSession = Depends(get_db)):
     )
     alerts_result = await db.execute(alerts_query)
     alerts_rows = alerts_result.all()
-
-    # Merge results
     hourly_data = {}
-    
     for row in footfall_rows:
         if not row.hour_ts: continue
         hour_str = row.hour_ts.strftime('%H:00')
@@ -84,7 +73,6 @@ async def get_historical_analytics(db: AsyncSession = Depends(get_db)):
             "bottlenecks": 0,
             "_ts": row.hour_ts
         }
-        
     for row in alerts_rows:
         if not row.hour_ts: continue
         hour_str = row.hour_ts.strftime('%H:00')
@@ -97,33 +85,23 @@ async def get_historical_analytics(db: AsyncSession = Depends(get_db)):
             }
         else:
             hourly_data[hour_str]["bottlenecks"] = int(row.bottlenecks or 0)
-
-    # Sort by timestamp
     sorted_values = sorted(hourly_data.values(), key=lambda x: x["_ts"])
-    
-    # Remove _ts before returning
     for item in sorted_values:
         item.pop("_ts", None)
         
     return sorted_values
-
-
 class SummaryResponse(BaseModel):
     summary: str
-
 @router.post("/generate-summary/{incident_id}", response_model=SummaryResponse, dependencies=[Depends(get_current_active_admin)])
 async def generate_ai_summary(incident_id: str, db: AsyncSession = Depends(get_db)):
     """
     Generates an NDRF-compliant post-incident executive summary using Gemini or a mocked LLM.
     """
-    # Fetch Alert (using incident_id which corresponds to alert.id in our system)
     result = await db.execute(select(CrowdAlert).where(CrowdAlert.id == incident_id))
     alert = result.scalars().first()
     
     if not alert:
         raise HTTPException(status_code=404, detail="Alert not found")
-        
-    # Fetch Zone for context
     zone_result = await db.execute(select(Zone).where(Zone.id == alert.zone_id))
     zone = zone_result.scalars().first()
     
@@ -155,12 +133,11 @@ async def generate_ai_summary(incident_id: str, db: AsyncSession = Depends(get_d
     """
 
     if not settings.GEMINI_API_KEY or len(settings.GEMINI_API_KEY) < 5:
-        # MOCK LLM SERVICE Fallback
+       
         mock_summary = f"**NDRF Structured Incident Summary**\n\nBased on recent SQLite TelemetryLog entries:\nIncident **{alert.id}** occurred at **{zone_name}** and was triggered due to **{alert.trigger_reason}**. Peak density reached an unsafe level of **{alert.density} p/m²**. \n\nMitigation actions deployed: {mitigation_actions}. The incident was officially resolved in **{resolution_time}**."
         return {"summary": mock_summary}
 
     try:
-        # Initialize the new google-genai client
         client = genai.Client(api_key=settings.GEMINI_API_KEY)
         response = client.models.generate_content(
             model="gemini-3.5-flash",
@@ -204,7 +181,6 @@ async def get_audit_logs(db: AsyncSession = Depends(get_db)):
         if alert.recommended_actions and len(alert.recommended_actions) > 0:
             intervention = alert.recommended_actions[0].get("actionText", "Action Dispatched")
             
-        # Ensure we have a valid string ID
         alert_id_str = str(alert.id)
         short_id = f"#LOG-{alert_id_str[-4:].upper()}" if len(alert_id_str) >= 4 else f"#LOG-{alert_id_str.upper()}"
             

@@ -14,7 +14,6 @@ import {
   Menu,
   LogOut 
 } from 'lucide-react';
-
 interface HeaderTopBarProps {
   venues: VenueInfo[];
   selectedVenue: VenueInfo | null;
@@ -33,7 +32,6 @@ interface HeaderTopBarProps {
   isCloudSyncLost: boolean;
   onNotificationClick: () => void;
 }
-
 export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
   venues,
   selectedVenue,
@@ -58,8 +56,6 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
-
-  // ─── TEAM'S CORE BACKEND LOGIC (100% UNTOUCHED) ───
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
@@ -67,14 +63,11 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
       recognition.continuous = false;
       recognition.interimResults = false;
       recognition.lang = 'en-US';
-
       recognition.onstart = () => setIsListening(true);
-
       recognition.onresult = async (event: any) => {
         const transcript = event.results[0][0].transcript;
         console.log('Voice Command Heard:', transcript);
         const parsed = parseVoiceCommand(transcript);
-        
         if (parsed) {
           try {
             await api.post('/interventions/execute', {
@@ -87,23 +80,18 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
           }
         }
       };
-
       recognition.onerror = (event: any) => {
         console.error('Speech recognition error', event.error);
         setIsListening(false);
       };
-
       recognition.onend = () => setIsListening(false);
-
       recognitionRef.current = recognition;
     }
   }, []);
-
   const toggleListening = () => {
     if (isListening) recognitionRef.current?.stop();
     else recognitionRef.current?.start();
   };
-
   const languages: { code: SupportedLanguage; label: string; name: string }[] = [
     { code: 'en', label: 'EN', name: 'English' },
     { code: 'hi', label: 'HI', name: 'Hindi (हिंदी)' },
@@ -111,19 +99,14 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
     { code: 'bn', label: 'BN', name: 'Bengali (বাংলা)' },
     { code: 'ta', label: 'TA', name: 'Tamil (தமிழ்)' },
   ];
-
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
     onSearch(e.target.value);
   };
-  // ──────────────────────────────────────────────────
-
   return (
     <>
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-slate-200/80 shadow-sm w-full font-body px-3 sm:px-6 py-2.5 sm:py-3 flex flex-col gap-2.5 sm:gap-3 transition-all duration-300">
-        
         <div className="flex items-center justify-between gap-1.5 sm:gap-4 w-full min-w-0">
-          
           {/* ── LEFT: Mobile Menu & Venue Dropdown ── */}
           <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 min-w-0">
             {onToggleMobileMenu && (
@@ -134,7 +117,6 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
                 <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             )}
-
             <div className="relative min-w-0 shrink-0">
               <button
                 onClick={() => setIsVenueDropdownOpen(!isVenueDropdownOpen)}
@@ -146,7 +128,6 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
                 </span>
                 <ChevronDown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 shrink-0" />
               </button>
-
               {isVenueDropdownOpen && (
                 <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-slate-200/80 rounded-2xl shadow-xl z-50 py-2 animate-in fade-in zoom-in-95">
                   <div className="px-5 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
@@ -189,7 +170,6 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
               )}
             </div>
           </div>
-
           {/* ── MIDDLE: Search Bar (Desktop) ── */}
           <div className="hidden md:flex flex-1 max-w-2xl mx-4 relative group">
             <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
@@ -201,10 +181,8 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
               className="w-full bg-slate-100 hover:bg-slate-200/60 focus:bg-white border border-transparent focus:border-indigo-300 rounded-2xl pl-11 pr-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-inner"
             />
           </div>
-
           {/* ── RIGHT: Voice, Controls, & Profile ── */}
           <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
-            
             {/* Sarvam Voice Mic */}
             <button
               onClick={() => setIsVoiceModalOpen(true)}
@@ -218,7 +196,6 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
               <Mic className={`w-4 h-4 ${isListening ? 'animate-pulse text-rose-500' : ''}`} />
               <span className="hidden sm:inline tracking-wide">{isListening ? 'Listening...' : 'Sarvam Voice'}</span>
             </button>
-
             {/* Language & Notifications Wrap */}
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               <div className="relative shrink-0">
@@ -229,7 +206,6 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
                 >
                   <Globe2 className="w-4 h-4" />
                 </button>
-
                 {isLangDropdownOpen && (
                   <div className="absolute top-full right-0 mt-2 w-48 bg-white border border-slate-200/80 rounded-2xl shadow-xl z-50 py-2 animate-in fade-in zoom-in-95">
                     {languages.map((lang) => (
@@ -250,7 +226,6 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
                   </div>
                 )}
               </div>
-
               <button 
                 onClick={onNotificationClick}
                 className="relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl text-slate-600 hover:text-indigo-600 transition-colors cursor-pointer shadow-sm active:scale-95 shrink-0"
@@ -263,7 +238,6 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
                 )}
               </button>
             </div>
-
             {/* Operator Profile */}
             <div className="flex items-center gap-2 sm:gap-3 pl-1.5 sm:pl-4 border-l border-slate-200 shrink-0">
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 text-white font-bold text-[10px] sm:text-xs flex items-center justify-center font-heading shadow-md shrink-0">
@@ -281,10 +255,8 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
                 <LogOut className="w-4 h-4" />
               </button>
             </div>
-            
           </div>
         </div>
-
           {/* Crisis Demo Trigger */}
           {/* {isScenarioActive ? (
             <button
@@ -303,8 +275,6 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
               <span className="font-heading tracking-wide">⚡ Trigger Stampede Scenario</span>
             </button>
           )} */}
-
-
         {/* ── MOBILE ONLY: Search Bar ── */}
         <div className="md:hidden w-full relative mt-0.5 group">
           <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
@@ -317,8 +287,6 @@ export const HeaderTopBar: React.FC<HeaderTopBarProps> = ({
           />
         </div>
       </header>
-
-      {/* 🚨 FIX APPLIED: Modal is rendered OUTSIDE the sticky header to prevent stacking context clipping bugs! */}
       <VoiceAssistantModal 
         isOpen={isVoiceModalOpen}
         onClose={() => setIsVoiceModalOpen(false)}

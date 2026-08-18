@@ -34,7 +34,6 @@ async def read_venues(skip: int = 0, limit: int = 100, db: AsyncSession = Depend
     venues = result.scalars().all()
 
     if not venues:
-        # Check if orphan zones exist in DB created by telemetry
         zones_result = await db.execute(select(Zone))
         zones = zones_result.scalars().all()
         if zones:
@@ -55,17 +54,17 @@ async def read_venues(skip: int = 0, limit: int = 100, db: AsyncSession = Depend
             result = await db.execute(select(Venue).offset(skip).limit(limit))
             venues = result.scalars().all()
 
-    # [CRITICAL FIX]: Snap massive 200m fallback boxes into tight ~25m building perimeters
+
     for venue in venues:
         for zone in venue.zones:
             if not zone.coordinates_json:
-                lat_offset = 0.00012  # ~13 meters north/south
-                lng_offset = 0.00015  # ~16 meters east/west
+                lat_offset = 0.00012  
+                lng_offset = 0.00015 
                 zone.coordinates_json = [
-                    [zone.center_lat + lat_offset, zone.center_lng - lng_offset], # Top Left
-                    [zone.center_lat + lat_offset, zone.center_lng + lng_offset], # Top Right
-                    [zone.center_lat - lat_offset, zone.center_lng + lng_offset], # Bottom Right
-                    [zone.center_lat - lat_offset, zone.center_lng - lng_offset]  # Bottom Left
+                    [zone.center_lat + lat_offset, zone.center_lng - lng_offset], 
+                    [zone.center_lat + lat_offset, zone.center_lng + lng_offset], 
+                    [zone.center_lat - lat_offset, zone.center_lng + lng_offset], 
+                    [zone.center_lat - lat_offset, zone.center_lng - lng_offset]  
                 ]
 
     return venues
@@ -83,7 +82,6 @@ async def set_active_venue(req: ActiveVenueRequest, db: AsyncSession = Depends(g
     Set the currently active venue ID and broadcast to all clients.
     """
     global ACTIVE_VENUE_ID
-    # Validate venue exists
     result = await db.execute(select(Venue).where(Venue.id == req.venue_id))
     venue = result.scalars().first()
     if not venue:
@@ -91,7 +89,6 @@ async def set_active_venue(req: ActiveVenueRequest, db: AsyncSession = Depends(g
         
     ACTIVE_VENUE_ID = req.venue_id
     
-    # Broadcast switch
     await ws_manager.broadcast({
         "event": "VENUE_SWITCHED",
         "venue_id": ACTIVE_VENUE_ID
@@ -108,8 +105,6 @@ async def read_venue(venue_id: str, db: AsyncSession = Depends(get_db)):
     venue = result.scalars().first()
     if not venue:
         raise HTTPException(status_code=404, detail="Venue not found")
-        
-    # Snap the boxes for single-venue queries as well
     for zone in venue.zones:
         if not zone.coordinates_json:
             lat_offset = 0.00012

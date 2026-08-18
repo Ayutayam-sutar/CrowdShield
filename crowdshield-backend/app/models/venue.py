@@ -10,15 +10,11 @@ import enum
 
 from app.db.base import Base
 
-
-# ─── Enumerations ───
-
 class RiskLevel(str, enum.Enum):
     safe = "safe"
     caution = "caution"
     warning = "warning"
     critical = "critical"
-
 
 class GateStatus(str, enum.Enum):
     open = "open"
@@ -27,14 +23,11 @@ class GateStatus(str, enum.Enum):
     one_way = "one_way"
     evacuation = "evacuation"
 
-
 class Trend(str, enum.Enum):
     up = "up"
     down = "down"
     stable = "stable"
 
-
-# ─── Venue Table ───
 
 class Venue(Base):
     """
@@ -49,12 +42,8 @@ class Venue(Base):
     gps_center_lat: Mapped[float] = mapped_column(Float, nullable=False)
     gps_center_lng: Mapped[float] = mapped_column(Float, nullable=False)
     total_capacity: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-
-    # Relationships
     zones: Mapped[list["Zone"]] = relationship("Zone", back_populates="venue", lazy="selectin")
 
-
-# ─── Zone Table ───
 
 class Zone(Base):
     """
@@ -70,14 +59,10 @@ class Zone(Base):
     code: Mapped[str] = mapped_column(String(16), nullable=False)  # e.g., "Z-03"
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     sector: Mapped[str] = mapped_column(String(100), nullable=False, default="")
-
-    # Capacity & Density Metrics
     capacity_limit: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     current_headcount: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     density: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)  # p/m²
     flow_rate: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)  # p/min
-
-    # Risk Assessment
     risk_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)  # 0-100
     risk_level: Mapped[RiskLevel] = mapped_column(
         SAEnum(RiskLevel, name="risk_level_enum", create_constraint=True),
@@ -90,23 +75,17 @@ class Zone(Base):
         default=Trend.stable,
     )
 
-    # Gate Control
     gate_status: Mapped[GateStatus] = mapped_column(
         SAEnum(GateStatus, name="gate_status_enum", create_constraint=True),
         nullable=False,
         default=GateStatus.open,
     )
 
-    # Spatial Coordinates (GPS polygon + center as JSON)
     coordinates_json: Mapped[dict | None] = mapped_column(
         JSON, nullable=True, doc="GPS polygon [[lat,lng], ...] for map rendering"
     )
     center_lat: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     center_lng: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
-
-    # Flow Anomaly Flags
     reverse_flow_detected: Mapped[bool] = mapped_column(Boolean, default=False)
     flow_conflict: Mapped[bool] = mapped_column(Boolean, default=False)
-
-    # Relationships
     venue: Mapped["Venue"] = relationship("Venue", back_populates="zones")

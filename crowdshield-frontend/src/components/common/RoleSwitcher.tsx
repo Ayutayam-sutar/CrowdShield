@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { ViewMode } from '../../types';
 import { ShieldAlert, RefreshCw, Lock, ChevronUp, X, Shield, User, LogOut } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-
 interface RoleSwitcherProps {
   currentView: ViewMode;
   onSwitchView: (view: ViewMode) => void;
@@ -11,7 +10,6 @@ interface RoleSwitcherProps {
   className?: string;
   style?: React.CSSProperties;
 }
-
 export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
   currentView,
   onSwitchView,
@@ -47,7 +45,6 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
               <X className="w-4 h-4" />
             </button>
           </div>
-
           {/* Session Details / Operator Credentials */}
           <div className="flex flex-col gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
             <div className="flex items-center gap-3">
@@ -63,7 +60,6 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
                 </span>
               </div>
             </div>
-
             <div className="pt-2 border-t border-slate-200 grid grid-cols-2 gap-2 text-[10px] font-mono-num text-slate-500">
               <div>
                 <span className="text-slate-400 block">Clearance:</span>
@@ -95,7 +91,6 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
                   <Shield className="w-3.5 h-3.5" />
                   <span>Admin Deck</span>
                 </button>
-
                 <button
                   onClick={() => {
                     onSwitchView('citizen');
@@ -113,7 +108,6 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
               </div>
             </div>
           )}
-
           {/* Reset Crisis Simulation Trigger */}
           <div className="pt-1 flex flex-col gap-2">
            
@@ -132,7 +126,6 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
           </div>
         </div>
       )}
-
       {/* Single Collapsed Floating Button */}
       {!isOpen && (
         <button
@@ -148,13 +141,10 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
               isScenarioActive ? 'bg-[#FF3B5C]' : 'bg-emerald-500'
             }`} />
           </span>
-
           <span className="text-slate-700 group-hover:text-slate-900 transition-colors">
             {currentView === 'admin' ? 'Admin Session' : 'Citizen Session'}
           </span>
-
           <div className="h-3 w-px bg-slate-200" />
-
           <ChevronUp className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-transform group-hover:-translate-y-0.5" />
         </button>
       )}

@@ -15,8 +15,6 @@ async def predict_density(zone_id: str, db: AsyncSession):
   """Calculates 10-minute density forecasting using Ridge time-series regression with a Holt-Linear smoothing fallback."""
   now = datetime.now(timezone.utc)
   thirty_mins_ago = now - timedelta(minutes=30)
-
-  # Fetch recent telemetry logs for this zone
   query = (
       select(TelemetryLog)
       .where(TelemetryLog.zone_id == zone_id)
@@ -25,14 +23,10 @@ async def predict_density(zone_id: str, db: AsyncSession):
   )
   result = await db.execute(query)
   logs = result.scalars().all()
-
-  # Fetch Zone current density as absolute fallback base
   zone_query = select(Zone).where(Zone.id == zone_id)
   zone_res = await db.execute(zone_query)
   zone_obj = zone_res.scalars().first()
   base_density = zone_obj.density if zone_obj else 0.5
-
-  # Fallback handler when data points are sparse (prevents API crashes)
   if len(logs) < 5:
     historical_times = [
         now - timedelta(minutes=i) for i in [15, 12, 9, 6, 3, 0]
@@ -40,8 +34,6 @@ async def predict_density(zone_id: str, db: AsyncSession):
     historical_densities = [
         round(max(0.0, base_density * (0.8 + 0.04 * i)), 2) for i in range(6)
     ]
-
-    # Exponential growth trend projection based on current density
     growth_rate = 1.08 if base_density > 2.5 else 1.02
     forecast = [
         round(base_density * (growth_rate**1), 2),
@@ -53,7 +45,6 @@ async def predict_density(zone_id: str, db: AsyncSession):
         historical_times, historical_densities, forecast, now
     )
 
-  # Resample telemetry to 1-minute time windows
   resampled_data = {}
   for log in logs:
     minute_ts = log.timestamp.replace(second=0, microsecond=0)
@@ -78,8 +69,6 @@ async def predict_density(zone_id: str, db: AsyncSession):
     return _generate_response(
         historical_times, historical_densities, forecast, now
     )
-
-  # Create autoregressive lagged features (t-3, t-2, t-1 -> t)
   X, y = [], []
   lags = min(3, len(densities) - 1)
 
@@ -96,22 +85,17 @@ async def predict_density(zone_id: str, db: AsyncSession):
         round(last_val * 1.12, 2),
     ]
     return _generate_response(sorted_times, densities, forecast, now)
-
-  # Fit Ridge Autoregressive Model
   model = Ridge(alpha=1.0)
   model.fit(X, y)
 
-  # Predict future steps iteratively (t+1 ... t+10)
   future_densities = []
   current_features = densities[-lags:]
 
   for step in range(1, 11):
     pred = model.predict([current_features])[0]
-    pred = max(0.0, float(pred))  # Ensure density cannot be negative
+    pred = max(0.0, float(pred)) 
     future_densities.append(pred)
     current_features = current_features[1:] + [pred]
-
-  # Extract 2m, 5m, 8m, and 10m future targets
   forecast = [
       round(future_densities[1], 2),
       round(future_densities[4], 2),
@@ -120,7 +104,6 @@ async def predict_density(zone_id: str, db: AsyncSession):
   ]
 
   return _generate_response(sorted_times, densities, forecast, now)
-
 
 def _generate_response(historical_times, historical_densities, forecast, now):
   historical = [
@@ -149,10 +132,7 @@ def _generate_response(historical_times, historical_densities, forecast, now):
 
   current_density = historical_densities[-1] if historical_densities else 0.0
   predicted_10m = forecast[3]
-
-  # Early Warning Trigger: current < 3.0 p/m² but 10m forecast exceeds critical 4.0 p/m²
   warning_triggered = bool(current_density < 3.0 and predicted_10m >= 4.0)
-
   return {
       "historical": historical,
       "projected": projected,

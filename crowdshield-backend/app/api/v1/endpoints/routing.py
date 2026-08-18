@@ -37,7 +37,6 @@ async def compute_evacuation_route(request: RoutingRequest, db: AsyncSession = D
     """
     Computes the safest A* evacuation path using physical JSON topology + DB telemetry penalties.
     """
-    # 1. Fetch zones for venue, with fallback to all zones if venue_id string differs
     result = await db.execute(select(Zone).where(Zone.venue_id == request.venue_id))
     zones = result.scalars().all()
     
@@ -48,10 +47,7 @@ async def compute_evacuation_route(request: RoutingRequest, db: AsyncSession = D
     if not zones:
         raise HTTPException(status_code=404, detail="No live zones found in database. Run seed_venue.py.")
         
-    # 2. Update the physical graph with live telemetry
     pathfinder.update_live_telemetry(zones)
-
-    # 3. Find the nearest valid physical zone to the user's GPS coordinates
     start_zone = None
     min_dist = float('inf')
     for z in zones:
@@ -61,7 +57,6 @@ async def compute_evacuation_route(request: RoutingRequest, db: AsyncSession = D
             start_zone = z
             
     if not start_zone or start_zone.id not in pathfinder.graph:
-        # Graceful fallback: Snap to first available graph node
         first_node = list(pathfinder.graph.nodes)[0] if pathfinder.graph.nodes else None
         if not first_node:
             raise HTTPException(status_code=400, detail="Could not snap location to a valid physical zone.")
@@ -69,7 +64,6 @@ async def compute_evacuation_route(request: RoutingRequest, db: AsyncSession = D
     else:
         start_zone_id = start_zone.id
 
-    # 4. Calculate safest path to an exit
     evac_result = pathfinder.compute_safest_evacuation(start_zone_id)
     
     if evac_result["status"] != "SUCCESS":
@@ -84,7 +78,6 @@ async def compute_evacuation_route(request: RoutingRequest, db: AsyncSession = D
 
     path_nodes = evac_result["path_nodes"]
 
-    # 5. Construct response metrics and waypoints
     waypoints = []
     avoided_zones = set()
     total_distance = 0.0
@@ -105,7 +98,6 @@ async def compute_evacuation_route(request: RoutingRequest, db: AsyncSession = D
             
         prev_node = node_id
 
-    # Find which critical zones the A* algorithm successfully bypassed
     for z in zones:
         risk_val = getattr(z.risk_level, "value", str(z.risk_level)).lower()
         if risk_val == 'critical' and z.id not in path_nodes:
@@ -121,13 +113,7 @@ async def compute_evacuation_route(request: RoutingRequest, db: AsyncSession = D
         avoided_surge_zones=list(avoided_zones),
         waypoints=waypoints
     )
-# =====================================================================
-# ADD THIS TO THE VERY BOTTOM OF YOUR routing.py FILE
-# Do not change your existing /evacuate code above!
-# =====================================================================
-
 class DigitalTwinQueryRequest(BaseModel):
-    # Make all possible frontend variable names optional so FastAPI doesn't throw a 422
     start: Optional[str] = None
     startZoneId: Optional[str] = None
     start_zone_id: Optional[str] = None
@@ -142,13 +128,11 @@ async def digital_twin_query_route(request: DigitalTwinQueryRequest):
     Flexibly catches whatever variable name React is sending.
     """
     try:
-        # Find which variable the frontend actually sent
         actual_start_id = request.start or request.startZoneId or request.start_zone_id or request.zone_id
         
         if not actual_start_id:
             return {"status": "error", "message": "Start zone ID missing from frontend payload."}
 
-        # Use your team's existing A* pathfinder
         evac_result = pathfinder.compute_safest_evacuation(start_zone_id=actual_start_id)
         
         if evac_result.get("status") != "SUCCESS":
@@ -160,7 +144,7 @@ async def digital_twin_query_route(request: DigitalTwinQueryRequest):
             
         return {
             "status": "success",
-            "route": evac_result.get("path_nodes", []), # Sends the node array to the 3D map
+            "route": evac_result.get("path_nodes", []), 
             "message": evac_result.get("message", "Route calculated successfully.")
         }
     except Exception as e:

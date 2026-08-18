@@ -36,14 +36,14 @@ export interface VenueZone {
   code: string;
   sector: string;
   venueId?: string;
-  density: number; // people per sq meter
+  density: number; 
   maxCapacity: number;
   currentHeadcount: number;
-  flowRate: number; // people per min
-  riskScore: number; // 0 - 100
+  flowRate: number; 
+  riskScore: number; 
   riskLevel: RiskLevel;
   trend: 'up' | 'down' | 'stable';
-  polygon: [number, number][]; // lat, lng pairs
+  polygon: [number, number][]; 
   center: [number, number];
   gateStatus: 'open' | 'restricted' | 'closed' | 'evacuation' | 'one_way';
   inferenceMs?: number;
@@ -55,7 +55,7 @@ export interface YoloDetection {
   id: string;
   label: string;
   confidence: number;
-  bbox: { x: number; y: number; width: number; height: number }; // percentages
+  bbox: { x: number; y: number; width: number; height: number }; 
   type: 'person' | 'backlog' | 'velocity_anomaly';
 }
 
@@ -94,7 +94,6 @@ export interface CrowdAlert {
 
 export type SupportedLanguage = 'en' | 'hi' | 'od' | 'bn' | 'ta';
 
-// Inside your types.ts file
 export interface SarvamTranslation {
   lang: string;
   langName: string;
@@ -103,23 +102,19 @@ export interface SarvamTranslation {
 }
 export interface CitizenReport {
   id?: string;
-  category: string; // Accepts 'Blocked Exit', 'Medical Emergency', 'Overcrowding', etc.
+  category: string; 
   description: string;
   location?: string;
   location_name?: string;
   venue_id?: string;
   latitude?: number;
   longitude?: number;
-  
-  // Media Fields (Supports both frontend camelCase and backend snake_case)
   photoUrl?: string;
   videoUrl?: string;
   mediaUrl?: string;
   media_url?: string;
   mediaType?: 'image' | 'video' | string;
   media_type?: 'image' | 'video' | string;
-
-  // Metadata & Status
   timestamp?: string;
   created_at?: string;
   status?: 'PENDING' | 'VERIFIED' | 'DISPATCHED' | 'RESOLVED' | 'pending' | 'dispatched' | 'resolved' | string;

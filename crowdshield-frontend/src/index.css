@@ -31,8 +31,6 @@ h1, h2, h3, h4, .heading-font {
   font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
 }
 
-/* ─── MOBILE APP CARD SYSTEM ──────────────────────────── */
-
 .app-card {
   background: #FFFFFF;
   border-radius: 20px;
@@ -73,8 +71,6 @@ h1, h2, h3, h4, .heading-font {
 .app-input::placeholder {
   color: #94A3B8;
 }
-
-/* ─── KEYFRAMES ─────────────────────────────────────── */
 
 @keyframes pulse-ring {
   0% {
@@ -121,7 +117,6 @@ h1, h2, h3, h4, .heading-font {
 .animate-emergency-border {
   animation: emergency-border-pulse 1.5s ease-in-out infinite;
 }
-/* Animista Tracking In Expand Animation */
 @keyframes tracking-in-expand {
   0% {
     letter-spacing: -0.5em;
@@ -139,7 +134,7 @@ h1, h2, h3, h4, .heading-font {
 .animate-tracking-in-expand {
   animation: tracking-in-expand 1.0s cubic-bezier(0.215, 0.610, 0.355, 1.000) both;
 }
-/* Animista Bounce Top Animation */
+
 @keyframes bounce-top {
   0% {
     transform: translateY(-45px);
@@ -191,9 +186,6 @@ h1, h2, h3, h4, .heading-font {
 }
 
 
-
-/* ─── LEAFLET ────────────────────────────────────────── */
-
 .leaflet-container {
   width: 100%;
   height: 100%;
@@ -223,7 +215,6 @@ h1, h2, h3, h4, .heading-font {
   color: #94A3B8 !important;
 }
 
-/* Pretty tooltip for route distance */
 .route-tooltip {
   background: #FFFFFF !important;
   border: 1.5px solid #6366F1 !important;
@@ -240,7 +231,6 @@ h1, h2, h3, h4, .heading-font {
   border-top-color: #FFFFFF !important;
 }
 
-/* Smooth scrollbar */
 .smooth-scroll::-webkit-scrollbar {
   width: 4px;
 }

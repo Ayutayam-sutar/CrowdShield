@@ -2,7 +2,6 @@ const CACHE_NAME = 'crowdshield-cache-v1';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  // Add other static assets here
 ];
 
 self.addEventListener('install', (event) => {
@@ -31,14 +30,11 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Ignore non-GET requests
-  if (event.request.method !== 'GET') return;
 
-  // Network First, falling back to cache strategy (ideal for API requests but ok for dev shell)
+  if (event.request.method !== 'GET') return;
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Don't cache bad responses or opaque responses (like cross-origin without CORS)
         if (!response || response.status !== 200 || response.type !== 'basic') {
           return response;
         }
@@ -52,7 +48,6 @@ self.addEventListener('fetch', (event) => {
         return response;
       })
       .catch(() => {
-        // If network fails (offline), try cache
         return caches.match(event.request);
       })
   );

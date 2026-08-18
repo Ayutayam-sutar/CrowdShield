@@ -168,35 +168,20 @@ export const AnalyticsView: React.FC = () => {
       });
     }
   };
-
 const handleExportCSV = () => {
   if (!logs.data || logs.data.length === 0) {
     console.warn("No data available to export.");
     return;
   }
-
-  // 1. Set the exact headers seen in your Excel screenshot
   const headers = ["Log ID", "Timestamp", "Zone", "Peak Density", "Intervention Applied"];
-
-  // 2. Map over your data and catch the right variable names (with safe fallbacks)
   const csvRows = logs.data.map((log: any) => {
-    // We use fallback || operators here to catch whatever format the backend sends
     const logId = log.id || log.log_id || 'N/A';
-    
-    // Format the timestamp nicely
     const timestamp = log.timestamp || log.created_at 
       ? new Date(log.timestamp || log.created_at).toLocaleString() 
       : 'Unknown Time';
-      
     const zone = log.zone_id || log.zone || log.location_name || 'Campus';
-    
-    // Grab the density/peak density
     const peakDensity = log.peak_density || log.density || log.max_density || '0.0';
-    
-    // Grab the intervention/status
     const intervention = log.intervention_applied || log.intervention || log.status || 'None';
-
-    // Escape commas inside strings so it doesn't break the CSV format
     return [
       `"${logId}"`,
       `"${timestamp}"`,
@@ -205,26 +190,17 @@ const handleExportCSV = () => {
       `"${intervention}"`
     ].join(',');
   });
-
-  // 3. Combine headers and rows with line breaks
   const csvString = [headers.join(','), ...csvRows].join('\n');
-
-  // 4. Create the downloadable file
   const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
-  
-  // 5. Trigger the download automatically
   const link = document.createElement('a');
   link.href = url;
   link.setAttribute('download', `CrowdShield_System_Logs_${new Date().toISOString().split('T')[0]}.csv`);
   document.body.appendChild(link);
   link.click();
-  
-  // Clean up
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 };
-
   const handleGenerateSummary = async (log: AuditLog) => {
     setSummaryModal({ alertId: log.alertId, text: '', loading: true, error: null });
     try {
@@ -237,18 +213,15 @@ const handleExportCSV = () => {
       setSummaryModal({ alertId: log.alertId, text: '', loading: false, error: detail });
     }
   };
-
   const handleCopySummary = () => {
     if (!summaryModal?.text) return;
     navigator.clipboard.writeText(summaryModal.text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
   const chartData = history.data ?? [];
   const peakFootfall = chartData.length ? Math.max(...chartData.map((d) => d.footfall)) : 0;
   const maxBottlenecks = chartData.length ? Math.max(...chartData.map((d) => d.bottlenecks)) : 0;
-
   const getStatusBadge = (status: CitizenReport['status']) => {
     switch (status) {
       case 'PENDING': return 'bg-amber-50 text-amber-600 border-amber-200 animate-pulse';
@@ -256,7 +229,6 @@ const handleExportCSV = () => {
       case 'RESOLVED': return 'bg-[#67b2b9]/10 text-[#648d6a] border-[#67b2b9]/30';
     }
   };
-
   const formatGeminiText = (text: string) => {
     if (!text) return null;
     return text.split('\n').map((line, i) => {
@@ -275,8 +247,6 @@ const handleExportCSV = () => {
       );
     });
   };
-
-  // ─── UI RENDER ───
   return (
     <div className="p-4 sm:p-6 lg:p-8 flex flex-col gap-6 lg:gap-8 font-body text-slate-800 bg-[#FAFAF7] min-h-screen">
       
@@ -323,7 +293,7 @@ const handleExportCSV = () => {
         </div>
       </div>
 
-      {/* ── KPI Stats Bar (Reduced to 3 Columns, Removed Resolution Time) ── */}
+      {/* ── KPI Stats Bar ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 lg:gap-6">
         <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-sm flex items-center justify-between group hover:shadow-md transition-shadow">
           <div className="flex flex-col gap-1.5">
@@ -367,7 +337,6 @@ const handleExportCSV = () => {
           </div>
         </div>
       </div>
-
       {/* ── Historical Telemetry Charts ── */}
       {history.loading ? (
         <div className="flex items-center justify-center h-72 bg-white border border-slate-200/80 rounded-3xl shadow-sm">
@@ -395,7 +364,6 @@ const handleExportCSV = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-          
           {/* Footfall Area Chart */}
           <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col gap-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -428,7 +396,6 @@ const handleExportCSV = () => {
               </ResponsiveContainer>
             </div>
           </div>
-
           {/* Bottleneck Bar Chart */}
           <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col gap-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -513,10 +480,7 @@ const handleExportCSV = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
                 {citizenReports.data.map((report: any) => {
-                  // 1. Grab whichever image key the backend sends
                   let mediaSrc = report.media_url || report.photoUrl || report.imageUrl || report.mediaUrl;
-                  
-                  // 2. Ignore toxic blobs that crash the page for other users
                   if (mediaSrc && mediaSrc.startsWith('blob:')) {
                     mediaSrc = null; 
                   }
@@ -527,8 +491,6 @@ const handleExportCSV = () => {
                       className="bg-white border border-slate-200/80 rounded-3xl overflow-hidden shadow-sm hover:shadow-lg transition-all flex flex-col justify-between group"
                     >
                       <div>
-                        {/* Image Preview */}
-                      {/* Media Preview (Supports Video & Image) */}
 {mediaSrc && (
   <div className="relative h-48 sm:h-56 w-full bg-slate-900 overflow-hidden group">
     {report.media_type === 'video' || (typeof mediaSrc === 'string' && (mediaSrc.startsWith('data:video') || mediaSrc.endsWith('.mp4'))) ? (
@@ -685,7 +647,7 @@ const handleExportCSV = () => {
         )}
       </div>
 
-      {/* ── AI Summary Modal (Clean White Dashboard Look) ── */}
+      {/* ── AI Summary Modal── */}
       {summaryModal && (
         <div className="fixed inset-0 z-[600] flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4 sm:p-6 font-body animate-fadeIn">
           <div className="bg-white border border-slate-200/80 rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col p-6 sm:p-8">

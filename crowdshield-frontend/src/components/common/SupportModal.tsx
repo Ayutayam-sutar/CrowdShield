@@ -1,14 +1,11 @@
 import React from 'react';
 import { X, Phone, Mail, FileCode, ShieldAlert, LifeBuoy } from 'lucide-react';
-
 interface SupportModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
 export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-body animate-fadeIn">
       <div className="bg-white border border-[#E7E5DD] rounded-2xl shadow-2xl max-w-md w-full overflow-hidden p-6 flex flex-col gap-5">

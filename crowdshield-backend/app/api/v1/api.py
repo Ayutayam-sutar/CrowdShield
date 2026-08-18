@@ -17,7 +17,6 @@ from app.api.v1.endpoints import (
 from app.api.v1 import websocket
 
 api_router = APIRouter()
-
 # Core Authentication & Venues
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(venues.router, prefix="/venues", tags=["venues"])

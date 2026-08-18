@@ -5,10 +5,7 @@ AuditLog ORM model — tracks all operator commands for NDRF compliance.
 from sqlalchemy import Integer, String, Text, DateTime
 from sqlalchemy.orm import Mapped, mapped_column
 from datetime import datetime, timezone
-
 from app.db.base import Base
-
-
 class AuditLog(Base):
     """
     Immutable audit trail of operator actions (gate overrides, PA broadcasts,

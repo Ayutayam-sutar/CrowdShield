@@ -73,15 +73,13 @@ async def register(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email is already registered"
         )
-
-    # Create new citizen user
     new_user = User(
         username=data.email,
         hashed_password=security.get_password_hash(data.password),
         role=UserRole.CITIZEN
     )
     db.add(new_user)
-    await db.flush() # Flush to get the generated ID
+    await db.flush() 
     
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return {

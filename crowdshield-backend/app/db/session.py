@@ -8,8 +8,6 @@ from typing import AsyncGenerator
 
 from app.core.config import settings
 
-# ─── Async Engine ───
-# Neon DB requires SSL; pool_pre_ping ensures stale connections are recycled.
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=False,
@@ -18,13 +16,11 @@ engine = create_async_engine(
     max_overflow=10,
 )
 
-# ─── Async Session Factory ───
 async_session = async_sessionmaker(
     bind=engine,
     class_=AsyncSession,
     expire_on_commit=False,
 )
-
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """

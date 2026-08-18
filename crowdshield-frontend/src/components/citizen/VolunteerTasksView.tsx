@@ -3,25 +3,19 @@ import { CrowdAlert } from '../../types';
 import { ShieldAlert, CheckCircle2, UserCircle } from 'lucide-react';
 import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
-
 interface VolunteerTasksViewProps {
   alerts: CrowdAlert[];
 }
-
 export const VolunteerTasksView: React.FC<VolunteerTasksViewProps> = ({ alerts }) => {
   const { userId } = useAuth();
   const [resolvingId, setResolvingId] = useState<string | null>(null);
   const [notes, setNotes] = useState<string>('');
-
-  // 🚨 FIX 1: Make sure we catch 'OPEN' alerts coming straight from the live Python backend!
   const activeAlerts = alerts.filter(
     a => a.status && (a.status.toLowerCase() === 'active' || a.status.toLowerCase() === 'open')
   );
-
   const handleResolve = async (alertId: string) => {
     setResolvingId(alertId);
     try {
-      // 🚨 FIX 2: Removed the redundant "/api/v1/" prefix so it doesn't double up and break the request
       await api.patch(`/alerts/${alertId}/status`, {
         status: 'RESOLVED',
         volunteer_id: userId || 'VOL-UNKNOWN',
@@ -34,7 +28,6 @@ export const VolunteerTasksView: React.FC<VolunteerTasksViewProps> = ({ alerts }
       setResolvingId(null);
     }
   };
-
   return (
     <div className="flex flex-col gap-4 font-body">
       <div className="bg-[#151726] p-4 rounded-2xl flex items-center justify-between text-white shadow-md">
@@ -50,7 +43,6 @@ export const VolunteerTasksView: React.FC<VolunteerTasksViewProps> = ({ alerts }
           </div>
         </div>
       </div>
-
       <div className="flex flex-col gap-3">
         {activeAlerts.length === 0 ? (
           <div className="bg-white border border-[#E7E5DD] p-6 rounded-2xl text-center text-[#5B5F73] text-sm">
@@ -68,12 +60,10 @@ export const VolunteerTasksView: React.FC<VolunteerTasksViewProps> = ({ alerts }
                   {alert.category}
                 </span>
               </div>
-              
               <div className="text-xs text-[#5B5F73] bg-[#FAFAF7] p-2 rounded-lg border border-[#E7E5DD]">
                 <strong className="text-[#151726]">Location:</strong> {alert.zoneName} <br/>
                 <strong className="text-[#151726]">Instructions:</strong> {alert.recommendedActions?.[0]?.actionText || alert.sentinelAnalysis || "Awaiting AI Analysis..."}
               </div>
-
               <div className="flex flex-col gap-2 mt-2">
                 <input 
                   type="text" 

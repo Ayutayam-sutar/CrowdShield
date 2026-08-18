@@ -1,5 +1,6 @@
+    
+//{ Check if user is within the zone radius + 50 meters buffer}
 import * as turf from '@turf/turf';
-
 export interface GeofenceZone {
   id: string;
   name: string;
@@ -16,14 +17,11 @@ export const checkGeofenceIntersections = (
 ): GeofenceZone[] => {
   const userPoint = turf.point([userLng, userLat]);
   const intersections: GeofenceZone[] = [];
-
   for (const zone of zones) {
     if (zone.riskLevel === 'critical' || zone.riskLevel === 'warning') {
       const zoneCenter = turf.point([zone.centerLng, zone.centerLat]);
       const distance = turf.distance(userPoint, zoneCenter, { units: 'meters' });
-      
-      // Check if user is within the zone radius + 50 meters buffer
-      if (distance <= zone.radiusMeters + 50) {
+            if (distance <= zone.radiusMeters + 50) {
         intersections.push(zone);
       }
     }

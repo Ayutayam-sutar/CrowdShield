@@ -45,18 +45,16 @@ async def update_alert_status(alert_id: str, alert_update: AlertUpdate, db: Asyn
         
     if alert_update.status == AlertStatus.RESOLVED:
         alert.resolved_at = datetime.now(timezone.utc)
-        
-        # Lower the zone risk level
+    
         zone_result = await db.execute(select(Zone).where(Zone.id == alert.zone_id))
         zone = zone_result.scalars().first()
         if zone:
-            # Drop risk score down to a caution/safe level
+
             zone.risk_score = min(zone.risk_score, 35.0)
             zone.risk_level = "safe"
             
     await db.flush()
 
-    # Broadcast Resolution
     if alert.status == AlertStatus.RESOLVED:
         payload = {
             "event": "RESOLVED_BY_VOLUNTEER",

@@ -17,7 +17,6 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-
 # ---------------------------------------------------------
 # ARGUMENT PARSING (Multi-Camera Support)
 # ---------------------------------------------------------
@@ -38,20 +37,14 @@ parser.add_argument(
     "--port", type=int, default=5000, help="Local port to stream MJPEG video"
 )
 args = parser.parse_args()
-
 VIDEO_SOURCE = args.video
 ZONE_ID = args.zone
-VENUE_ID = args.venue  # 🚨 NEW: Variable assignment
+VENUE_ID = args.venue 
 PORT = args.port
-
-# Load environment variables
-# Load environment variables with live Render fallbacks
 # ---------------------------------------------------------
 # BACKEND TARGETS (Dual-Broadcast: Local + Cloud)
 # ---------------------------------------------------------
 load_dotenv()
-
-# Read comma-separated URLs from .env or fallback to both Local and Render
 raw_backend_urls = os.getenv(
     "BACKEND_URLS", 
     "http://localhost:8000,https://crowdshield-uw8r.onrender.com"
@@ -62,15 +55,11 @@ NODE_TOKEN = os.getenv("NODE_AUTH_TOKEN", "technova_demo_key_9988")
 # CONSTANTS & PHYSICAL CALIBRATION (IPM)
 # ---------------------------------------------------------
 FPS = 30.0
-TELEMETRY_INTERVAL_FRAMES = int(FPS * 2)  # Send every 2 seconds
-
-# Camera FOV polygon on pixel space (x, y) - Calibrated for 1280x720
+TELEMETRY_INTERVAL_FRAMES = int(FPS * 2) 
 ZONE_POLYGON = np.array(
     [[100, 100], [1180, 100], [1180, 620], [100, 620]], np.float32
 )
 ZONE_POLYGON_INT = ZONE_POLYGON.astype(np.int32)
-
-# Top-down metric rectangle (destination points) - 10m x 10m real-world grid
 REAL_WORLD_WIDTH_M = 10.0
 REAL_WORLD_HEIGHT_M = 10.0
 METRIC_POLYGON = np.array(
@@ -83,19 +72,15 @@ METRIC_POLYGON = np.array(
     np.float32,
 )
 
-# Calculate Homography Matrix H
 HOMOGRAPHY_MATRIX = cv2.getPerspectiveTransform(ZONE_POLYGON, METRIC_POLYGON)
 ZONE_AREA_SQM = REAL_WORLD_WIDTH_M * REAL_WORLD_HEIGHT_M
 
-EXIT_VECTOR = np.array([0, 1])  # Downward exit flow vector
-
+EXIT_VECTOR = np.array([0, 1]) 
 # ---------------------------------------------------------
 # MODEL INITIALIZATION
 # ---------------------------------------------------------
 print(f"[Init] Starting node for Zone: {ZONE_ID}, Source: {VIDEO_SOURCE}, Port: {PORT}")
 print("[Init] Loading YOLOv11 and XGBoost models...")
-
-# 1. Load YOLO Model
 yolo_path = "weights/best (1).pt"
 if not os.path.exists(yolo_path):
     yolo_path = "weights/best.pt" if os.path.exists("weights/best.pt") else "yolov11m.pt"
@@ -106,8 +91,6 @@ try:
 except Exception as e:
     print(f"[Warning] Failed to load custom YOLO. Falling back to default YOLOv8n. Error: {e}")
     model = YOLO("yolov8n.pt")
-
-# 2. Load XGBoost Model
 xgb_path = "weights/crowdshield_xgb_model.json"
 if not os.path.exists(xgb_path):
     xgb_path = "weights/xgboost_crowd_risk.json"
@@ -120,7 +103,6 @@ except Exception as e:
     print(f"[Warning] Failed to load XGBoost model from '{xgb_path}'. Will use fallback heuristics. Error: {e}")
     risk_model = None
 
-# Separate deques: Pixel history for visual rendering, Metric history for IPM physics math
 pixel_history = defaultdict(lambda: deque(maxlen=15))
 metric_history = defaultdict(lambda: deque(maxlen=15))
 
@@ -134,7 +116,7 @@ def send_telemetry_to_single_backend(backend_url: str, payload: dict, token: str
         headers = {"Authorization": f"Bearer {token}"} if token else {}
         url = f"{backend_url}/api/v1/telemetry/"
         
-        # Increased timeout to 5.0s to accommodate cloud latency spikes
+        
         res = requests.post(url, json=payload, headers=headers, timeout=5.0)
         
         if res.status_code in [200, 201]:
@@ -143,7 +125,7 @@ def send_telemetry_to_single_backend(backend_url: str, payload: dict, token: str
             print(f"[Telemetry Warning -> {backend_url}] HTTP {res.status_code}: {res.text}")
             
     except requests.exceptions.Timeout:
-        # Cloud server took slightly longer to reply; next frame will catch it
+       
         print(f"[Telemetry Lag -> {backend_url}] Latency spike (request timed out)")
     except requests.exceptions.RequestException:
         print(f"[Telemetry Offline -> {backend_url}] Server unreachable")
@@ -194,13 +176,13 @@ def generate_mjpeg_stream():
     frame_count = 0
     latest_surge_score = 0.0
     latest_density = 0.0
-    latest_avg_speed = 0.0  # Added average speed tracking
+    latest_avg_speed = 0.0  
 
     print(f"[Init] Starting inference generator loop on active source: {current_src}...")
 
     try:
         while True:
-            # --- HOT-SWAP DETECTOR ---
+          
             if RELOAD_SOURCE_FLAG:
                 print(f"[Hot-Swap] Switching active video feed dynamically to: {ACTIVE_SOURCE}")
                 if cap.isOpened():
@@ -220,25 +202,21 @@ def generate_mjpeg_stream():
             if not cap.isOpened():
                 break
 
-            time.sleep(0.01)  # Throttle slightly to keep CPU/GPU stable
+            time.sleep(0.01)  
 
             success, frame = cap.read()
             if not success:
                 if isinstance(ACTIVE_SOURCE, str):
-                    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)  # Loop video source
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, 0) 
                     continue
                 else:
                     break
 
-            # --- MEMORY & DISPLAY OPTIMIZATION ---
-            # Downscale high-res video inputs to standard 1280x720.
-            # This prevents OpenCV OutOfMemory allocation crashes across multi-camera streams.
             if frame.shape[1] != 1280 or frame.shape[0] != 720:
                 frame = cv2.resize(frame, (1280, 720))
 
             frame_count += 1
 
-            # 1. ByteTrack YOLO Inference (Class 0: Person, Class 2: Head)
             results = model.track(
                 frame,
                 tracker="bytetrack.yaml",
@@ -339,7 +317,6 @@ def generate_mjpeg_stream():
                     del metric_history[sid]
                     del pixel_history[sid]
 
-            # 2. Telemetry Aggregation & Async Backend Sync
             if frame_count % TELEMETRY_INTERVAL_FRAMES == 0:
                 density = (
                     float(people_in_zone) / ZONE_AREA_SQM if people_in_zone > 0 else 0.0
@@ -389,7 +366,6 @@ def generate_mjpeg_stream():
                 latest_surge_score = surge_score
                 latest_avg_speed = avg_speed
 
-                # 2. Telemetry Aggregation & Dual Async Backend Sync
                 payload = {
                     "zone_id": ZONE_ID,
                     "venue_id": VENUE_ID,
@@ -402,28 +378,22 @@ def generate_mjpeg_stream():
                     "inference_ms": round(inference_ms, 1),
                 }
 
-                # Broadcast to both Localhost and Render
                 threading.Thread(
                     target=broadcast_telemetry_async,
                     args=(payload, NODE_TOKEN, BACKEND_URLS),
                     daemon=True,
                 ).start()
 
-            # 3. Draw Polygon & HUD Overlay
             cv2.polylines(frame, [ZONE_POLYGON_INT], True, (0, 255, 255), 2)
 
             overlay = frame.copy()
             cv2.rectangle(overlay, (20, 20), (760, 75), (0, 0, 0), -1)
             cv2.addWeighted(overlay, 0.6, frame, 0.4, 0, frame)
-
             hud_color = (0, 0, 255) if latest_surge_score > 0.70 else (0, 255, 0)
-            
-            # --- HUD TEXT: Now includes Velocity (m/s) alongside Density and Risk ---
             overlay_text = (
                 f"Zone: {ZONE_ID} | Risk: {latest_surge_score*100:.1f}/100 | "
                 f"Density: {latest_density:.2f} p/m2 | Vel: {latest_avg_speed:.2f} m/s"
             )
-            
             cv2.putText(
                 frame,
                 overlay_text,
@@ -433,25 +403,20 @@ def generate_mjpeg_stream():
                 hud_color,
                 2,
             )
-
-            # 4. Encode frame to JPEG
             ret, buffer = cv2.imencode(
                 ".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 55]
             )
             if not ret:
                 continue
-
             yield (
                 b"--frame\r\nContent-Type: image/jpeg\r\n\r\n"
                 + buffer.tobytes()
                 + b"\r\n"
             )
-
     finally:
         print("[Cleanup] Releasing video capture resource...")
         if cap and cap.isOpened():
             cap.release()
-
 
 @app.post("/upload")
 async def upload_video(file: UploadFile = File(...)):
@@ -482,7 +447,6 @@ def video_feed():
         media_type="multipart/x-mixed-replace; boundary=frame",
     )
 
-
 @app.get("/health")
 def health_check():
     return {
@@ -490,8 +454,6 @@ def health_check():
         "zone_id": ZONE_ID,
         "stream_url": f"http://localhost:{PORT}/video_feed",
     }
-
-
 if __name__ == "__main__":
     os.makedirs("weights", exist_ok=True)
     print(

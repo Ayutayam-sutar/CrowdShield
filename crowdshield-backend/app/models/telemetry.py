@@ -32,16 +32,11 @@ class TelemetryLog(Base):
         index=True,
     )
 
-    # ─── Raw Sensor Data ───
     person_count: Mapped[int] = mapped_column(default=0)
     density: Mapped[float] = mapped_column(Float, default=0.0, doc="p/m²")
     avg_speed: Mapped[float] = mapped_column(Float, default=0.0, doc="m/s")
-
-    # ─── Anomaly Flags ───
     flow_conflict: Mapped[bool] = mapped_column(Boolean, default=False)
     reverse_flow_detected: Mapped[bool] = mapped_column(Boolean, default=False)
-
-    # ─── Computed Scores ───
     surge_score: Mapped[float] = mapped_column(
         Float, default=0.0, doc="Raw ML surge probability [0-1]"
     )

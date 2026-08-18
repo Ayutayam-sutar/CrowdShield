@@ -3,14 +3,11 @@
 Uses venue_graph.json for strict physical topology and live telemetry for
 dynamic A* weighting.
 """
-
 import json
 import math
 import os
 from typing import Any, Dict, List, Optional
 import networkx as nx
-
-
 class UnifiedPathfinder:
 
   def __init__(self, graph_file_path: str):
@@ -21,7 +18,6 @@ class UnifiedPathfinder:
   def _load_physical_topology(self, path: str):
     """Loads static walls, gates, and valid physical pathways from JSON."""
     if not os.path.exists(path):
-      # Fallback to look in root backend folder if relative path fails
       alt_path = os.path.join(
           os.path.dirname(__file__), "../../../venue_graph.json"
       )
@@ -38,12 +34,9 @@ class UnifiedPathfinder:
     try:
       with open(path, "r") as f:
         data = json.load(f)
-
-      # --- BUG FIX: Dig into the "venues" array to find the nodes/edges ---
-      venues = data.get("venues", [data]) # Fallback to flat if no venues array exists
+      venues = data.get("venues", [data]) 
 
       for venue in venues:
-        # 1. Load exact physical nodes and their coordinates
         for node in venue.get("nodes", []):
           self.graph.add_node(
               node["id"],
@@ -54,19 +47,15 @@ class UnifiedPathfinder:
               type=node.get("type", "zone"),
           )
 
-        # 2. Load strictly allowed physical paths (Edges)
         for edge in venue.get("edges", []):
-          # Supports both naming conventions from the JSON
-          length = edge.get("distance_meters", edge.get("length_meters", 10.0))
 
-          # Forward path
+          length = edge.get("distance_meters", edge.get("length_meters", 10.0))
           self.graph.add_edge(
               edge["source"],
               edge["target"],
               base_weight=length,
-              weight=length,  # Default weight before telemetry is applied
+              weight=length,  
           )
-          # Reverse path (Assuming bi-directional corridors unless specified)
           self.graph.add_edge(
               edge["target"],
               edge["source"],
@@ -81,17 +70,13 @@ class UnifiedPathfinder:
       )
     except Exception as e:
       print(f"[UnifiedPathfinder] Failed to parse venue_graph.json: {e}")
-
   def update_live_telemetry(self, live_zones: list):
     """Updates the physical graph with live density and risk penalties from telemetry."""
     for zone in live_zones:
       zone_id = getattr(zone, "id", None) or getattr(zone, "zone_id", None)
       if not zone_id or zone_id not in self.graph.nodes:
         continue
-
       density = getattr(zone, "density", 0.0)
-
-      # Safely extract string value from Enum or raw String
       risk_obj = getattr(zone, "risk_level", "safe")
       if hasattr(risk_obj, "value"):
         risk_str = str(risk_obj.value).lower()
@@ -101,22 +86,15 @@ class UnifiedPathfinder:
       self.graph.nodes[zone_id]["density"] = density
       self.graph.nodes[zone_id]["risk_level"] = risk_str
 
-      # Apply dynamic penalties to any pathway leading INTO this zone
       for u, v, data in self.graph.in_edges(zone_id, data=True):
-        # Exponential penalty based on crowd density
         density_multiplier = math.exp(min(density * 0.4, 10.0))
-
-        # Additional risk penalty multiplier
         if risk_str == "critical":
           risk_bonus = 8.0
         elif risk_str in ["warning", "caution"]:
           risk_bonus = 2.5
         else:
           risk_bonus = 1.0
-
-        # New Cost = Physical Distance * Crowd Resistance * AI Risk
         data["weight"] = data["base_weight"] * density_multiplier * risk_bonus
-
   def compute_safest_evacuation(
       self, start_zone_id: str, target_zone_id: Optional[str] = None
   ) -> Dict[str, Any]:
@@ -130,8 +108,6 @@ class UnifiedPathfinder:
           "path_nodes": [start_zone_id],
           "cost": 0.0,
       }
-
-    # Auto-detect exits if no specific target is provided
     if not target_zone_id:
       exits = [
           n
@@ -139,7 +115,6 @@ class UnifiedPathfinder:
           if attr.get("is_exit") and n != start_zone_id
       ]
       if not exits:
-        # Fallback: Treat any node containing 'gate' or 'exit' in its ID as an exit
         exits = [
             n
             for n in self.graph.nodes
@@ -162,8 +137,6 @@ class UnifiedPathfinder:
             "cost": 0.0,
         }
       exits = [target_zone_id]
-
-    # A* Heuristic: Real-world physical distance estimate
     def heuristic(u, v):
       node_u = self.graph.nodes[u]
       node_v = self.graph.nodes[v]
@@ -181,8 +154,6 @@ class UnifiedPathfinder:
 
     best_path = None
     best_cost = float("inf")
-
-    # Check path to all available exits and pick the one with lowest dynamic cost
     for exit_node in exits:
       try:
         path = nx.astar_path(
@@ -223,9 +194,6 @@ class UnifiedPathfinder:
             f" {target_exit_name}."
         ),
     }
-
-
-# Initialize Singleton Pathfinder Instance
 pathfinder_graph_path = os.path.join(
     os.path.dirname(__file__), "../../venue_graph.json"
 )

@@ -2,31 +2,25 @@ import React, { useState, useEffect } from 'react';
 import { X, Terminal, Cpu, Loader2 } from 'lucide-react';
 import api from '../../utils/api';
 import { wsService } from '../../services/websocket';
-
 interface SystemLogsModalProps {
   isOpen: boolean;
   onClose: () => void;
   isScenarioActive: boolean;
 }
-
 interface LogEntry {
   time: string;
   level: 'CRITICAL' | 'WARN' | 'INFO' | 'CRITICAL_EVENT';
   msg: string;
 }
-
 export const SystemLogsModal: React.FC<SystemLogsModalProps> = ({ isOpen, onClose, isScenarioActive }) => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-
-  // 1. Fetch live system logs from backend on modal open
   useEffect(() => {
     if (!isOpen) return;
 
     const fetchLiveLogs = async () => {
       setIsLoading(true);
       try {
-        // Fetch recent system alerts/history from your backend
         const response = await api.get('/analytics/history');
         if (response.data && Array.isArray(response.data)) {
           const fetchedLogs: LogEntry[] = response.data.slice(-10).map((item: any) => ({
@@ -42,14 +36,10 @@ export const SystemLogsModal: React.FC<SystemLogsModalProps> = ({ isOpen, onClos
         setIsLoading(false);
       }
     };
-
     fetchLiveLogs();
   }, [isOpen]);
-
-  // 2. Listen to real-time WebSockets to push live daemon logs instantly
   useEffect(() => {
     if (!isOpen) return;
-
     const unsubscribe = wsService.subscribe((data: any) => {
       const newLogTime = new Date().toLocaleTimeString();
       let newEntry: LogEntry | null = null;
@@ -81,8 +71,6 @@ export const SystemLogsModal: React.FC<SystemLogsModalProps> = ({ isOpen, onClos
 
     return () => unsubscribe();
   }, [isOpen]);
-
-  // 3. Inject scenario alert if active
   useEffect(() => {
     if (isScenarioActive && isOpen) {
       setLogs((prev) => [
@@ -97,7 +85,6 @@ export const SystemLogsModal: React.FC<SystemLogsModalProps> = ({ isOpen, onClos
   }, [isScenarioActive, isOpen]);
 
   if (!isOpen) return null;
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-body animate-fadeIn">
       <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl max-w-xl w-full overflow-hidden p-5 flex flex-col gap-4 text-slate-800">
@@ -110,7 +97,6 @@ export const SystemLogsModal: React.FC<SystemLogsModalProps> = ({ isOpen, onClos
             <X className="w-5 h-5" />
           </button>
         </div>
-
         <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl font-mono-num text-xs flex flex-col gap-2 max-h-72 overflow-y-auto">
           {isLoading ? (
             <div className="flex items-center justify-center py-8 text-slate-400 gap-2">

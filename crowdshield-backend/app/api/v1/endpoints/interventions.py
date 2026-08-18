@@ -14,7 +14,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter()
 
-
 class InterventionRequest(BaseModel):
     actionId: Optional[str] = None
     actionText: Optional[str] = None
@@ -38,12 +37,10 @@ async def dispatch_intervention(
     target_action = payload.actionText or payload.actionId or "Emergency Action"
     target_zone_id = payload.zoneId or "soa-iter-01"
 
-    # Fetch related zone details
     zone_result = await db.execute(select(Zone).where(Zone.id == target_zone_id))
     zone = zone_result.scalars().first()
     zone_name = zone.name if zone else target_zone_id
 
-    # Mark open alerts for this zone as RESOLVED
     alerts_result = await db.execute(
         select(CrowdAlert)
         .where(CrowdAlert.zone_id == target_zone_id)
@@ -55,8 +52,6 @@ async def dispatch_intervention(
         alert.status = AlertStatus.RESOLVED
 
     await db.commit()
-
-    # Broadcast real-time dispatch event over WebSockets to ALL devices
     ws_payload = {
         "event": "INTERVENTION_DISPATCHED",
         "actionText": target_action,
@@ -76,14 +71,12 @@ async def dispatch_intervention(
         "resolved_alerts_count": len(open_alerts),
     }
 
-
 @router.post("/scenario")
 async def trigger_scenario(
     payload: ScenarioRequest, db: AsyncSession = Depends(get_db)
 ):
     """Global emergency override to trigger or reset the stampede simulation."""
     if payload.action == "trigger":
-        # 1. Elevate all DB zones to critical risk
         zones_result = await db.execute(select(Zone))
         zones = zones_result.scalars().all()
         for z in zones:
@@ -93,8 +86,6 @@ async def trigger_scenario(
                 z.risk_level = "critical"
             if hasattr(z, "density"):
                 z.density = 5.82
-
-        # 2. Define targets for BOTH ITER Campus and Kalinga Stadium
         target_locations = [
             {
                 "zone_id": "zone_library_roundabout",
@@ -110,7 +101,6 @@ async def trigger_scenario(
 
         primary_alert_payload = None
 
-        # 3. Create persistent CrowdAlert records for both venues
         for loc in target_locations:
             import uuid
             timestamp_str = int(datetime.now(timezone.utc).timestamp())
@@ -160,15 +150,12 @@ async def trigger_scenario(
             if not primary_alert_payload:
                 primary_alert_payload = alert_dict
 
-            # Broadcast new alert for each venue to WS subscribers
             await ws_manager.broadcast({
                 "event": "NEW_ALERT",
                 "alert": alert_dict,
             })
 
         await db.commit()
-
-        # 4. Broadcast global crisis flag to force emergency state on all Citizen & Admin clients
         await ws_manager.broadcast({
             "event": "SCENARIO_TRIGGERED",
             "message": "Global Stampede Scenario Activated",
@@ -183,7 +170,6 @@ async def trigger_scenario(
         }
 
     elif payload.action == "reset":
-        # 1. Mark all open alerts in DB as RESOLVED
         alerts_result = await db.execute(
             select(CrowdAlert).where(CrowdAlert.status == AlertStatus.OPEN)
         )
@@ -191,7 +177,6 @@ async def trigger_scenario(
         for alert in open_alerts:
             alert.status = AlertStatus.RESOLVED
 
-        # 2. Reset all zone risks to safe
         zones_result = await db.execute(select(Zone))
         zones = zones_result.scalars().all()
         for z in zones:
@@ -202,7 +187,6 @@ async def trigger_scenario(
 
         await db.commit()
 
-        # 3. Broadcast WS Reset
         await ws_manager.broadcast({
             "event": "SCENARIO_RESET",
             "message": "Scenario Stood Down",
@@ -249,4 +233,4 @@ async def get_scenario_status(db: AsyncSession = Depends(get_db)):
     return {
         "active": active_alert is not None,
         "alert": alert_dict
-    }
+    }
