@@ -17,6 +17,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+
 # ---------------------------------------------------------
 # ARGUMENT PARSING (Multi-Camera Support)
 # ---------------------------------------------------------
@@ -37,10 +38,12 @@ parser.add_argument(
     "--port", type=int, default=5000, help="Local port to stream MJPEG video"
 )
 args = parser.parse_args()
+
 VIDEO_SOURCE = args.video
 ZONE_ID = args.zone
 VENUE_ID = args.venue 
 PORT = args.port
+
 # ---------------------------------------------------------
 # BACKEND TARGETS (Dual-Broadcast: Local + Cloud)
 # ---------------------------------------------------------
@@ -51,15 +54,19 @@ raw_backend_urls = os.getenv(
 )
 BACKEND_URLS = [url.strip().rstrip("/") for url in raw_backend_urls.split(",") if url.strip()]
 NODE_TOKEN = os.getenv("NODE_AUTH_TOKEN", "technova_demo_key_9988")
+
 # ---------------------------------------------------------
 # CONSTANTS & PHYSICAL CALIBRATION (IPM)
 # ---------------------------------------------------------
 FPS = 30.0
 TELEMETRY_INTERVAL_FRAMES = int(FPS * 2) 
+
+# 🚨 FIX: Expanded polygon to cover almost the entire 1280x720 frame
 ZONE_POLYGON = np.array(
-    [[100, 100], [1180, 100], [1180, 620], [100, 620]], np.float32
+    [[10, 10], [1270, 10], [1270, 710], [10, 710]], np.float32
 )
 ZONE_POLYGON_INT = ZONE_POLYGON.astype(np.int32)
+
 REAL_WORLD_WIDTH_M = 10.0
 REAL_WORLD_HEIGHT_M = 10.0
 METRIC_POLYGON = np.array(
@@ -76,11 +83,13 @@ HOMOGRAPHY_MATRIX = cv2.getPerspectiveTransform(ZONE_POLYGON, METRIC_POLYGON)
 ZONE_AREA_SQM = REAL_WORLD_WIDTH_M * REAL_WORLD_HEIGHT_M
 
 EXIT_VECTOR = np.array([0, 1]) 
+
 # ---------------------------------------------------------
 # MODEL INITIALIZATION
 # ---------------------------------------------------------
 print(f"[Init] Starting node for Zone: {ZONE_ID}, Source: {VIDEO_SOURCE}, Port: {PORT}")
 print("[Init] Loading YOLOv11 and XGBoost models...")
+
 yolo_path = "weights/best (1).pt"
 if not os.path.exists(yolo_path):
     yolo_path = "weights/best.pt" if os.path.exists("weights/best.pt") else "yolov11m.pt"
@@ -91,6 +100,7 @@ try:
 except Exception as e:
     print(f"[Warning] Failed to load custom YOLO. Falling back to default YOLOv8n. Error: {e}")
     model = YOLO("yolov8n.pt")
+
 xgb_path = "weights/crowdshield_xgb_model.json"
 if not os.path.exists(xgb_path):
     xgb_path = "weights/xgboost_crowd_risk.json"
@@ -116,7 +126,6 @@ def send_telemetry_to_single_backend(backend_url: str, payload: dict, token: str
         headers = {"Authorization": f"Bearer {token}"} if token else {}
         url = f"{backend_url}/api/v1/telemetry/"
         
-        
         res = requests.post(url, json=payload, headers=headers, timeout=5.0)
         
         if res.status_code in [200, 201]:
@@ -125,7 +134,6 @@ def send_telemetry_to_single_backend(backend_url: str, payload: dict, token: str
             print(f"[Telemetry Warning -> {backend_url}] HTTP {res.status_code}: {res.text}")
             
     except requests.exceptions.Timeout:
-       
         print(f"[Telemetry Lag -> {backend_url}] Latency spike (request timed out)")
     except requests.exceptions.RequestException:
         print(f"[Telemetry Offline -> {backend_url}] Server unreachable")
@@ -182,7 +190,6 @@ def generate_mjpeg_stream():
 
     try:
         while True:
-          
             if RELOAD_SOURCE_FLAG:
                 print(f"[Hot-Swap] Switching active video feed dynamically to: {ACTIVE_SOURCE}")
                 if cap.isOpened():
@@ -217,12 +224,13 @@ def generate_mjpeg_stream():
 
             frame_count += 1
 
+            # 🚨 FIX: Lowered confidence to 0.15 to prevent hardware bottlenecks
             results = model.track(
                 frame,
                 tracker="bytetrack.yaml",
                 persist=True,
                 classes=[0, 2],
-                conf=0.25,
+                conf=0.15, 
                 verbose=False,
             )
 
@@ -418,6 +426,7 @@ def generate_mjpeg_stream():
         if cap and cap.isOpened():
             cap.release()
 
+
 @app.post("/upload")
 async def upload_video(file: UploadFile = File(...)):
     """Receives a new video file from frontend and hot-swaps the live feed."""
@@ -447,6 +456,7 @@ def video_feed():
         media_type="multipart/x-mixed-replace; boundary=frame",
     )
 
+
 @app.get("/health")
 def health_check():
     return {
@@ -454,6 +464,8 @@ def health_check():
         "zone_id": ZONE_ID,
         "stream_url": f"http://localhost:{PORT}/video_feed",
     }
+
+
 if __name__ == "__main__":
     os.makedirs("weights", exist_ok=True)
     print(

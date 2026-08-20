@@ -1,30 +1,52 @@
-"""ML Telemetry Ingestion endpoint."""
+"""ML Telemetry Ingestion endpoint with Multi-Venue support."""
+
 import uuid
+
 from app.core.websocket import ws_manager
 from app.db.session import get_db
 from app.models.alert import AlertSeverity, AlertStatus, CrowdAlert
 from app.models.telemetry import TelemetryLog
-from app.models.user import User  # Ensure User model is visible if needed
+from app.models.user import User
 from app.models.venue import RiskLevel, Venue, Zone
 from app.schemas.telemetry import TelemetryCreate, TelemetryResponse
-from app.services.pathfinding import pathfinder  # Dynamic A* Pathfinder Engine
+from app.services.pathfinding import pathfinder
 from app.services.predictive_engine import predict_density
 from app.services.risk_engine import risk_engine
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 router = APIRouter()
-CANONICAL_VENUE_ID = "soa-iter-01"
-CANONICAL_VENUE = {
-    "id": CANONICAL_VENUE_ID,
-    "name": "Siksha 'O' Anusandhan University Campus",
-    "location": "Bhubaneswar, Odisha",
-    "gps_center_lat": 20.2496,
-    "gps_center_lng": 85.7988,
-    "total_capacity": 15000,
+
+# ---------------------------------------------------------------------------
+# Multi-Venue Registry (ITER Campus & Kalinga Stadium)
+# ---------------------------------------------------------------------------
+VENUE_REGISTRY = {
+    "soa-iter-01": {
+        "id": "soa-iter-01",
+        "name": "Siksha 'O' Anusandhan University Campus",
+        "location": "Bhubaneswar, Odisha",
+        "gps_center_lat": 20.2496,
+        "gps_center_lng": 85.7988,
+        "total_capacity": 15000,
+    },
+    "kalinga-stadium-01": {
+        "id": "kalinga-stadium-01",
+        "name": "Kalinga Stadium Complex",
+        "location": "Bhubaneswar, Odisha",
+        "gps_center_lat": 20.2936,
+        "gps_center_lng": 85.8236,
+        "total_capacity": 40000,
+    },
 }
+
+# ---------------------------------------------------------------------------
+# Complete 12-Zone Registry across both venues
+# ---------------------------------------------------------------------------
 ZONE_REGISTRY = {
+    # ─── ITER CAMPUS (6 Zones: 3 Live, 3 Standby) ───
     "gate_1": {
+        "venue_id": "soa-iter-01",
         "name": "Main Gate",
         "sector": "Main Gate",
         "capacity_limit": 300,
@@ -32,13 +54,23 @@ ZONE_REGISTRY = {
         "center_lng": 85.7912,
     },
     "zone_admin_block_rd": {
+        "venue_id": "soa-iter-01",
         "name": "Administrative Block Road + Gate Approach",
         "sector": "Admin Block",
         "capacity_limit": 500,
         "center_lat": 20.2593,
         "center_lng": 85.7916,
     },
+    "gate_2": {
+        "venue_id": "soa-iter-01",
+        "name": "EV Charging / Food Court Junction",
+        "sector": "Food Court",
+        "capacity_limit": 300,
+        "center_lat": 20.2585,
+        "center_lng": 85.7928,
+    },
     "zone_library_roundabout": {
+        "venue_id": "soa-iter-01",
         "name": "Central Library Roundabout",
         "sector": "Library",
         "capacity_limit": 400,
@@ -46,266 +78,315 @@ ZONE_REGISTRY = {
         "center_lng": 85.7920,
     },
     "zone_sports_complex_rd": {
+        "venue_id": "soa-iter-01",
         "name": "Sports Complex / Physics Dept Road",
         "sector": "Sports Complex",
         "capacity_limit": 500,
         "center_lat": 20.2591,
         "center_lng": 85.7925,
     },
-    "gate_2": {
-        "name": "EV Charging / Food Court Junction",
-        "sector": "Food Court",
-        "capacity_limit": 300,
-        "center_lat": 20.2585,
-        "center_lng": 85.7928,
-    },
     "zone_e_block_lawn_rd": {
+        "venue_id": "soa-iter-01",
         "name": "E Block Lawn / F Block Road",
         "sector": "E Block",
         "capacity_limit": 500,
         "center_lat": 20.2582,
         "center_lng": 85.7921,
     },
+
+    # ─── KALINGA STADIUM (6 Zones: 1 Live, 5 Standby) ───
+    "ks_gate_3": {
+        "venue_id": "kalinga-stadium-01",
+        "name": "Gate 3 (Main Entrance)",
+        "sector": "Main Gate",
+        "capacity_limit": 1000,
+        "center_lat": 20.2936,
+        "center_lng": 85.8236,
+    },
+    "ks_sky_walk": {
+        "venue_id": "kalinga-stadium-01",
+        "name": "Sky Walk Concourse",
+        "sector": "Concourse",
+        "capacity_limit": 800,
+        "center_lat": 20.2940,
+        "center_lng": 85.8240,
+    },
+    "ks_swimming": {
+        "venue_id": "kalinga-stadium-01",
+        "name": "Hockey Stadium Entrance",
+        "sector": "Hockey Complex",
+        "capacity_limit": 1200,
+        "center_lat": 20.2930,
+        "center_lng": 85.8230,
+    },
+    "ks_athletics": {
+        "venue_id": "kalinga-stadium-01",
+        "name": "Athletics Entrance",
+        "sector": "Track & Field",
+        "capacity_limit": 1500,
+        "center_lat": 20.2945,
+        "center_lng": 85.8245,
+    },
+    "ks_parking": {
+        "venue_id": "kalinga-stadium-01",
+        "name": "Gate 8B (Way to Parking)",
+        "sector": "Parking Zone",
+        "capacity_limit": 600,
+        "center_lat": 20.2925,
+        "center_lng": 85.8220,
+    },
+    "ks_badminton": {
+        "venue_id": "kalinga-stadium-01",
+        "name": "Badminton Stadium Junction",
+        "sector": "Indoor Arena",
+        "capacity_limit": 700,
+        "center_lat": 20.2950,
+        "center_lng": 85.8250,
+    },
 }
-async def _get_or_create_canonical_venue(db: AsyncSession) -> Venue:
-    """Fetches the single canonical ITER/SOA venue, creating it once if absent."""
-    result = await db.execute(
-        select(Venue).where(Venue.id == CANONICAL_VENUE_ID)
-    )
+
+
+async def _get_or_create_venue(venue_id: str, db: AsyncSession) -> Venue:
+    """Fetches or registers a venue dynamically from the VENUE_REGISTRY."""
+    result = await db.execute(select(Venue).where(Venue.id == venue_id))
     venue = result.scalars().first()
+
     if not venue:
-        venue = Venue(**CANONICAL_VENUE)
+        venue_def = VENUE_REGISTRY.get(venue_id)
+        if not venue_def:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown venue_id '{venue_id}'. Known venues: {list(VENUE_REGISTRY.keys())}",
+            )
+        venue = Venue(**venue_def)
         db.add(venue)
         await db.flush()
     return venue
+
+
 @router.post("/", response_model=TelemetryResponse)
 async def create_telemetry(
     telemetry: TelemetryCreate, db: AsyncSession = Depends(get_db)
 ):
-  """Ingest ML telemetry from YOLO/ByteTrack pipeline.
+    """Ingest ML telemetry from YOLO/ByteTrack pipeline across multiple venues."""
+    # 1. Look up Zone in DB
+    result = await db.execute(select(Zone).where(Zone.id == telemetry.zone_id))
+    zone = result.scalars().first()
 
-  Calculates risk, updates zone, updates A* pathfinding weights, generates
-  alerts, and broadcasts via WS.
-  """
-  result = await db.execute(select(Zone).where(Zone.id == telemetry.zone_id))
-  zone = result.scalars().first()
+    if not zone:
+        zone_def = ZONE_REGISTRY.get(telemetry.zone_id)
+        if not zone_def:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Unknown zone_id '{telemetry.zone_id}'. Valid zones: "
+                    f"{', '.join(ZONE_REGISTRY.keys())}."
+                ),
+            )
 
-  if not zone:
-    zone_def = ZONE_REGISTRY.get(telemetry.zone_id)
-    if not zone_def:
-      raise HTTPException(
-          status_code=400,
-          detail=(
-              f"Unknown zone_id '{telemetry.zone_id}'. Valid zones for this "
-              f"venue are: {', '.join(ZONE_REGISTRY.keys())}. Check your "
-              "edge camera config — it may still be posting a legacy zone_id."
-          ),
-      )
+        # Dynamically fetch/create the associated venue (ITER or Kalinga)
+        venue = await _get_or_create_venue(zone_def["venue_id"], db)
 
-    venue = await _get_or_create_canonical_venue(db)
+        zone = Zone(
+            id=telemetry.zone_id,
+            venue_id=venue.id,
+            code=telemetry.zone_id,
+            name=zone_def["name"],
+            sector=zone_def["sector"],
+            capacity_limit=zone_def["capacity_limit"],
+            current_headcount=0,
+            density=0.0,
+            flow_rate=0.0,
+            risk_score=0.0,
+            center_lat=zone_def["center_lat"],
+            center_lng=zone_def["center_lng"],
+        )
+        db.add(zone)
+        await db.flush()
 
-    print(
-        f"[Auto-Setup] Creating known zone '{telemetry.zone_id}' "
-        f"('{zone_def['name']}') under venue '{venue.id}'..."
+    # 2. Calculate Density & Capacity Ratio
+    area_sqm = zone.capacity_limit / 5.0 if zone.capacity_limit else 100.0
+    density = telemetry.person_count / area_sqm
+    capacity_ratio = (
+        telemetry.person_count / zone.capacity_limit
+        if zone.capacity_limit
+        else 0.0
     )
-    zone = Zone(
-        id=telemetry.zone_id,
-        venue_id=venue.id,
-        code=telemetry.zone_id,
-        name=zone_def["name"],
-        sector=zone_def["sector"],
-        capacity_limit=zone_def["capacity_limit"],
-        current_headcount=0,
-        density=0.0,
-        flow_rate=0.0,
-        risk_score=0.0,
-        center_lat=zone_def["center_lat"],
-        center_lng=zone_def["center_lng"],
+
+    surge_score = getattr(telemetry, "surge_score", 0.0)
+    if not surge_score:
+        surge_score = min(
+            (telemetry.person_count / (zone.capacity_limit or 1))
+            + (0.2 if telemetry.flow_conflict else 0.0),
+            1.0,
+        )
+
+    # 3. XGBoost Risk Engine Inference
+    (
+        final_risk_score,
+        calculated_risk_level,
+        override_applied,
+    ) = risk_engine.calculate_risk(
+        density=density,
+        avg_speed=telemetry.avg_speed,
+        flow_conflict=telemetry.flow_conflict,
+        reverse_flow_detected=telemetry.reverse_flow_detected,
+        capacity_ratio=capacity_ratio,
+        surge_score=surge_score,
     )
-    db.add(zone)
+
+    # Update Zone DB fields
+    zone.current_headcount = telemetry.person_count
+    zone.density = density
+    zone.risk_score = final_risk_score
+    zone.reverse_flow_detected = telemetry.reverse_flow_detected
+    zone.flow_conflict = telemetry.flow_conflict
+
+    risk_enum_map = {
+        "safe": RiskLevel.safe,
+        "caution": RiskLevel.caution,
+        "warning": RiskLevel.warning,
+        "critical": RiskLevel.critical,
+    }
+    zone.risk_level = risk_enum_map.get(calculated_risk_level, RiskLevel.safe)
+
+    # 4. Dynamic Pathfinding Graph Update
+    pathfinder.update_live_telemetry([zone])
+    evacuation_route = pathfinder.compute_safest_evacuation(zone.id)
+
+    # 5. Save TelemetryLog
+    log = TelemetryLog(
+        zone_id=telemetry.zone_id,
+        person_count=telemetry.person_count,
+        density=density,
+        avg_speed=telemetry.avg_speed,
+        flow_conflict=telemetry.flow_conflict,
+        reverse_flow_detected=telemetry.reverse_flow_detected,
+        surge_score=surge_score,
+        calculated_risk_score=final_risk_score,
+    )
+    db.add(log)
     await db.flush()
-  area_sqm = zone.capacity_limit / 5.0 if zone.capacity_limit else 100.0
-  density = telemetry.person_count / area_sqm
-  capacity_ratio = (
-      telemetry.person_count / zone.capacity_limit
-      if zone.capacity_limit
-      else 0.0
-  )
 
-  surge_score = getattr(telemetry, "surge_score", 0.0)
-  if not surge_score:
-    surge_score = min(
-        (telemetry.person_count / (zone.capacity_limit or 1))
-        + (0.2 if telemetry.flow_conflict else 0.0),
-        1.0,
+    # 6. Generate Alert if WARNING or CRITICAL
+    new_alert_dict = None
+    if calculated_risk_level in ["warning", "critical"]:
+        alert_result = await db.execute(
+            select(CrowdAlert)
+            .where(CrowdAlert.zone_id == zone.id)
+            .where(CrowdAlert.status == AlertStatus.OPEN)
+        )
+        existing_alert = alert_result.scalars().first()
+
+        if not existing_alert:
+            route_msg = evacuation_route.get(
+                "message", "Proceed to nearest clear exit."
+            )
+            new_alert = CrowdAlert(
+                id=f"ALT-{uuid.uuid4().hex[:6].upper()}",
+                zone_id=zone.id,
+                venue_id=zone.venue_id,
+                severity=(
+                    AlertSeverity.critical
+                    if calculated_risk_level == "critical"
+                    else AlertSeverity.warning
+                ),
+                title=f"Crowd Surge Detected in {zone.name}",
+                trigger_reason="Density or Capacity threshold exceeded.",
+                sentinel_analysis=(
+                    "XGBoost Risk Engine flagged conditions. Override"
+                    f" Applied: {override_applied}. {route_msg}"
+                ),
+                confidence_score=surge_score * 100,
+                density=density,
+                status=AlertStatus.OPEN,
+                recommended_actions=[
+                    {
+                        "id": f"act-1-{zone.id}",
+                        "actionText": f"Open Auxiliary Emergency Gates near {zone.name}",
+                        "impact": "Immediate -40% headcount relief",
+                        "targetGateOrZone": zone.name,
+                    },
+                    {
+                        "id": f"act-2-{zone.id}",
+                        "actionText": "Broadcast Sarvam AI Multilingual PA Diversion Announcement",
+                        "impact": f"Redirect traffic via route: {route_msg}",
+                        "targetGateOrZone": zone.name,
+                    },
+                ],
+            )
+            db.add(new_alert)
+            await db.flush()
+
+            new_alert_dict = {
+                "id": new_alert.id,
+                "title": new_alert.title,
+                "zoneId": new_alert.zone_id,
+                "zoneName": zone.name,
+                "riskLevel": new_alert.severity.value,
+                "density": new_alert.density,
+                "flowRate": zone.flow_rate,
+                "category": getattr(new_alert, "category", "surge"),
+                "status": "active",
+                "sentinelAnalysis": new_alert.sentinel_analysis,
+                "recommendedActions": new_alert.recommended_actions,
+                "evacuationRoute": evacuation_route,
+            }
+
+    # 7. WebSocket Broadcast to Dashboard & Citizen PWA
+    prediction = await predict_density(zone.id, db)
+    predictive_10m_curve = (
+        prediction.get("projected", [])
+        if isinstance(prediction, dict) and "projected" in prediction
+        else []
     )
 
-  (
-      final_risk_score,
-      calculated_risk_level,
-      override_applied,
-  ) = risk_engine.calculate_risk(
-      density=density,
-      avg_speed=telemetry.avg_speed,
-      flow_conflict=telemetry.flow_conflict,
-      reverse_flow_detected=telemetry.reverse_flow_detected,
-      capacity_ratio=capacity_ratio,
-      surge_score=surge_score,
-  )
+    payload = {
+        "event": "TELEMETRY_UPDATE",
+        "zone": {
+            "id": zone.id,
+            "name": zone.name,
+            "code": zone.code,
+            "venue_id": zone.venue_id,
+            "sector": zone.sector,
+            "density": round(density, 2),
+            "maxCapacity": zone.capacity_limit,
+            "currentHeadcount": telemetry.person_count,
+            "flowRate": zone.flow_rate,
+            "riskScore": round(final_risk_score, 1),
+            "riskLevel": zone.risk_level.value,
+            "trend": (
+                zone.trend.value
+                if hasattr(zone.trend, "value")
+                else str(zone.trend)
+            ),
+            "gateStatus": (
+                zone.gate_status.value
+                if hasattr(zone.gate_status, "value")
+                else str(zone.gate_status)
+            ),
+            "center_lat": zone.center_lat,
+            "center_lng": zone.center_lng,
+            "predictive_10m_curve": predictive_10m_curve,
+            "evacuationRoute": evacuation_route,
+            "inference_ms": getattr(telemetry, "inference_ms", 0.0),
+        },
+    }
+    if new_alert_dict:
+        payload["alert"] = new_alert_dict
 
-  zone.current_headcount = telemetry.person_count
-  zone.density = density
-  zone.risk_score = final_risk_score
-  zone.reverse_flow_detected = telemetry.reverse_flow_detected
-  zone.flow_conflict = telemetry.flow_conflict
+    await ws_manager.broadcast(payload)
+    await db.commit()
 
-  risk_enum_map = {
-      "safe": RiskLevel.safe,
-      "caution": RiskLevel.caution,
-      "warning": RiskLevel.warning,
-      "critical": RiskLevel.critical,
-  }
-  zone.risk_level = risk_enum_map.get(calculated_risk_level, RiskLevel.safe)
-
-  # ---------------------------------------------------------
-  # 4. UPDATE DYNAMIC A* PATHFINDING GRAPH
-  # ---------------------------------------------------------
-  pathfinder.update_live_telemetry([zone])
-  evacuation_route = pathfinder.compute_safest_evacuation(zone.id)
-
-  log = TelemetryLog(
-      zone_id=telemetry.zone_id,
-      person_count=telemetry.person_count,
-      density=density,
-      avg_speed=telemetry.avg_speed,
-      flow_conflict=telemetry.flow_conflict,
-      reverse_flow_detected=telemetry.reverse_flow_detected,
-      surge_score=surge_score,
-      calculated_risk_score=final_risk_score,
-  )
-  db.add(log)
-  await db.flush() 
-
-  new_alert_dict = None
-  if calculated_risk_level in ["warning", "critical"]:
-
-    alert_result = await db.execute(
-        select(CrowdAlert)
-        .where(CrowdAlert.zone_id == zone.id)
-        .where(CrowdAlert.status == AlertStatus.OPEN)
+    return TelemetryResponse(
+        id=log.id,
+        zone_id=log.zone_id,
+        person_count=log.person_count,
+        avg_speed=log.avg_speed,
+        flow_conflict=log.flow_conflict,
+        reverse_flow_detected=log.reverse_flow_detected,
+        timestamp=log.timestamp,
+        density=log.density,
+        surge_score=log.surge_score,
+        calculated_risk_score=log.calculated_risk_score,
     )
-    existing_alert = alert_result.scalars().first()
-
-    if not existing_alert:
-      route_msg = evacuation_route.get(
-          "message", "Proceed to nearest clear exit."
-      )
-      new_alert = CrowdAlert(
-          id=f"ALT-{uuid.uuid4().hex[:6].upper()}",
-          zone_id=zone.id,
-          venue_id=zone.venue_id,
-          severity=(
-              AlertSeverity.critical
-              if calculated_risk_level == "critical"
-              else AlertSeverity.warning
-          ),
-          title=f"Crowd Surge Detected in {zone.name}",
-          trigger_reason="Density or Capacity threshold exceeded.",
-          sentinel_analysis=(
-              "XGBoost Risk Engine flagged conditions. Override"
-              f" Applied: {override_applied}. {route_msg}"
-          ),
-          confidence_score=surge_score * 100,
-          density=density,
-          status=AlertStatus.OPEN,
-          recommended_actions=[
-              {
-                  "id": f"act-1-{zone.id}",
-                  "actionText": (
-                      f"Open Auxiliary Emergency Gates near {zone.name}"
-                  ),
-                  "impact": "Immediate -40% headcount relief",
-                  "targetGateOrZone": zone.name,
-              },
-              {
-                  "id": f"act-2-{zone.id}",
-                  "actionText": (
-                      "Broadcast Sarvam AI Multilingual PA Diversion Announcement"
-                  ),
-                  "impact": f"Redirect traffic via route: {route_msg}",
-                  "targetGateOrZone": zone.name,
-              },
-          ],
-      )
-      db.add(new_alert)
-      await db.flush()
-
-      new_alert_dict = {
-          "id": new_alert.id,
-          "title": new_alert.title,
-          "zoneId": new_alert.zone_id,
-          "zoneName": zone.name,
-          "riskLevel": new_alert.severity.value,
-          "density": new_alert.density,
-          "flowRate": zone.flow_rate,
-          "category": getattr(new_alert, "category", "surge"),
-          "status": "active",
-          "sentinelAnalysis": new_alert.sentinel_analysis,
-          "recommendedActions": new_alert.recommended_actions,
-          "evacuationRoute": evacuation_route,
-      }
-  prediction = await predict_density(zone.id, db)
-  predictive_10m_curve = (
-      prediction.get("projected", [])
-      if isinstance(prediction, dict) and "projected" in prediction
-      else []
-  )
-
-  payload = {
-      "event": "TELEMETRY_UPDATE",
-      "zone": {
-          "id": zone.id,
-          "name": zone.name,
-          "code": zone.code,
-          "venue_id": zone.venue_id,
-          "sector": zone.sector,
-          "density": round(density, 2),
-          "maxCapacity": zone.capacity_limit,
-          "currentHeadcount": telemetry.person_count,
-          "flowRate": zone.flow_rate,
-          "riskScore": round(final_risk_score, 1),
-          "riskLevel": zone.risk_level.value,
-          "trend": (
-              zone.trend.value
-              if hasattr(zone.trend, "value")
-              else str(zone.trend)
-          ),
-          "gateStatus": (
-              zone.gate_status.value
-              if hasattr(zone.gate_status, "value")
-              else str(zone.gate_status)
-          ),
-          "center_lat": zone.center_lat,
-          "center_lng": zone.center_lng,
-          "predictive_10m_curve": predictive_10m_curve,
-          "evacuationRoute": evacuation_route,  # Dynamic A* Route
-          "inference_ms": getattr(telemetry, "inference_ms", 0.0),
-      },
-  }
-  if new_alert_dict:
-    payload["alert"] = new_alert_dict
-  await ws_manager.broadcast(payload)
-  await db.commit()
-
-  return TelemetryResponse(
-      id=log.id,
-      zone_id=log.zone_id,
-      person_count=log.person_count,
-      avg_speed=log.avg_speed,
-      flow_conflict=log.flow_conflict,
-      reverse_flow_detected=log.reverse_flow_detected,
-      timestamp=log.timestamp,
-      density=log.density,
-      surge_score=log.surge_score,
-      calculated_risk_score=log.calculated_risk_score,
-  )
