@@ -124,9 +124,6 @@ crowdshield-backend/
 │
 ├── venue_graph.json                   # Spatial graph topology
 ├── crowdshield_xgb_model.json         # Trained XGBoost weights
-├── crowdshield_training_data.csv      # 2,500-row synthetic training set
-├── train_xgboost_model.py             # XGBoost training script
-├── generate_synthetic_data.py         # Physics-grounded data generator
 ├── requirements.txt
 └── .env
 ```
