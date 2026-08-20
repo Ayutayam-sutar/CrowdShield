@@ -382,7 +382,6 @@ graph TB
 | Resolve alerts | ✅ | ❌ |
 | Submit SOS reports | ✅ | ✅ |
 | View safety feed | ✅ | ✅ |
-| Upvote citizen reports | ✅ | ✅ |
 | Access evacuation guide | ✅ | ✅ |
 
 ---

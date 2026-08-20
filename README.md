@@ -55,6 +55,7 @@ The platform operates across three tightly integrated layers:
 | **YOLOv11** (Ultralytics) | Real-time person detection on CCTV streams |
 | **OpenCV** | Video frame processing and optical flow estimation |
 | **XGBoost** | On-device risk pre-scoring |
+| **ByteTrack** | On-device multi-object tracking |
 
 ### Backend
 | Technology | Purpose |

@@ -62,7 +62,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        "https://crowdshieldjuggernaut.netlify.app", 
+        "https://crowdshieldjuggernaut.netlify.app",
+        "http://localhost" 
         "*" 
     ],
     allow_credentials=True,
