@@ -59,7 +59,7 @@ NODE_TOKEN = os.getenv("NODE_AUTH_TOKEN", "technova_demo_key_9988")
 # CONSTANTS & PHYSICAL CALIBRATION (IPM)
 # ---------------------------------------------------------
 FPS = 30.0
-TELEMETRY_INTERVAL_FRAMES = int(FPS * 2) 
+TELEMETRY_INTERVAL_FRAMES = int(FPS * 4)
 
 # 🚨 FIX: Expanded polygon to cover almost the entire 1280x720 frame
 ZONE_POLYGON = np.array(
@@ -214,7 +214,9 @@ def generate_mjpeg_stream():
             success, frame = cap.read()
             if not success:
                 if isinstance(ACTIVE_SOURCE, str):
-                    cap.set(cv2.CAP_PROP_POS_FRAMES, 0) 
+                    print("[System] Video reached end. Reloading source to preserve memory...")
+                    cap.release()
+                    cap = cv2.VideoCapture(ACTIVE_SOURCE)
                     continue
                 else:
                     break
