@@ -97,7 +97,7 @@ The platform operates across three tightly integrated layers:
 
 ```bash
 git clone https://github.com/Sid-is-afk/CrowdShield.git
-cd CrowdShield
+cd Crowdshield
 ```
 
 ### 2. Backend Setup
