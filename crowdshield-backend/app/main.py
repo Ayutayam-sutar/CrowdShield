@@ -52,7 +52,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="CrowdShield Backend",
-    description="AI-Powered Early Warning Crowd Stampede Prevention System",
+    description="AI-Powered Early Warning Crowd Stampede Prevention System.",
     version="1.0.0",
     lifespan=lifespan
 )
