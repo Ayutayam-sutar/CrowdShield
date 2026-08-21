@@ -233,6 +233,6 @@ CrowdShield is designed, engineered, and maintained by **Team Juggernaut** — a
 
 **CrowdShield** — *Because every second counts when crowds become critical.*
 
-Built with ❤️ by **Team Juggernaut** for **TechNova Season3**·
+Built with ❤️ by **Team Juggernaut** for **TechNova Season3**·.
 
 </div>
