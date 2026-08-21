@@ -65,8 +65,10 @@ npm run dev
 ```
 
 ✅ The frontend will be live at **`http://localhost:3000`**
+
 **Admin: Credentials are hard-coded for administrator access.
 Citizen: Anyone can register with their name, email, and password, then log in using their registered credentials.**
+
 **Admin Credentials** : email: admin2@gmail.com, password: 1234
 **Citizen Credentials** : email: ok@gmail.com, password: 123456
 
