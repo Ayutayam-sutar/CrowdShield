@@ -553,7 +553,7 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
                 ) : dispatchState.error ? (
                   <span>Retry Dispatch</span>
                 ) : (
-                  <span>Dispatch Action Now</span>
+                  <span>Dispatch Action Now </span>
                 )}
               </button>
             </div>
