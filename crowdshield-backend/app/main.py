@@ -64,6 +64,8 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "https://crowdshieldjuggernaut.netlify.app",
         "http://localhost",
+        "https://localhost", 
+        "ionic://localhost",
     ],
     allow_credentials=True,
     allow_methods=["*"],  
