@@ -86,6 +86,8 @@ The platform operates across three tightly integrated layers:
 
 ## 🚀 Quick Start
 
+**Detailed instructions to run the project locally is given in this file: [Quick Start Guide](Quickstart.md)**
+
 ### Prerequisites
 
 - **Python 3.11+** and **pip**
@@ -96,7 +98,7 @@ The platform operates across three tightly integrated layers:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/Sid-is-afk/CrowdShield.git
+git clone https://github.com/newprogrammer07/Crowdshield
 cd Crowdshield
 ```
 
@@ -233,6 +235,6 @@ CrowdShield is designed, engineered, and maintained by **Team Juggernaut** — a
 
 **CrowdShield** — *Because every second counts when crowds become critical.*
 
-Built with ❤️ by **Team Juggernaut** for **TechNova Season3**·.
+Built with ❤️ by **Team Juggernaut** for **TechNova Season3**·
 
 </div>

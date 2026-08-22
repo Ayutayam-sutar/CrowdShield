@@ -1,3 +1,5 @@
+//We tried implementing a volunteer task board, but it was too complex for the MVP, with the amount of time we had.
+
 import React, { useState } from 'react';
 import { CrowdAlert } from '../../types';
 import { ShieldAlert, CheckCircle2, UserCircle } from 'lucide-react';

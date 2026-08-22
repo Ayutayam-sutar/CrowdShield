@@ -66,8 +66,9 @@ npm run dev
 
 ✅ The frontend will be live at **`http://localhost:3000`**
 
-**Admin: Credentials are hard-coded for administrator access.
-Citizen: Anyone can register with their name, email, and password, then log in using their registered credentials.**
+**Admin: Credentials are hard-coded for administrator access.**
+
+**Citizen: Anyone can register with their name, email, and password, then log in using their registered credentials.**
 
 **Admin Credentials** : email: admin2@gmail.com, password: 1234
 **Citizen Credentials** : email: ok@gmail.com, password: 123456
@@ -99,9 +100,6 @@ pip install -r requirements.txt
 python run_cameras.py
 ```
 
-✅ The edge server will be live at **`http://localhost:8000`** (default)  
-📹 Camera streams accessible at **`http://localhost:8000/stream/{zone_id}`**
-
 > **Note:** Make sure the backend is already running before starting the edge service, as the edge server sends telemetry data to the backend at the configured `BACKEND_URL`.
 
 ---
@@ -112,9 +110,9 @@ The project is deployed and can be tested using the following links:
 
 | Service | Link |
 |---------|------|
-| 🖥️ **Admin Dashboard** (Netlify) | `[Link will be added]` |
-| ⚙️ **Backend API** (Render) | `[Link will be added]` |
-| 📱 **Citizen App APK** | `[Link will be added]` |
+| 🖥️ **Admin Dashboard** (Netlify) | [Netlify Link](https://crowdshieldjuggernaut.netlify.app/) |
+| ⚙️ **Backend API** (Render) | [Render Link](https://crowdshield-uw8r.onrender.com/) |
+| 📱 **Citizen App APK** | [App Link](https://drive.google.com/file/d/1x6_OlBORP_aQziGSWvS9V_PlhqQUkz_4/view?usp=drive_link) |
 
 ---
 
@@ -131,7 +129,7 @@ cd crowdshield-edge
 python run_cameras.py
 ```
 
-Make sure the edge service is running and actively processing camera feeds before proceeding.
+**Make sure the edge service is running and actively processing camera feeds before proceeding.**
 
 ### Step 2 — Test the Admin Dashboard
 
@@ -149,6 +147,7 @@ Make sure the edge service is running and actively processing camera feeds befor
 
 ## ⚠️ Important Note on Testing
 
-> For **demonstration and testing purposes**, the risk threshold values in this prototype have been intentionally **reduced** from real-world parameters. This means alerts and warnings will trigger more frequently and at lower crowd density levels than they would in an actual production deployment. 
+> For **demonstration and testing purposes**, the risk threshold values in this prototype have been intentionally **reduced** from real-world parameters. This means alerts and warnings will trigger more frequently and at lower crowd density levels. The CCTV camera feeds used are currently pre-recorded, and the venues are pre-seeded with dummy data. However, the system is fully equipped to access live CCTV feeds (via RTSP links) and capture real-time data in an actual production deployment.
+
 
 ---
